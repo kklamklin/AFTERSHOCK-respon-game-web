@@ -13,7 +13,7 @@ export const OPERATORS = {
   human: {
     name: 'Robertson', side: 'field', base: 75,
     portraits: {
-      normal: 'Field-op-robertson.png',       // TODO: ยังไม่เห็นไฟล์นี้ในโฟลเดอร์ ตรวจสอบตอนอัปจริง
+      normal: 'Field-op-robertson.png',
       injured: 'Field-op-robertson-injured.png',
       lost: 'Field-op-robertson-finalstand.png',
     },
@@ -60,8 +60,8 @@ export const OPERATORS = {
   elf: {
     name: 'Lia', side: 'support',
     portraits: {
-      normal: 'Base-op-Lia.png',
-      talk: ['Base-op-Lia-talking1.png', 'Base-op-Lia-talking2.png'], // สลับ 2 เฟรมทำแอนิเมชันพูด
+      normal: 'Base-op-Lia.png', // ✅ มีไฟล์จริงแล้ว
+      talk: ['Base-op-Lia-talking1.png', 'Base-op-Lia-talking2.png'], // ✅ มีไฟล์จริงแล้ว สลับ 2 เฟรมทำแอนิเมชันพูด
     },
     skills: {
       scan: {
