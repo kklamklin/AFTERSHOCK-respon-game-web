@@ -1,0 +1,6 @@
+node_modules/
+.DS_Store
+*.log
+
+# ไฟล์ build ที่ generate ได้ใหม่เสมอ — ถ้าจะส่งงานค่อยเอา comment ออก
+# dist/index.html
