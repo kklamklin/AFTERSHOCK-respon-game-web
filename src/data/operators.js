@@ -1,22 +1,26 @@
 // จนท. 4 ตัว + สกิล — อ้างอิงจาก docs/gamesystemfinal.md §16.2
 //
-// หมายเหตุชื่อไฟล์ asset (ปรับตามที่เจ้าของโปรเจกต์กำหนด):
-//   ภาพตัวละคร   {status}-op-{codename}.png       เช่น normal-op-robertson.png, injured-op-robertson.png
-//     - ภาคสนาม (field): status = normal / injured / lost  (ตรงกับ units[x].status ใน state.js)
-//     - ภาคฐาน (support/base): status = normal (ปากปิด) / talk (ปากเปิด) สลับกันทำแอนิเมชันพูด
-//   ไอคอนสกิล    icon-skill-{codename}-{skillId}.png   เช่น icon-skill-robertson-sar.png
-//   ไอคอนสถานะ   icon-status-{context}.png             ใช้ร่วมกันได้ทุกตัว เช่น icon-status-injured.png, icon-status-cooldown.png
+// ชื่อไฟล์ asset อ้างอิงจากไฟล์จริงที่อัปโหลดไว้ใน Google Drive (ไม่ได้ตั้งเป็นสูตรเดียวกันทุกไฟล์
+// เพราะไฟล์จริงตัวพิมพ์เล็ก/ใหญ่และเว้นวรรค/ underscore ไม่ตรงกันเป๊ะ — เก็บเป็น literal string
+// ในนี้ที่เดียว ห้ามเขียนสูตรสร้างชื่อไฟล์เองที่อื่น ให้ import ใช้จากที่นี่เสมอ)
 //
-// key ของ object นี้ (human/cat/elf/spirit) คือ "สายพันธุ์" ใช้อ้างอิงใน logic ทั้งหมด
-// (state.units, CONFIG ฯลฯ) ส่วน `name`/`codename` คือชื่อตัวละครที่โชว์ผู้เล่นและใช้ตั้งชื่อไฟล์ asset
+// **สำคัญ: ชื่อไฟล์ตัวพิมพ์เล็ก/ใหญ่มีผล** เพราะ GitHub Pages เป็น case-sensitive filesystem
+// ถ้าอัปโหลดไฟล์มาแล้วชื่อไม่ตรงกับที่ระบุในนี้เป๊ะ ต้องมาแก้ path ในไฟล์นี้ให้ตรง
+//
+// key ของ OPERATORS (human/cat/elf/spirit) คือ "สายพันธุ์" ใช้อ้างอิงใน logic ทั้งหมด
+// (state.units, CONFIG ฯลฯ) — `name` คือชื่อตัวละครที่โชว์ผู้เล่น
 export const OPERATORS = {
   human: {
-    codename: 'robertson', name: 'Robertson', side: 'field', base: 75,
-    portrait: (status = 'normal') => `${status}-op-robertson.png`,
+    name: 'Robertson', side: 'field', base: 75,
+    portraits: {
+      normal: 'Field-op-robertson.png',       // TODO: ยังไม่เห็นไฟล์นี้ในโฟลเดอร์ ตรวจสอบตอนอัปจริง
+      injured: 'Field-op-robertson-injured.png',
+      lost: 'Field-op-robertson-finalstand.png',
+    },
     hasSpecialSkill: false, // TODO: บางตัวมีสกิลพิเศษเพิ่ม — รอ asset/สเปกเพิ่มเติม ยังไม่ต้องทำ
     skills: {
       sar: {
-        name: 'Search & Rescue', icon: 'icon-skill-robertson-sar.png', type: 'field',
+        name: 'Search & Rescue', icon: 'Icon-skills-robertson-search&rescue.PNG', type: 'field',
         zones: {
           gray:   { ap: 8,  cd: 1 },
           yellow: { ap: 16, cd: 2 },
@@ -24,19 +28,23 @@ export const OPERATORS = {
         },
       },
       crowd: {
-        name: 'Crowd Control', icon: 'icon-skill-robertson-crowd.png', type: 'buff',
+        name: 'Crowd Control', icon: 'Icon-skills-robertson-crowd_control.PNG', type: 'buff',
         buff: 25, scope: 'zone', durationHours: 3, ap: 14, cd: 3, risky: true,
       },
     },
   },
 
   cat: {
-    codename: 'lyla', name: 'Lyla', side: 'field', base: 90,
-    portrait: (status = 'normal') => `${status}-op-lyla.png`,
+    name: 'Lyla', side: 'field', base: 90,
+    portraits: {
+      normal: 'Field-op-Lyla.png',
+      injured: 'Field-op-Lyla-injured.png',
+      lost: 'Field-op-Lyla-finalstand.png', // TODO: ยังไม่เห็นไฟล์นี้ในโฟลเดอร์ ตรวจสอบตอนอัปจริง
+    },
     hasSpecialSkill: false, // TODO: เช่นเดียวกับด้านบน
     skills: {
       hsar: {
-        name: 'Hardly Search & Rescue', icon: 'icon-skill-lyla-hsar.png', type: 'field',
+        name: 'Hardly Search & Rescue', icon: 'Icon-skills-Lyla-hardsearch&extract.png', type: 'field',
         zones: {
           gray:   { ap: 10, cd: 1 },
           yellow: { ap: 18, cd: 1 },
@@ -46,34 +54,45 @@ export const OPERATORS = {
     },
   },
 
+  // หมายเหตุ: โฟลเดอร์ Operators สะกดว่า "Lia" ส่วนโฟลเดอร์ Icon สะกดว่า "Ria" —
+  // เจ้าของโปรเจกต์ยืนยันแล้วว่าชื่อจริงคือ "Lia" ไฟล์ไอคอนสกิลด้านล่างจึงยังใช้ชื่อเดิม (Ria) ตามไฟล์จริง
+  // ต้องเปลี่ยนตอนอัปไฟล์จริงให้ตรงเป็น Lia ไม่งั้น path จะพัง
   elf: {
-    codename: 'ria', name: 'Ria', side: 'support',
-    portrait: (talking = false) => `${talking ? 'talk' : 'normal'}-op-ria.png`,
+    name: 'Lia', side: 'support',
+    portraits: {
+      normal: 'Base-op-Lia.png',
+      talk: ['Base-op-Lia-talking1.png', 'Base-op-Lia-talking2.png'], // สลับ 2 เฟรมทำแอนิเมชันพูด
+    },
     skills: {
       scan: {
-        name: 'Scan Area', icon: 'icon-skill-ria-scan.png', type: 'buff',
+        name: 'Scan Area', icon: 'Icon-skills-Ria-scan_area.PNG', type: 'buff', // TODO: เปลี่ยนเป็น Lia เมื่อเจ้าของแก้ชื่อไฟล์จริง
         buff: 15, scope: 'multi', durationHours: 3, ap: 10, cd: 0,
       },
       alert: {
-        name: 'Alert', icon: 'icon-skill-ria-alert.png', type: 'shield',
+        name: 'Alert', icon: 'Icon-skills-Ria-alert_allied.PNG', type: 'shield', // TODO: เปลี่ยนเป็น Lia เมื่อเจ้าของแก้ชื่อไฟล์จริง
         buff: 0, immune: true, scope: 'zone', durationHours: 3, ap: 35, cd: 4,
       },
     },
   },
 
   spirit: {
-    codename: 'mudongzock', name: 'Mudongzock', side: 'support',
-    portrait: (talking = false) => `${talking ? 'talk' : 'normal'}-op-mudongzock.png`,
+    name: 'Mudongzock', side: 'support',
+    portraits: {
+      normal: 'Base-op-mudongzock.PNG',
+      talk: ['Base-op-mudongzock-talking1.PNG', 'Base-op-mudongzock-talking2.PNG'], // TODO: ยังไม่เห็นไฟล์นี้ ตรวจสอบตอนอัปจริง
+    },
     skills: {
       air: {
-        name: 'Air Deploy', icon: 'icon-skill-mudongzock-air.png', type: 'buff',
+        // หมายเหตุ: ไฟล์จริงสะกด "mudongzong" (ไม่มี c) และไม่มีขีดกลางก่อน air_deploy —
+        // เจ้าของยืนยันชื่อจริงคือ mudongzock ต้องเปลี่ยนไฟล์นี้ให้ตรงตอนอัปจริง
+        name: 'Air Deploy', icon: 'Icon-skills-mudongzong_air_deploy.PNG', type: 'buff', // TODO: แก้เป็น Icon-skills-mudongzock-air_deploy.PNG
         buff: 15, scope: 'global', durationHours: 1, ap: 24, cd: 3,
       },
     },
   },
 };
 
-// ไอคอนสถานะที่ใช้ร่วมกันได้ทุกตัว (ไม่ผูกกับ operator คนใดคนหนึ่ง)
+// ไอคอนสถานะที่ใช้ร่วมกันได้ทุกตัว (ไม่ผูกกับ operator คนใดคนหนึ่ง) — ยังไม่มีไฟล์จริง ใช้ placeholder ไปก่อน
 export const STATUS_ICONS = {
   injured: 'icon-status-injured.png',
   lost: 'icon-status-lost.png',

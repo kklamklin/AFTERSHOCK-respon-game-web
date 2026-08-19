@@ -54,22 +54,25 @@
 
 ### ชื่อไฟล์ (คนละแบบกับเอกสารสเปกเดิม — ยึดอันนี้)
 
-ตัวละครมีชื่อเรียก (codename) แล้ว ไม่ใช้ op-human.png แบบเดิมอีกต่อไป ดู `src/data/operators.js` (คอมเมนต์บนสุดของไฟล์) เป็นที่มาความจริงของ path — สรุปสั้น ๆ:
+**ไฟล์จริงไม่ได้ตั้งตามสูตรเดียวกันทุกไฟล์** (ตัวพิมพ์เล็ก/ใหญ่ไม่ตรงกัน, บางไฟล์ใช้ `.png` บางไฟล์ `.PNG`, บางไฟล์ใช้ `-` บางไฟล์ใช้ `_` คั่นคำ)
+เพราะงั้น **ห้ามเขียนสูตรสร้างชื่อไฟล์เอง** — ทุก path เก็บเป็น literal string ไว้ที่ `src/data/operators.js` (`portraits`, `skills[x].icon`, `STATUS_ICONS`) ที่เดียว ต้อง import ใช้จากตรงนั้นเสมอ
 
-| สายพันธุ์ (key ใน OPERATORS) | codename | ฝ่าย |
+| สายพันธุ์ (key ใน OPERATORS) | ชื่อตัวละคร | ฝ่าย |
 |---|---|---|
-| `human` | robertson | ภาคสนาม |
-| `cat` | lyla | ภาคสนาม |
-| `elf` | ria | ภาคฐาน |
-| `spirit` | mudongzock | ภาคฐาน |
+| `human` | Robertson | ภาคสนาม |
+| `cat` | Lyla | ภาคสนาม |
+| `elf` | Lia | ภาคฐาน |
+| `spirit` | Mudongzock | ภาคฐาน |
 
-- **ภาพตัวละคร:** `{status}-op-{codename}.png`
-  - ภาคสนาม (robertson, lyla): status = `normal` / `injured` / `lost` (ตรงกับ `units[x].status` ใน state.js)
-  - ภาคฐาน (ria, mudongzock): status = `normal` (ปากปิด) / `talk` (ปากเปิด) สลับกันทำแอนิเมชันพูด — ยังไม่ต้องเขียนระบบสลับเฟรม รอสั่ง
-  - ห้าม hardcode path ตรง ๆ ในโค้ดที่อื่น ใช้ `OPERATORS[key].portrait(status)` เสมอ
-- **ไอคอนสกิล:** `icon-skill-{codename}-{skillId}.png` เช่น `icon-skill-robertson-sar.png`
-- **ไอคอนสถานะ (ใช้ร่วมกันได้ทุกตัว ไม่ผูก codename):** `icon-status-{context}.png` เช่น `icon-status-injured.png` — ดู `STATUS_ICONS` ใน operators.js
+- **ภาพตัวละคร:** `OPERATORS[key].portraits.{normal|injured|lost|talk}` — ภาคสนามมี normal/injured/lost, ภาคฐานมี normal/talk (talk เป็น array 2 เฟรมสลับกัน)
+- **ไอคอนสกิล:** `OPERATORS[key].skills[skillId].icon`
+- **ไอคอนสถานะ (ใช้ร่วมกันได้ทุกตัว):** `STATUS_ICONS.{injured|lost|cooldown}` — ยังไม่มีไฟล์จริง ใช้ placeholder ไปก่อน
 - บางตัวจะมี **สกิลพิเศษเพิ่ม** ทีหลัง (`hasSpecialSkill` ใน operators.js) — **ยังไม่ต้องทำอะไรกับมันตอนนี้** รอสเปก/asset มาก่อน
+
+**⚠️ ค้างแก้อยู่ (ดู comment `// TODO` ใน operators.js):**
+- โฟลเดอร์ Icon สะกดชื่อตัว elf ว่า `Ria` แต่โฟลเดอร์ Operators สะกดว่า `Lia` — เจ้าของยืนยันว่า **Lia คือชื่อจริง** ไฟล์ไอคอนสกิลของตัวนี้ต้องเปลี่ยนชื่อเป็น Lia ตอนอัปจริง (ตอนนี้ path ในโค้ดยังอ้างชื่อเดิม `Ria` ตามไฟล์ที่มีอยู่ เพื่อไม่ให้ path พัง)
+- ไฟล์สกิล spirit สะกดว่า `mudongzong` (เจ้าของยืนยันชื่อจริงคือ `mudongzock`) ต้องเปลี่ยนไฟล์ตอนอัปจริงเช่นกัน
+- ยังไม่เห็นไฟล์: Robertson ท่า normal, Lyla ท่า finalstand (lost), เฟรมพูดของ Mudongzock — รอเจ้าของอัปเพิ่ม
 
 ระหว่างนี้ใช้ placeholder (emoji / สี่เหลี่ยมสี) ที่**สลับเป็นรูปจริงได้โดยไม่ต้องแก้โค้ด** — asset จริงเข้ามาแค่วางทับชื่อไฟล์เดิมในโฟลเดอร์ `assets/`
 
