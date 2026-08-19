@@ -52,8 +52,27 @@
 
 รูปตัวละคร/สกิลจริง **ยังไม่เสร็จ ทยอยมาทีหลัง** ห้ามรอ ห้ามหยุดงาน
 
-- เขียนโค้ดอ้างชื่อไฟล์ตามสเปกไว้เลย (`op-human.png`, `skill-scan.png` ...)
-- ระหว่างนี้ใช้ placeholder (emoji / สี่เหลี่ยมสี) ที่**สลับเป็นรูปจริงได้โดยไม่ต้องแก้โค้ด**
+### ชื่อไฟล์ (คนละแบบกับเอกสารสเปกเดิม — ยึดอันนี้)
+
+ตัวละครมีชื่อเรียก (codename) แล้ว ไม่ใช้ op-human.png แบบเดิมอีกต่อไป ดู `src/data/operators.js` (คอมเมนต์บนสุดของไฟล์) เป็นที่มาความจริงของ path — สรุปสั้น ๆ:
+
+| สายพันธุ์ (key ใน OPERATORS) | codename | ฝ่าย |
+|---|---|---|
+| `human` | robertson | ภาคสนาม |
+| `cat` | lyla | ภาคสนาม |
+| `elf` | ria | ภาคฐาน |
+| `spirit` | mudongzock | ภาคฐาน |
+
+- **ภาพตัวละคร:** `{status}-op-{codename}.png`
+  - ภาคสนาม (robertson, lyla): status = `normal` / `injured` / `lost` (ตรงกับ `units[x].status` ใน state.js)
+  - ภาคฐาน (ria, mudongzock): status = `normal` (ปากปิด) / `talk` (ปากเปิด) สลับกันทำแอนิเมชันพูด — ยังไม่ต้องเขียนระบบสลับเฟรม รอสั่ง
+  - ห้าม hardcode path ตรง ๆ ในโค้ดที่อื่น ใช้ `OPERATORS[key].portrait(status)` เสมอ
+- **ไอคอนสกิล:** `icon-skill-{codename}-{skillId}.png` เช่น `icon-skill-robertson-sar.png`
+- **ไอคอนสถานะ (ใช้ร่วมกันได้ทุกตัว ไม่ผูก codename):** `icon-status-{context}.png` เช่น `icon-status-injured.png` — ดู `STATUS_ICONS` ใน operators.js
+- บางตัวจะมี **สกิลพิเศษเพิ่ม** ทีหลัง (`hasSpecialSkill` ใน operators.js) — **ยังไม่ต้องทำอะไรกับมันตอนนี้** รอสเปก/asset มาก่อน
+
+ระหว่างนี้ใช้ placeholder (emoji / สี่เหลี่ยมสี) ที่**สลับเป็นรูปจริงได้โดยไม่ต้องแก้โค้ด** — asset จริงเข้ามาแค่วางทับชื่อไฟล์เดิมในโฟลเดอร์ `assets/`
+
 - `map.svg` จริง (48 โซน 1600×1000) ก็ยังไม่มา — ตอนนี้ `src/ui/map.js` วาดเป็นกริด placeholder
   เมื่อได้ไฟล์จริง **แก้แค่ `src/ui/map.js`** ห้ามให้กระทบ `src/systems/`
 
