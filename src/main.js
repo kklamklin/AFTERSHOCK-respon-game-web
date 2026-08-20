@@ -2,6 +2,10 @@ import { CONFIG } from './config.js';
 import { state } from './state.js';
 import { renderMap, updateZoneEl, applyZoneColors } from './ui/map.js';
 import { createClock, tickLoop } from './systems/time.js';
+import { initScreens } from './ui/screens.js';
+
+// หน้าปก/เมนูหลัก (§I) — ทับอยู่บนเกมจริงจนกว่าจะเชื่อมปุ่ม Play เข้ากับเกมจริง (ยังไม่ทำ)
+initScreens(document.getElementById('screen-root'));
 
 const mapEl = document.getElementById('map');
 const hourEl = document.getElementById('hud-hour');
