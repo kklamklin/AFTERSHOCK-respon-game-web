@@ -160,14 +160,33 @@ export function renderBlank(root, { label = '', onBack } = {}) {
   root.appendChild(note);
 }
 
-// เชื่อม flow: splash → menu → (settings จริง / blank สำหรับที่เหลือ) → กลับ menu ได้
+// หน้า Quit — พยายามปิดแท็บให้เลย ถ้าเบราว์เซอร์ไม่ยอม (ปกติบล็อกการปิดแท็บที่ผู้ใช้เปิดเอง)
+// ให้ข้อความบอกให้ปิดแท็บ/ออกจากเว็บเอง
+export function renderQuit(root) {
+  root.innerHTML = '';
+  root.classList.add('screen--quit');
+  root.classList.remove('screen--splash', 'screen--menu', 'screen--blank', 'screen--settings');
+
+  const note = document.createElement('div');
+  note.className = 'quit-note';
+  note.textContent = 'ปิดแท็บนี้ได้เลย — ขอบคุณที่เล่น AFTERSHOCKS';
+  root.appendChild(note);
+
+  // เบราว์เซอร์ส่วนใหญ่บล็อก window.close() บนแท็บที่ผู้ใช้เปิดเอง (ไม่ใช่แท็บที่สคริปต์เปิด)
+  // ลองปิดให้ก่อน ถ้าไม่สำเร็จ (ปกติจะไม่สำเร็จ) ผู้เล่นเห็นข้อความด้านบนแทน
+  window.close();
+}
+
+// เชื่อม flow: splash → menu → (settings/quit จริง / blank สำหรับที่เหลือ) → กลับ menu ได้
 export function initScreens(root) {
   const showMenu = () => renderMenu(root, { onNavigate: onMenuNavigate });
   const showBlank = (id) => renderBlank(root, { label: id, onBack: showMenu });
   const showSettings = () => renderSettingsMenu(root, { onBack: showMenu });
+  const showQuit = () => renderQuit(root);
 
   function onMenuNavigate(id) {
     if (id === 'settings') showSettings();
+    else if (id === 'quit') showQuit();
     else showBlank(id);
   }
 
