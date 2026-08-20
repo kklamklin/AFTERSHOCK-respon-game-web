@@ -83,9 +83,9 @@ export const OPERATORS = {
     },
     skills: {
       air: {
-        // หมายเหตุ: ไฟล์จริงสะกด "mudongzong" (ไม่มี c) และไม่มีขีดกลางก่อน air_deploy —
-        // เจ้าของยืนยันชื่อจริงคือ mudongzock ต้องเปลี่ยนไฟล์นี้ให้ตรงตอนอัปจริง
-        name: 'Air Deploy', icon: 'Icon-skills-mudongzong_air_deploy.PNG', type: 'buff', // TODO: แก้เป็น Icon-skills-mudongzock-air_deploy.PNG
+        // หมายเหตุ: ไฟล์จริงสะกด "mudongzong" (ไม่มี c) — เจ้าของยืนยันชื่อจริงคือ mudongzock
+        // ต้องเปลี่ยนไฟล์นี้ให้ตรงตอนอัปจริง ตอนนี้ path อ้างตามไฟล์ที่มีอยู่ (มี ✅ ไฟล์แล้ว)
+        name: 'Air Deploy', icon: 'Icon-skills-mudongzong-air_deploy.PNG', type: 'buff', // TODO: แก้เป็น Icon-skills-mudongzock-air_deploy.PNG
         buff: 15, scope: 'global', durationHours: 1, ap: 24, cd: 3,
       },
     },
