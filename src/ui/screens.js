@@ -92,7 +92,57 @@ export function renderMenu(root, { onNavigate } = {}) {
   root.appendChild(buildVersionTag('V.1 alpha'));
 }
 
-// หน้าว่างชั่วคราว — ใช้แทนหน้า Play/Settings/Intel/Quit จนกว่าจะสั่งให้ทำจริง
+// หน้า Settings — เวอร์ชันเข้าจากเมนูหลัก (§ setting draft รูป "ขวาสุด")
+// ไม่มี popup ยืนยัน เพราะไม่มีเกมที่กำลังเล่นอยู่ให้เสีย — ต่างจากเวอร์ชันในเกม (ยังไม่ทำ รอหน้าเกมก่อน)
+function buildSlider(label, value) {
+  const row = document.createElement('div');
+  row.className = 'settings-row';
+
+  const name = document.createElement('span');
+  name.className = 'settings-label';
+  name.textContent = label;
+
+  const input = document.createElement('input');
+  input.type = 'range';
+  input.min = '0';
+  input.max = '100';
+  input.value = String(value);
+  input.className = 'settings-slider';
+
+  row.append(name, input);
+  return row;
+}
+
+export function renderSettingsMenu(root, { onBack } = {}) {
+  root.innerHTML = '';
+  root.classList.add('screen--settings');
+  root.classList.remove('screen--splash', 'screen--menu', 'screen--blank');
+
+  const header = document.createElement('div');
+  header.className = 'settings-header';
+  const back = document.createElement('button');
+  back.className = 'settings-back';
+  back.textContent = '‹';
+  back.addEventListener('click', () => onBack?.());
+  const title = document.createElement('span');
+  title.className = 'settings-title';
+  title.textContent = 'SETTINGS';
+  header.append(back, title);
+  root.appendChild(header);
+
+  const body = document.createElement('div');
+  body.className = 'settings-body';
+  body.append(buildSlider('Volume', 90), buildSlider('Brightness', 40));
+  root.appendChild(body);
+
+  const backToMenu = document.createElement('button');
+  backToMenu.className = 'settings-back-to-menu';
+  backToMenu.textContent = 'BACK TO MENU';
+  backToMenu.addEventListener('click', () => onBack?.());
+  root.appendChild(backToMenu);
+}
+
+// หน้าว่างชั่วคราว — ใช้แทนหน้า Play/Intel/Quit จนกว่าจะสั่งให้ทำจริง
 export function renderBlank(root, { label = '', onBack } = {}) {
   root.innerHTML = '';
   root.classList.add('screen--blank');
@@ -110,9 +160,16 @@ export function renderBlank(root, { label = '', onBack } = {}) {
   root.appendChild(note);
 }
 
-// เชื่อม flow: splash → menu → (blank ตามปุ่มที่กด) → กลับ menu ได้
+// เชื่อม flow: splash → menu → (settings จริง / blank สำหรับที่เหลือ) → กลับ menu ได้
 export function initScreens(root) {
-  const showMenu = () => renderMenu(root, { onNavigate: showBlank });
+  const showMenu = () => renderMenu(root, { onNavigate: onMenuNavigate });
   const showBlank = (id) => renderBlank(root, { label: id, onBack: showMenu });
+  const showSettings = () => renderSettingsMenu(root, { onBack: showMenu });
+
+  function onMenuNavigate(id) {
+    if (id === 'settings') showSettings();
+    else showBlank(id);
+  }
+
   renderSplash(root, { onContinue: showMenu });
 }

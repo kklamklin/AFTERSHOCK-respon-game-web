@@ -101,6 +101,24 @@ html, body {
 }
 .menu-btn:hover { color: #e8484a; }
 
+/* หน้า Settings (เข้าจากเมนู) */
+.screen--settings { padding: 32px 48px; align-items: stretch; }
+.settings-header { display: flex; align-items: center; gap: 12px; }
+.settings-back {
+  background: none; border: none; font-size: 32px; line-height: 1; cursor: pointer;
+  color: #1b1f24; padding: 0 4px;
+}
+.settings-title { font-size: 32px; font-weight: 800; }
+.settings-body { display: flex; flex-direction: column; gap: 28px; margin-top: 40px; max-width: 640px; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.settings-label { font-size: 20px; }
+.settings-slider { flex: 1; max-width: 360px; }
+.settings-back-to-menu {
+  position: absolute; left: 0; right: 0; bottom: 40px; margin: 0 auto;
+  background: none; border: none; font-size: 22px; font-weight: 800; cursor: pointer;
+  color: #1b1f24; text-align: center; width: fit-content;
+}
+
 /* หน้าว่างชั่วคราว (Play/Settings/Intel/Quit ที่ยังไม่ได้ทำ) */
 .screen--blank { align-items: center; justify-content: center; }
 .blank-back {
