@@ -37,6 +37,16 @@ function buildLogo({ size = 'lg', subtitle = 'Response' } = {}) {
   return wrap;
 }
 
+const SCREEN_CLASSES = [
+  'screen--splash', 'screen--menu', 'screen--blank', 'screen--settings',
+  'screen--quit', 'screen--intel', 'screen--howto',
+];
+
+function setScreenClass(root, cls) {
+  root.classList.remove(...SCREEN_CLASSES);
+  root.classList.add(cls);
+}
+
 function buildVersionTag(text) {
   const tag = document.createElement('div');
   tag.className = 'version-tag';
@@ -46,8 +56,7 @@ function buildVersionTag(text) {
 
 export function renderSplash(root, { onContinue } = {}) {
   root.innerHTML = '';
-  root.classList.add('screen--splash');
-  root.classList.remove('screen--menu', 'screen--blank');
+  setScreenClass(root, 'screen--splash');
 
   const center = document.createElement('div');
   center.className = 'splash-center';
@@ -65,8 +74,7 @@ export function renderSplash(root, { onContinue } = {}) {
 
 export function renderMenu(root, { onNavigate } = {}) {
   root.innerHTML = '';
-  root.classList.add('screen--menu');
-  root.classList.remove('screen--splash', 'screen--blank');
+  setScreenClass(root, 'screen--menu');
 
   const top = document.createElement('div');
   top.className = 'menu-top';
@@ -115,8 +123,7 @@ function buildSlider(label, value) {
 
 export function renderSettingsMenu(root, { onBack } = {}) {
   root.innerHTML = '';
-  root.classList.add('screen--settings');
-  root.classList.remove('screen--splash', 'screen--menu', 'screen--blank');
+  setScreenClass(root, 'screen--settings');
 
   const header = document.createElement('div');
   header.className = 'settings-header';
@@ -145,8 +152,7 @@ export function renderSettingsMenu(root, { onBack } = {}) {
 // หน้าว่างชั่วคราว — ใช้แทนหน้า Play/Intel/Quit จนกว่าจะสั่งให้ทำจริง
 export function renderBlank(root, { label = '', onBack } = {}) {
   root.innerHTML = '';
-  root.classList.add('screen--blank');
-  root.classList.remove('screen--splash', 'screen--menu');
+  setScreenClass(root, 'screen--blank');
 
   const back = document.createElement('button');
   back.className = 'blank-back';
@@ -164,8 +170,7 @@ export function renderBlank(root, { label = '', onBack } = {}) {
 // ให้ข้อความบอกให้ปิดแท็บ/ออกจากเว็บเอง
 export function renderQuit(root) {
   root.innerHTML = '';
-  root.classList.add('screen--quit');
-  root.classList.remove('screen--splash', 'screen--menu', 'screen--blank', 'screen--settings');
+  setScreenClass(root, 'screen--quit');
 
   const note = document.createElement('div');
   note.className = 'quit-note';
@@ -177,17 +182,136 @@ export function renderQuit(root) {
   window.close();
 }
 
-// เชื่อม flow: splash → menu → (settings/quit จริง / blank สำหรับที่เหลือ) → กลับ menu ได้
+// หน้า Intel — เมนูย่อย (How to play / Operator)
+function buildSubHeader(titleText, onBack) {
+  const header = document.createElement('div');
+  header.className = 'sub-header';
+  const back = document.createElement('button');
+  back.className = 'sub-back';
+  back.textContent = '‹';
+  back.addEventListener('click', () => onBack?.());
+  const title = document.createElement('span');
+  title.className = 'sub-title';
+  title.textContent = titleText;
+  header.append(back, title);
+  return header;
+}
+
+function buildBackToMenu(onBack) {
+  const btn = document.createElement('button');
+  btn.className = 'sub-back-to-menu';
+  btn.textContent = 'BACK TO MENU';
+  btn.addEventListener('click', () => onBack?.());
+  return btn;
+}
+
+export function renderIntelMenu(root, { onBack, onNavigate } = {}) {
+  root.innerHTML = '';
+  setScreenClass(root, 'screen--intel');
+
+  root.appendChild(buildSubHeader('INTELS', onBack));
+
+  const nav = document.createElement('nav');
+  nav.className = 'intel-nav';
+  const items = [
+    { id: 'howto', label: 'How to play' },
+    { id: 'operator', label: 'Operator' },
+  ];
+  for (const { id, label } of items) {
+    const btn = document.createElement('button');
+    btn.className = 'intel-btn';
+    btn.textContent = label;
+    btn.addEventListener('click', () => onNavigate?.(id));
+    nav.appendChild(btn);
+  }
+  root.appendChild(nav);
+  root.appendChild(buildBackToMenu(onBack));
+}
+
+// เนื้อหาคู่มือละเอียด (มากกว่าที่ Lia พูดสรุปใน tutorial) — สรุปจาก docs/gameflowspec.md + docs/gamesystemfinal.md
+const HOW_TO_PLAY_SECTIONS = [
+  {
+    heading: 'เป้าหมาย',
+    body: 'คุณเป็นผู้บัญชาการศูนย์กู้ภัย ส่งเจ้าหน้าที่ 4 คนเข้าไปช่วยผู้รอดชีวิต 1,200 คน ที่ติดอยู่ใน 48 โซนทั่วเมืองที่เกิดแผ่นดินไหว ภายในเวลา 72 ชั่วโมงในเกม (เล่นจริงประมาณ 10 นาที)',
+  },
+  {
+    heading: 'การควบคุมเวลา',
+    body: 'เกมเดินเวลาอัตโนมัติตั้งแต่กดเริ่ม ใช้ปุ่ม ⏸ หยุด / ▶ เดินปกติ / ⏩ เร่งความเร็ว ปรับได้ตลอดเวลา เวลาจะหยุดอัตโนมัติเมื่อลากไอคอนสั่งงาน หรือมีเจ้าหน้าที่บาดเจ็บ',
+  },
+  {
+    heading: 'โซนและผู้รอดชีวิต',
+    body: 'เมืองแบ่งเป็น 48 โซน 3 ระดับ: เทา (เสี่ยงต่ำ) เหลือง (เสี่ยงปานกลาง) แดง (เสี่ยงสูง) แต่ละโซนมีคนติดอยู่ไม่เท่ากัน และจะค่อย ๆ เสียชีวิตไปเรื่อย ๆ ถ้าไม่ได้รับความช่วยเหลือ — โซนยิ่งอันตราย คนยิ่งตายเร็ว ต้องรีบตัดสินใจว่าจะช่วยที่ไหนก่อน',
+  },
+  {
+    heading: 'Action Point (AP)',
+    body: 'การส่งเจ้าหน้าที่หรือใช้สกิลทุกครั้งต้องใช้ AP โดย AP จะได้รับเพิ่มขึ้นทุกชั่วโมง และยิ่งเวลาผ่านไปนาน (คนหายไปจากระบบมากขึ้น ไม่ว่าจะช่วยได้หรือเสียชีวิต) จะยิ่งได้ AP ต่อชั่วโมงมากขึ้น',
+  },
+  {
+    heading: 'เจ้าหน้าที่ 4 คน',
+    body: 'Robertson (มนุษย์ ภาคสนาม) เข้าโซนเทา/เหลืองได้ มีสกิลบัฟ Crowd Control · Lyla (สาวแมว ภาคสนาม) เข้าได้ทุกโซนรวมโซนแดง อัตราสำเร็จฐานสูงกว่า · Lia (เอลฟ์ ภาคฐาน) ไม่ลงพื้นที่เอง ใช้สกิล Scan Area เพิ่มอัตราสำเร็จได้หลายโซน และ Alert การันตีความปลอดภัย · Mudongzock (ภูต ภาคฐาน) ใช้สกิล Air Deploy บัฟทั้งแผนที่พร้อมกัน',
+  },
+  {
+    heading: 'วิธีส่งเจ้าหน้าที่/สกิล',
+    body: 'ลากไอคอนเจ้าหน้าที่หรือสกิลไปวางบนโซนที่ต้องการ ปล่อยแล้วยืนยันทันที ไม่มีขั้นตอนยืนยันซ้ำ ระหว่างลาก เกมจะหยุดเวลาให้อัตโนมัติ และโซนที่ลงไม่ได้จะขึ้นกากบาทให้เห็นชัดเจน',
+  },
+  {
+    heading: 'จุดสำคัญ: คำนวณผลตอนไหน',
+    body: 'ผลจะถูกคำนวณ "หลัง" เจ้าหน้าที่ทำงานเสร็จ ไม่ใช่ตอนส่งไป ระหว่างรอผล คนในโซนนั้นยังตายต่อไปเรื่อย ๆ และคุณยังลงบัฟเพิ่มได้ระหว่างที่เขากำลังทำงานอยู่ — บัฟที่ลงทีหลังมีผลจริงเพราะยังไม่ได้คำนวณ',
+  },
+  {
+    heading: 'ผลลัพธ์',
+    body: 'มี 2 แบบเท่านั้น: สำเร็จ (โซนกลายเป็นสีเขียว ช่วยคนได้ตามเปอร์เซ็นต์ที่สุ่มขึ้นกับอัตราสำเร็จ ปลอดภัย 100%) หรือ ไม่สำเร็จ (ไม่ได้ช่วยใครเลย และมีโอกาสที่เจ้าหน้าที่จะบาดเจ็บ) ยิ่งอัตราสำเร็จสูง โอกาสได้ผลดีก็ยิ่งสูงตาม',
+  },
+  {
+    heading: 'ความเสี่ยงและสถานะเจ้าหน้าที่',
+    body: 'ถ้าไม่สำเร็จ มีโอกาสที่เจ้าหน้าที่จะ "บาดเจ็บ" (อัตราสำเร็จลดลงชั่วคราวจนกว่าจะฟื้น) หรือแย่กว่านั้นคือ "หมดสติ" (ใช้งานไม่ได้ชั่วคราว) ถ้าเจ้าหน้าที่ภาคสนามทั้งสองคนหมดสติพร้อมกัน จะเข้าสู่ภาวะวิกฤต นับถอยหลัง 3 ชั่วโมง ถ้าไม่มีใครฟื้นทัน เกมจะจบทันที',
+  },
+  {
+    heading: 'คะแนน',
+    body: 'ช่วยคนได้ +1 คะแนนต่อคน เสียคนไป −1 คะแนนต่อคน เกมจบเมื่อครบ 72 ชั่วโมง หรือไม่มีใครเหลือให้ช่วยแล้ว',
+  },
+];
+
+export function renderHowToPlay(root, { onBack } = {}) {
+  root.innerHTML = '';
+  setScreenClass(root, 'screen--howto');
+
+  root.appendChild(buildSubHeader('HOW TO PLAY', onBack));
+
+  const article = document.createElement('div');
+  article.className = 'howto-body';
+  for (const { heading, body } of HOW_TO_PLAY_SECTIONS) {
+    const h = document.createElement('div');
+    h.className = 'howto-heading';
+    h.textContent = heading;
+    const p = document.createElement('div');
+    p.className = 'howto-text';
+    p.textContent = body;
+    article.append(h, p);
+  }
+  root.appendChild(article);
+  root.appendChild(buildBackToMenu(onBack));
+}
+
+// เชื่อม flow: splash → menu → (settings/intel/quit จริง / blank สำหรับที่เหลือ) → กลับ menu ได้
 export function initScreens(root) {
   const showMenu = () => renderMenu(root, { onNavigate: onMenuNavigate });
-  const showBlank = (id) => renderBlank(root, { label: id, onBack: showMenu });
+  const showBlank = (id, backTo = showMenu) => renderBlank(root, { label: id, onBack: backTo });
   const showSettings = () => renderSettingsMenu(root, { onBack: showMenu });
   const showQuit = () => renderQuit(root);
+  const showIntel = () => renderIntelMenu(root, { onBack: showMenu, onNavigate: onIntelNavigate });
+  const showHowTo = () => renderHowToPlay(root, { onBack: showIntel });
 
   function onMenuNavigate(id) {
     if (id === 'settings') showSettings();
     else if (id === 'quit') showQuit();
+    else if (id === 'intel') showIntel();
     else showBlank(id);
+  }
+
+  function onIntelNavigate(id) {
+    if (id === 'howto') showHowTo();
+    else showBlank(id, showIntel); // 'operator' — ยังไม่ทำ กลับไปเมนู intel ไม่ใช่เมนูหลัก
   }
 
   renderSplash(root, { onContinue: showMenu });

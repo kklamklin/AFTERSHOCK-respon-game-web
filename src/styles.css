@@ -123,6 +123,37 @@ html, body {
   color: #1b1f24; text-align: center; width: fit-content;
 }
 
+/* หัวข้อ/ปุ่มกลับที่ใช้ร่วมกันในหน้า Intel และ How to Play */
+.sub-header { display: flex; align-items: center; gap: 12px; }
+.sub-back {
+  background: none; border: none; font-size: 32px; line-height: 1; cursor: pointer;
+  color: #1b1f24; padding: 0 4px;
+}
+.sub-title { font-size: 32px; font-weight: 800; }
+.sub-back-to-menu {
+  position: absolute; left: 0; right: 0; bottom: 24px; margin: 0 auto;
+  background: none; border: none; font-size: 22px; font-weight: 800; cursor: pointer;
+  color: #1b1f24; text-align: center; width: fit-content;
+}
+
+/* หน้า Intel (เมนูย่อย How to play / Operator) */
+.screen--intel { padding: 32px 48px 96px; align-items: stretch; }
+.intel-nav { display: flex; flex-direction: column; gap: 24px; align-items: flex-start; margin-top: 32px; }
+.intel-btn {
+  font-size: 24px; background: none; border: none; color: #1b1f24; cursor: pointer; padding: 0;
+}
+.intel-btn:hover { color: #e8484a; }
+
+/* หน้า How to Play — เนื้อหายาว เลื่อนได้ */
+.screen--howto { padding: 32px 48px 96px; align-items: stretch; }
+.howto-body {
+  margin-top: 24px; overflow-y: auto; flex: 1;
+  padding-right: 24px; max-width: 900px;
+}
+.howto-heading { font-size: 18px; font-weight: 800; margin-top: 20px; }
+.howto-heading:first-child { margin-top: 0; }
+.howto-text { font-size: 15px; line-height: 1.6; color: #333; margin-top: 4px; }
+
 /* หน้าว่างชั่วคราว (Play/Settings/Intel/Quit ที่ยังไม่ได้ทำ) */
 .screen--blank { align-items: center; justify-content: center; }
 .blank-back {
