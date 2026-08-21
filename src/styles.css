@@ -216,29 +216,22 @@ html, body {
 /* ตำแหน่ง/ขนาดคงที่ทุกตัว — สไปรต์ทุกตัวยึดจุดเดียวกัน เลื่อนแค่แกน X ตอนมีของแทรกฉาก */
 .vn-portrait {
   height: 74%; object-fit: contain; object-position: bottom;
-  position: absolute; bottom: 10%; /* ยกขึ้นให้เห็นลำตัว ปลายภาพทับกล่องข้อความ ตามภาพอ้างอิง */
+  position: absolute; bottom: 18%; /* ยกขึ้นให้เห็นลำตัว ปลายภาพทับกล่องข้อความ ตามภาพอ้างอิง */
   left: 50%; transform: translateX(-50%);
   transition: left 0.35s ease;
 }
 .vn-portrait--side { left: 26%; }
-.vn-portrait--robertson { height: 64%; }
 
-/* กระตุกแค่แกน Y เท่านั้น (ไม่ scale ไม่จาง ไม่ขยับ X) */
+/* กระตุกแค่แกน Y เท่านั้น (ไม่ scale ไม่จาง ไม่ขยับ X)
+   ต้องคง translateX(-50%) ไว้ทุกเฟรม เพราะการเลื่อนซ้าย/ขวาใช้ค่า left ไม่ใช่ transform
+   (เดิมใช้ margin-top ซึ่งไม่มีผลกับ element ที่ position: absolute + bottom จึงไม่เห็นการเด้ง) */
 @keyframes vnShake {
-  0% { margin-top: 10px; }
-  45% { margin-top: -4px; }
-  75% { margin-top: 2px; }
-  100% { margin-top: 0; }
+  0%   { transform: translateX(-50%) translateY(10px); }
+  45%  { transform: translateX(-50%) translateY(-5px); }
+  75%  { transform: translateX(-50%) translateY(2px); }
+  100% { transform: translateX(-50%) translateY(0); }
 }
 .vn-portrait.vn-shake { animation: vnShake 0.3s ease; }
-
-.vn-robertson-scrim {
-  position: absolute; inset: 0; background: rgba(0,0,0,0); pointer-events: none;
-  transition: background 0.3s ease;
-}
-.vn-robertson-scrim--on { background: rgba(0,0,0,0.55); }
-.vn-pop { animation: vnPop 0.3s ease; }
-@keyframes vnPop { 0% { transform: translateX(-50%) scale(0.85); opacity: 0; } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
 
 .vn-insert {
   position: absolute; right: 4%; top: 6%; width: 42%; max-width: 520px;

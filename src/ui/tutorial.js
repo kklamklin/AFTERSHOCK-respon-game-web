@@ -31,10 +31,6 @@ export function renderTutorial(root, { onFinish } = {}) {
   insertPanel.className = 'vn-insert';
   stage.appendChild(insertPanel);
 
-  const robertsonScrim = document.createElement('div');
-  robertsonScrim.className = 'vn-robertson-scrim';
-  root.appendChild(robertsonScrim);
-
   const skipBtn = document.createElement('button');
   skipBtn.className = 'vn-skip';
   skipBtn.textContent = 'Skip all ⟫⟫⟫';
@@ -174,7 +170,6 @@ export function renderTutorial(root, { onFinish } = {}) {
 
     // ฉากบรรยายเปิดเรื่อง — ไม่มีตัวละคร/ป้ายชื่อ แค่พื้นหลัง + ข้อความเอียง
     if (step.narration) {
-      robertsonScrim.classList.remove('vn-robertson-scrim--on');
       portrait.style.display = 'none';
       insertPanel.innerHTML = '';
       bg.className = 'vn-bg';
@@ -196,57 +191,41 @@ export function renderTutorial(root, { onFinish } = {}) {
     roleTag.textContent = meta.role;
     roleTag.style.color = meta.roleColor;
 
-    // Robertson overlay — โหมด portrait นิ่งซ้อนจอมืด ไม่มีห้องบัญชาการ/ของแทรก
-    if (step.robertsonOverlay) {
-      robertsonScrim.classList.add('vn-robertson-scrim--on');
-      portrait.classList.add('vn-portrait--robertson');
-      portrait.classList.remove('vn-portrait--side');
-      insertPanel.innerHTML = '';
-      bg.className = 'vn-bg';
-      portrait.src = portraitSrc(step.sprite);
-      if (!step.interrupt) {
-        portrait.classList.remove('vn-pop');
-        void portrait.offsetWidth;
-        portrait.classList.add('vn-pop');
-      }
-    } else {
-      robertsonScrim.classList.remove('vn-robertson-scrim--on');
-      portrait.classList.remove('vn-portrait--robertson');
-      portrait.src = portraitSrc(step.sprite);
+    // ทุกตัวรวมถึง Robertson แสดงเหมือนกันหมด (ห้องบัญชาการปกติ ไม่มีจอมืดพิเศษ)
+    portrait.src = portraitSrc(step.sprite);
 
-      const key = insertKeyOf(step);
-      const hasInsert = !!step.insert;
-      portrait.classList.toggle('vn-portrait--side', hasInsert);
+    const key = insertKeyOf(step);
+    const hasInsert = !!step.insert;
+    portrait.classList.toggle('vn-portrait--side', hasInsert);
 
-      bg.className = 'vn-bg';
-      if (step.insert?.type === 'tone-dark' || step.insert?.type === 'injury' || step.insert?.type === 'gameover') {
-        bg.classList.add('vn-bg--dark');
-      }
+    bg.className = 'vn-bg';
+    if (step.insert?.type === 'tone-dark' || step.insert?.type === 'injury' || step.insert?.type === 'gameover') {
+      bg.classList.add('vn-bg--dark');
+    }
 
-      insertPanel.classList.toggle('vn-insert--instant', step.insert?.type === 'stat');
+    insertPanel.classList.toggle('vn-insert--instant', step.insert?.type === 'stat');
 
-      if (key !== lastInsertKey) {
-        buildInsert(step);
-        insertPanel.classList.remove('vn-insert--in');
-        void insertPanel.offsetWidth;
-        if (hasInsert) insertPanel.classList.add('vn-insert--in');
-      } else if (hasInsert) {
-        buildInsert(step); // อัปเดตเนื้อหา (เช่น % หรือ highlight เปลี่ยน) แต่ไม่ทำอนิเมชันสไลด์ซ้ำ
-      }
-      lastInsertKey = key;
+    if (key !== lastInsertKey) {
+      buildInsert(step);
+      insertPanel.classList.remove('vn-insert--in');
+      void insertPanel.offsetWidth;
+      if (hasInsert) insertPanel.classList.add('vn-insert--in');
+    } else if (hasInsert) {
+      buildInsert(step); // อัปเดตเนื้อหา (เช่น % หรือ highlight เปลี่ยน) แต่ไม่ทำอนิเมชันสไลด์ซ้ำ
+    }
+    lastInsertKey = key;
 
-      if (step.insert?.type === 'gameover') {
-        const flash = document.createElement('div');
-        flash.className = 'vn-gameover-flash';
-        root.appendChild(flash);
-        setTimeout(() => flash.remove(), 900);
-      }
+    if (step.insert?.type === 'gameover') {
+      const flash = document.createElement('div');
+      flash.className = 'vn-gameover-flash';
+      root.appendChild(flash);
+      setTimeout(() => flash.remove(), 900);
+    }
 
-      if (!step.interrupt) {
-        portrait.classList.remove('vn-shake');
-        void portrait.offsetWidth;
-        portrait.classList.add('vn-shake');
-      }
+    if (!step.interrupt) {
+      portrait.classList.remove('vn-shake');
+      void portrait.offsetWidth;
+      portrait.classList.add('vn-shake');
     }
 
     typeOut(step.text);
@@ -301,7 +280,6 @@ export function renderTutorial(root, { onFinish } = {}) {
     e.stopPropagation();
     confirmOverlay.classList.remove('vn-confirm-overlay--on');
     clearInterval(typeTimer);
-    robertsonScrim.classList.remove('vn-robertson-scrim--on');
     insertPanel.innerHTML = '';
     portrait.style.display = 'none';
     bg.classList.add('vn-bg--dark');

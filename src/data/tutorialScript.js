@@ -6,7 +6,6 @@
 //   sprite     ไฟล์ภาพใน assets/characters/ (จาก OPERATORS[x].portraits)
 //   text       บทพูด
 //   interrupt  true = พูดแทรก ตัดไปทันทีไม่มีอนิเมชันเข้าฉาก
-//   robertsonOverlay  true = โหมด portrait นิ่งซ้อนทับจอมืด (ไม่มีห้องบัญชาการ)
 //   insert     ของแทรกฉาก (แผนที่ / สถิติ / ทีม / บาดเจ็บ / จบเกม) หรือ null = ห้องบัญชาการปกติ
 //   final      true = จบบท เฟดดำ จบ tutorial
 //   narration  true = ข้อความบรรยายฉากเปิดเรื่อง ไม่มีตัวละคร/ป้ายชื่อ ตัวเอียง แค่พื้นหลัง
@@ -32,7 +31,7 @@ export const TUTORIAL_SCRIPT = [
   { speaker: 'lyla', sprite: 'Field-op-Lyla-talking2.png', text: 'อ๋อใช่ ปล่อยมือปุ๊บคือส่งจริง', insert: { type: 'map', mode: 'side', team: true, percent: 72 } },
   { speaker: 'lyla', sprite: 'Field-op-Lyla.png', text: 'ยกเลิกไม่ได้แล้วนะ', insert: { type: 'map', mode: 'side', team: true, percent: 72 } },
 
-  { speaker: 'robertson', sprite: 'Field-op-robertson.png', text: 'รับทราบ', robertsonOverlay: true },
+  { speaker: 'robertson', sprite: 'Field-op-robertson.png', text: 'รับทราบ' },
   { speaker: 'lyla', sprite: 'Field-op-Lyla-talking1.png', text: '...พูดคำเดียวตลอดเลยเนี่ย' },
   { speaker: 'ria', sprite: 'Base-op-Lia-talking2.png', text: 'แต่เชื่อถือได้' },
 
@@ -66,7 +65,7 @@ export const TUTORIAL_SCRIPT = [
   { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'ระบบมีเท่านี้', insert: { type: 'map', mode: 'full' } },
   { speaker: 'lyla', sprite: 'Field-op-Lyla-talking1.png', text: '1,200 คน 48 โซน 72 ชั่วโมง', insert: { type: 'map', mode: 'full' } },
   { speaker: 'lyla', sprite: 'Field-op-Lyla.png', text: '...โหดอยู่นะเนี่ย', insert: { type: 'map', mode: 'full' } },
-  { speaker: 'robertson', sprite: 'Field-op-robertson.png', text: 'พร้อมเสมอ', robertsonOverlay: true },
+  { speaker: 'robertson', sprite: 'Field-op-robertson.png', text: 'พร้อมเสมอ' },
   { speaker: 'lyla', sprite: 'Field-op-Lyla-talking2.png', text: 'พาพวกเรารอดด้วยล่ะ ผู้บัญชาการ', final: true },
 ];
 
