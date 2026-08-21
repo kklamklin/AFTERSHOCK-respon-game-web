@@ -2,6 +2,9 @@
 // ตอนนี้ทำแค่หน้าปก + เมนูหลัก ตามที่สั่ง — ปุ่มเมนู (Play/Settings/Intel/Quit)
 // ยังไม่เชื่อมไปหน้าจริง กดแล้วไปหน้าว่างชั่วคราวก่อน (renderBlank)
 
+import { OPERATORS } from '../data/operators.js';
+import { OPERATOR_INTEL } from '../data/operatorIntel.js';
+
 // ลำดับต้องตรงกับหน้าตาดราฟ: มนุษย์(หน้ากาก) → แมว → เอลฟ์(Lia) → ภูต(Mudongzock)
 // ยังไม่มี asset ไอคอนจิบิจริง ใช้ emoji วางตำแหน่งจองไว้ก่อน สลับเป็นรูปจริงทีหลังได้โดยไม่ต้องแก้โครงสร้าง
 const OPERATOR_CHIBI_PLACEHOLDERS = [
@@ -39,7 +42,7 @@ function buildLogo({ size = 'lg', subtitle = 'Response' } = {}) {
 
 const SCREEN_CLASSES = [
   'screen--splash', 'screen--menu', 'screen--blank', 'screen--settings',
-  'screen--quit', 'screen--intel', 'screen--howto',
+  'screen--quit', 'screen--intel', 'screen--howto', 'screen--roster', 'screen--card',
 ];
 
 function setScreenClass(root, cls) {
@@ -293,6 +296,143 @@ export function renderHowToPlay(root, { onBack } = {}) {
   root.appendChild(buildBackToMenu(onBack));
 }
 
+// หน้า Operator — เมนูย่อยของ Intel (Field operator / Baseplate)
+const OPERATOR_SIDES = {
+  field: { title: 'FIELD OPERATOR', keys: ['human', 'cat'] },
+  baseplate: { title: 'BASEPLATE', keys: ['elf', 'spirit'] },
+};
+
+function portraitSrc(speciesKey) {
+  return `assets/characters/${OPERATORS[speciesKey].portraits.normal}`;
+}
+
+export function renderOperatorMenu(root, { onBack, onNavigate } = {}) {
+  root.innerHTML = '';
+  setScreenClass(root, 'screen--intel');
+
+  root.appendChild(buildSubHeader('OPERATORS', onBack));
+
+  const nav = document.createElement('nav');
+  nav.className = 'intel-nav';
+  const items = [
+    { id: 'field', label: 'Field operator' },
+    { id: 'baseplate', label: 'Baseplate' },
+  ];
+  for (const { id, label } of items) {
+    const btn = document.createElement('button');
+    btn.className = 'intel-btn';
+    btn.textContent = label;
+    btn.addEventListener('click', () => onNavigate?.(id));
+    nav.appendChild(btn);
+  }
+  root.appendChild(nav);
+  root.appendChild(buildBackToMenu(onBack));
+}
+
+// รายชื่อ จนท. ในฝ่ายที่เลือก (Field operator / Baseplate) — แต่ละแถวมีรูปย่อ + ชื่อ + codename
+export function renderOperatorRoster(root, { side, onBack, onSelect } = {}) {
+  root.innerHTML = '';
+  setScreenClass(root, 'screen--roster');
+
+  const { title, keys } = OPERATOR_SIDES[side];
+  root.appendChild(buildSubHeader(title, onBack));
+
+  const list = document.createElement('div');
+  list.className = 'roster-list';
+  for (const key of keys) {
+    const op = OPERATORS[key];
+    const intel = OPERATOR_INTEL[key];
+
+    const row = document.createElement('button');
+    row.className = 'roster-row';
+    row.addEventListener('click', () => onSelect?.(key));
+
+    const thumb = document.createElement('img');
+    thumb.className = 'roster-thumb';
+    thumb.src = portraitSrc(key);
+    thumb.alt = op.name;
+
+    const text = document.createElement('div');
+    text.className = 'roster-text';
+    const name = document.createElement('div');
+    name.className = 'roster-name';
+    name.textContent = op.name;
+    const sub = document.createElement('div');
+    sub.className = 'roster-sub';
+    sub.textContent = intel.codename;
+    text.append(name, sub);
+
+    row.append(thumb, text);
+    list.appendChild(row);
+  }
+  root.appendChild(list);
+  root.appendChild(buildBackToMenu(onBack));
+}
+
+// การ์ดข้อมูล จนท. รายตัว — รูป + Name/Codename/Age/Unit + bio/สกิลเลื่อนดูได้
+export function renderOperatorCard(root, { speciesKey, onBack } = {}) {
+  root.innerHTML = '';
+  setScreenClass(root, 'screen--card');
+
+  const op = OPERATORS[speciesKey];
+  const intel = OPERATOR_INTEL[speciesKey];
+
+  root.appendChild(buildSubHeader(op.name, onBack));
+
+  const top = document.createElement('div');
+  top.className = 'card-top';
+
+  const portrait = document.createElement('img');
+  portrait.className = 'card-portrait';
+  portrait.src = portraitSrc(speciesKey);
+  portrait.alt = op.name;
+
+  const facts = document.createElement('div');
+  facts.className = 'card-facts';
+  const rows = [
+    ['Name', intel.fullName],
+    ['Codename', intel.codename],
+    ['Age', intel.age],
+    ['Unit', intel.unit],
+  ];
+  for (const [label, value] of rows) {
+    const row = document.createElement('div');
+    const b = document.createElement('b');
+    b.textContent = `${label}: `;
+    row.append(b, document.createTextNode(value));
+    facts.appendChild(row);
+  }
+
+  top.append(portrait, facts);
+  root.appendChild(top);
+
+  const body = document.createElement('div');
+  body.className = 'card-body';
+  for (const p of intel.bio) {
+    const para = document.createElement('div');
+    para.className = 'card-text';
+    para.textContent = p;
+    body.appendChild(para);
+  }
+
+  const skillsHeading = document.createElement('div');
+  skillsHeading.className = 'card-heading';
+  skillsHeading.textContent = 'สกิล';
+  body.appendChild(skillsHeading);
+
+  for (const skill of intel.skills) {
+    const name = document.createElement('div');
+    name.className = 'card-skill-name';
+    name.textContent = skill.name;
+    const desc = document.createElement('div');
+    desc.className = 'card-text';
+    desc.textContent = skill.desc;
+    body.append(name, desc);
+  }
+
+  root.appendChild(body);
+}
+
 // เชื่อม flow: splash → menu → (settings/intel/quit จริง / blank สำหรับที่เหลือ) → กลับ menu ได้
 export function initScreens(root) {
   const showMenu = () => renderMenu(root, { onNavigate: onMenuNavigate });
@@ -301,6 +441,9 @@ export function initScreens(root) {
   const showQuit = () => renderQuit(root);
   const showIntel = () => renderIntelMenu(root, { onBack: showMenu, onNavigate: onIntelNavigate });
   const showHowTo = () => renderHowToPlay(root, { onBack: showIntel });
+  const showOperatorMenu = () => renderOperatorMenu(root, { onBack: showIntel, onNavigate: onOperatorNavigate });
+  const showRoster = (side) => renderOperatorRoster(root, { side, onBack: showOperatorMenu, onSelect: (key) => showCard(key, side) });
+  const showCard = (speciesKey, side) => renderOperatorCard(root, { speciesKey, onBack: () => showRoster(side) });
 
   function onMenuNavigate(id) {
     if (id === 'settings') showSettings();
@@ -311,7 +454,12 @@ export function initScreens(root) {
 
   function onIntelNavigate(id) {
     if (id === 'howto') showHowTo();
-    else showBlank(id, showIntel); // 'operator' — ยังไม่ทำ กลับไปเมนู intel ไม่ใช่เมนูหลัก
+    else if (id === 'operator') showOperatorMenu();
+    else showBlank(id, showIntel);
+  }
+
+  function onOperatorNavigate(id) {
+    showRoster(id); // 'field' หรือ 'baseplate'
   }
 
   renderSplash(root, { onContinue: showMenu });

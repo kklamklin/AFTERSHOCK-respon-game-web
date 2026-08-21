@@ -39,7 +39,7 @@ export const OPERATORS = {
     portraits: {
       normal: 'Field-op-Lyla.png',
       injured: 'Field-op-Lyla-injured.png',
-      lost: 'Field-op-Lyla-finalstand.png', // TODO: ยังไม่เห็นไฟล์นี้ในโฟลเดอร์ ตรวจสอบตอนอัปจริง
+      lost: 'Field-op-Lyla-unconscious.png', // ✅ มีไฟล์จริงแล้ว (ชื่อไฟล์จริงคือ "unconscious" ไม่ใช่ "finalstand" เหมือน Robertson)
     },
     hasSpecialSkill: false, // TODO: เช่นเดียวกับด้านบน
     skills: {
@@ -78,7 +78,7 @@ export const OPERATORS = {
   spirit: {
     name: 'Mudongzock', side: 'support',
     portraits: {
-      normal: 'Base-op-mudongzock.PNG',
+      normal: 'Base-op-mudongzock.png', // ✅ มีไฟล์จริงแล้ว
       talk: ['Base-op-mudongzock-talking1.PNG', 'Base-op-mudongzock-talking2.PNG'], // TODO: ยังไม่เห็นไฟล์นี้ ตรวจสอบตอนอัปจริง
     },
     skills: {

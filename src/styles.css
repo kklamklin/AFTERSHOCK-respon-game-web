@@ -154,6 +154,36 @@ html, body {
 .howto-heading:first-child { margin-top: 0; }
 .howto-text { font-size: 15px; line-height: 1.6; color: #333; margin-top: 4px; }
 
+/* หน้ารายชื่อ จนท. (Field operator / Baseplate) */
+.screen--roster { padding: 32px 48px 96px; align-items: stretch; }
+.roster-list { display: flex; flex-direction: column; gap: 40px; margin-top: 32px; }
+.roster-row {
+  display: flex; align-items: center; gap: 20px;
+  background: none; border: none; cursor: pointer; padding: 0; text-align: left;
+}
+.roster-thumb {
+  width: 96px; height: 96px; object-fit: cover; border: 2px solid #1b1f24;
+  background: #ccc;
+}
+.roster-name { font-size: 24px; }
+.roster-sub { font-size: 14px; color: #777; }
+
+/* หน้าการ์ดข้อมูล จนท. รายตัว */
+.screen--card { padding: 32px 48px; align-items: stretch; }
+.card-top { display: flex; gap: 32px; margin-top: 24px; align-items: flex-start; }
+.card-portrait {
+  width: 220px; height: 220px; object-fit: cover; border: 2px solid #1b1f24;
+  background: #ccc; flex-shrink: 0;
+}
+.card-facts { font-size: 16px; line-height: 2; }
+.card-body {
+  margin-top: 24px; overflow-y: auto; flex: 1;
+  padding-right: 24px; padding-bottom: 24px; max-width: 900px;
+}
+.card-text { font-size: 14px; line-height: 1.6; color: #333; margin-top: 8px; }
+.card-heading { font-size: 18px; font-weight: 800; margin-top: 24px; }
+.card-skill-name { font-size: 15px; font-weight: 700; font-style: italic; margin-top: 16px; }
+
 /* หน้าว่างชั่วคราว (Play/Settings/Intel/Quit ที่ยังไม่ได้ทำ) */
 .screen--blank { align-items: center; justify-content: center; }
 .blank-back {
