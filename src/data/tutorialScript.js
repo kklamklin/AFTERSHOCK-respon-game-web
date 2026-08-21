@@ -9,8 +9,11 @@
 //   robertsonOverlay  true = โหมด portrait นิ่งซ้อนทับจอมืด (ไม่มีห้องบัญชาการ)
 //   insert     ของแทรกฉาก (แผนที่ / สถิติ / ทีม / บาดเจ็บ / จบเกม) หรือ null = ห้องบัญชาการปกติ
 //   final      true = จบบท เฟดดำ จบ tutorial
+//   narration  true = ข้อความบรรยายฉากเปิดเรื่อง ไม่มีตัวละคร/ป้ายชื่อ ตัวเอียง แค่พื้นหลัง
 
 export const TUTORIAL_SCRIPT = [
+  { narration: true, text: '6 ชั่วโมงหลังแผ่นดินไหวถล่มเมือง คุณถูกเรียกตัวมาที่ศูนย์บัญชาการทันที' },
+
   { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'ผู้บัญชาการ... เมืองเจอแผ่นดินไหวเมื่อ 6 ชั่วโมงก่อน' },
   { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'ก่อนเริ่ม ขอพาดูระบบก่อนนิดนึง' },
 

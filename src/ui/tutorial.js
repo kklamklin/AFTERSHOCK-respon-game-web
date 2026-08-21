@@ -171,8 +171,25 @@ export function renderTutorial(root, { onFinish } = {}) {
 
   function renderStep(i) {
     const step = TUTORIAL_SCRIPT[i];
-    const meta = SPEAKER_META[step.speaker];
 
+    // ฉากบรรยายเปิดเรื่อง — ไม่มีตัวละคร/ป้ายชื่อ แค่พื้นหลัง + ข้อความเอียง
+    if (step.narration) {
+      robertsonScrim.classList.remove('vn-robertson-scrim--on');
+      portrait.style.display = 'none';
+      insertPanel.innerHTML = '';
+      bg.className = 'vn-bg';
+      tagRow.style.display = 'none';
+      textEl.classList.add('vn-text--narration');
+      typeOut(step.text);
+      nextHint.style.visibility = 'hidden';
+      setTimeout(() => { nextHint.style.visibility = 'visible'; }, step.text.length * TYPE_SPEED_MS + 50);
+      return;
+    }
+    portrait.style.display = '';
+    tagRow.style.display = '';
+    textEl.classList.remove('vn-text--narration');
+
+    const meta = SPEAKER_META[step.speaker];
     nameTag.textContent = meta.name;
     nameTag.style.background = meta.tagColor;
     nameTag.style.color = meta.tagColor === '#1b1f24' ? '#fff' : '#1b1f24';

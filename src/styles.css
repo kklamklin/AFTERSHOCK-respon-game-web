@@ -216,7 +216,7 @@ html, body {
 /* ตำแหน่ง/ขนาดคงที่ทุกตัว — สไปรต์ทุกตัวยึดจุดเดียวกัน เลื่อนแค่แกน X ตอนมีของแทรกฉาก */
 .vn-portrait {
   height: 74%; object-fit: contain; object-position: bottom;
-  position: absolute; bottom: -3%; /* ลงไปนิดให้ชิดกล่องข้อความ ไม่มีช่องว่าง */
+  position: absolute; bottom: 0; /* ชิดกล่องข้อความพอดี ไม่ทับไม่เว้นช่องว่าง */
   left: 50%; transform: translateX(-50%);
   transition: left 0.35s ease;
 }
@@ -303,6 +303,7 @@ html, body {
 }
 .vn-role { font-weight: 700; font-size: 14px; }
 .vn-text { font-size: 17px; line-height: 1.6; min-height: 4.8em; color: #1b1f24; }
+.vn-text--narration { font-style: italic; }
 .vn-next { text-align: right; font-size: 13px; color: #888; visibility: hidden; }
 
 .vn-confirm-overlay {
