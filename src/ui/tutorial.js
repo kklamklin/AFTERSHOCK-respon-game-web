@@ -137,19 +137,20 @@ export function renderTutorial(root, { onFinish } = {}) {
     }
 
     if (ins.type === 'stat') {
+      // โผล่มาทันที ไม่มีอนิเมชันนับเลข/สไลด์ — เลขนิ่งกันบัค (ตามที่แจ้ง)
       const wrap = document.createElement('div');
       wrap.className = 'vn-stat';
       const label = document.createElement('div');
       label.className = 'vn-stat-label';
       const num = document.createElement('div');
       num.className = 'vn-stat-num';
-      let from, to, unit, dur = 1400;
-      if (ins.kind === 'survivors') { label.textContent = 'ผู้รอดในโซน'; from = 42; to = 30; unit = ''; }
-      else if (ins.kind === 'redzone') { label.textContent = 'โซนแดง — ผู้รอด'; from = 70; to = 40; unit = ''; wrap.classList.add('vn-stat--danger'); }
-      else { label.textContent = 'AP สะสม'; from = 5; to = 24; unit = ''; }
+      let value;
+      if (ins.kind === 'survivors') { label.textContent = 'ผู้รอดในโซน'; value = 30; }
+      else if (ins.kind === 'redzone') { label.textContent = 'โซนแดง — ผู้รอด'; value = 40; wrap.classList.add('vn-stat--danger'); }
+      else { label.textContent = 'AP สะสม'; value = 24; }
+      num.textContent = value;
       wrap.append(label, num);
       insertPanel.appendChild(wrap);
-      animateNumber(num, from, to, dur, unit);
       return;
     }
 
@@ -166,17 +167,6 @@ export function renderTutorial(root, { onFinish } = {}) {
       insertPanel.appendChild(wrap);
       return;
     }
-  }
-
-  function animateNumber(el, from, to, duration, unit) {
-    const start = performance.now();
-    function tick(now) {
-      const t = Math.min(1, (now - start) / duration);
-      const val = Math.round(from + (to - from) * t);
-      el.textContent = `${val}${unit}`;
-      if (t < 1) requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
   }
 
   function renderStep(i) {
@@ -215,6 +205,8 @@ export function renderTutorial(root, { onFinish } = {}) {
       if (step.insert?.type === 'tone-dark' || step.insert?.type === 'injury' || step.insert?.type === 'gameover') {
         bg.classList.add('vn-bg--dark');
       }
+
+      insertPanel.classList.toggle('vn-insert--instant', step.insert?.type === 'stat');
 
       if (key !== lastInsertKey) {
         buildInsert(step);

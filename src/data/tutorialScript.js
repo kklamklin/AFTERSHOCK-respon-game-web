@@ -70,8 +70,8 @@ export const TUTORIAL_SCRIPT = [
 // ป้ายชื่อ/สีของแต่ละตัว — ใช้ตอนแสดงกล่องข้อความ
 export const SPEAKER_META = {
   robertson: { name: 'Robertson', role: 'UK-ISAK', roleColor: '#b8590a', tagColor: '#e8703a' },
-  lyla: { name: 'Lyla', role: 'Field operator', roleColor: '#2f9e44', tagColor: '#1b1f24' },
-  ria: { name: 'Lia', role: 'Baseplate', roleColor: '#2b6cb0', tagColor: '#e0b23c' },
+  lyla: { name: 'Lyla', role: 'Beast warden', roleColor: '#2f9e44', tagColor: '#1b1f24' },
+  ria: { name: 'Lia', role: 'Data analysis', roleColor: '#2b6cb0', tagColor: '#e0b23c' },
 };
 
 // สรุปเนื้อเรื่องแบบย่อ — โชว์ตอนกด Skip all แล้วยืนยัน

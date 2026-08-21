@@ -202,38 +202,35 @@ html, body {
 
 .vn-bg {
   position: absolute; inset: 0;
-  background-image: url('../assets/Background/briefroom.jpg');
-  background-size: cover; background-position: center;
-  background-color: #14284a; /* placeholder จนกว่าจะมีไฟล์จริง */
+  background-image: url('../assets/Background/Briefroom.JPG');
+  background-size: cover; background-position: top center;
+  background-color: #14284a; /* placeholder ถ้าไฟล์โหลดไม่ได้ */
   transition: filter 0.5s ease;
 }
 .vn-bg--dark { filter: brightness(0.45) saturate(0.7); }
 
 .vn-stage {
   position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center;
-  padding-bottom: 2%;
 }
 
+/* ตำแหน่ง/ขนาดคงที่ทุกตัว — สไปรต์ทุกตัวยึดจุดเดียวกัน เลื่อนแค่แกน X ตอนมีของแทรกฉาก */
 .vn-portrait {
-  height: 92%; object-fit: contain; position: absolute; bottom: 0;
+  height: 74%; object-fit: contain; object-position: bottom;
+  position: absolute; bottom: -3%; /* ลงไปนิดให้ชิดกล่องข้อความ ไม่มีช่องว่าง */
   left: 50%; transform: translateX(-50%);
-  transition: left 0.35s ease, transform 0.35s ease, height 0.35s ease;
+  transition: left 0.35s ease;
 }
-.vn-portrait--side { left: 26%; height: 78%; }
-.vn-portrait--robertson { height: 70%; }
+.vn-portrait--side { left: 26%; }
+.vn-portrait--robertson { height: 64%; }
 
+/* กระตุกแค่แกน Y เท่านั้น (ไม่ scale ไม่จาง ไม่ขยับ X) */
 @keyframes vnShake {
-  0% { transform: translateX(-50%) translateY(6px) scale(0.98); opacity: 0.4; }
-  40% { transform: translateX(-50%) translateY(-3px) scale(1.01); opacity: 1; }
-  70% { transform: translateX(-50%) translateY(1px) scale(1); }
-  100% { transform: translateX(-50%) translateY(0) scale(1); }
+  0% { margin-top: 10px; }
+  45% { margin-top: -4px; }
+  75% { margin-top: 2px; }
+  100% { margin-top: 0; }
 }
-.vn-portrait--side.vn-shake { animation: vnShakeSide 0.35s ease; }
-@keyframes vnShakeSide {
-  0% { transform: translateX(-26%) translateY(6px) scale(0.98); opacity: 0.4; }
-  100% { transform: translateX(-26%) translateY(0) scale(1); opacity: 1; }
-}
-.vn-portrait.vn-shake:not(.vn-portrait--side) { animation: vnShake 0.35s ease; }
+.vn-portrait.vn-shake { animation: vnShake 0.3s ease; }
 
 .vn-robertson-scrim {
   position: absolute; inset: 0; background: rgba(0,0,0,0); pointer-events: none;
@@ -249,6 +246,7 @@ html, body {
   transition: opacity 0.4s ease, transform 0.4s ease;
 }
 .vn-insert--in { opacity: 1; transform: translateX(0); }
+.vn-insert--instant { transition: none; } /* สถิติ (AP/ผู้รอด) โผล่มาทันที ไม่มีอนิเมชัน กันตัวเลขบัค */
 
 .vn-map { background: #fff; border: 2px solid #1b1f24; border-radius: 6px; padding: 12px; position: relative; }
 .vn-map-img { width: 100%; display: block; }
