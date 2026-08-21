@@ -215,8 +215,8 @@ html, body {
 
 /* ตำแหน่ง/ขนาดคงที่ทุกตัว — สไปรต์ทุกตัวยึดจุดเดียวกัน เลื่อนแค่แกน X ตอนมีของแทรกฉาก */
 .vn-portrait {
-  height: 98%; object-fit: contain; object-position: bottom;
-  position: absolute; bottom: -8%; /* ทับลงไปในกล่องข้อความให้เห็นชัด ตามภาพอ้างอิง */
+  height: 74%; object-fit: contain; object-position: bottom;
+  position: absolute; bottom: 10%; /* ยกขึ้นให้เห็นลำตัว ปลายภาพทับกล่องข้อความ ตามภาพอ้างอิง */
   left: 50%; transform: translateX(-50%);
   transition: left 0.35s ease;
 }
