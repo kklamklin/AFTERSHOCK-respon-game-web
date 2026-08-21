@@ -215,8 +215,8 @@ html, body {
 
 /* ตำแหน่ง/ขนาดคงที่ทุกตัว — สไปรต์ทุกตัวยึดจุดเดียวกัน เลื่อนแค่แกน X ตอนมีของแทรกฉาก */
 .vn-portrait {
-  height: 74%; object-fit: contain; object-position: bottom;
-  position: absolute; bottom: 0; /* ชิดกล่องข้อความพอดี ไม่ทับไม่เว้นช่องว่าง */
+  height: 76%; object-fit: contain; object-position: bottom;
+  position: absolute; bottom: -5%; /* ทับลงไปในกล่องข้อความนิดหน่อย ตามภาพอ้างอิง */
   left: 50%; transform: translateX(-50%);
   transition: left 0.35s ease;
 }
