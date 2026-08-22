@@ -44,16 +44,49 @@ export const CONFIG = {
   lostConsciousHours: 4,
   criticalCountdownHours: 3,
 
-  // %ช่วยชีวิตตอนสำเร็จ — เลือกทางเลือก ง. (สุ่มระหว่างอัตราสำเร็จ ถึง 100%)
-  // ดู docs/gameflowspec.md §14 Q1b
-  rescueRateMode: 'rollBetweenSuccessAnd100',
+  // %ช่วยชีวิตตอนสำเร็จ — ทอย 2 ชั้น (GAMESCREEN_SPEC §4.2)
+  // ชั้น 2 สุ่มระดับจากตารางประจำตัว OP แล้วสุ่ม % ในช่วงของระดับนั้น — บัฟไม่มีผลกับชั้นนี้
+  rescueTierChance: {
+    human: { best: 20, high: 25, mid: 35, low: 20 }, // Robertson
+    cat:   { best: 35, high: 30, mid: 25, low: 10 }, // Lyla
+  },
+  rescuePctRange: {
+    best: [99, 99],
+    high: [90, 98],
+    mid:  [70, 89],
+    low:  [50, 69],
+  },
+
+  // ค่าบัฟ (GAMESCREEN_SPEC §3.2)
+  buffs: {
+    crowd: { rate: 25, durationHours: 3, ap: 14, cooldownHours: 3, scope: 'zone' },
+    scan:  { rate: 15, durationHours: 3, ap: 10, cooldownHours: 0, scope: 'zone',
+             deathSlowFactor: 0.5, maxStacks: 5 },
+    alert: { rate: 0,  durationHours: 3, ap: 35, cooldownHours: 4, scope: 'zone', safe: true },
+    air:   { rate: 15, durationHours: 1, ap: 24, cooldownHours: 3, scope: 'global' },
+  },
+
+  // สกิลลงพื้นที่ — AP และเวลาทำงานแยกตามระดับโซน (null = ลงโซนนั้นไม่ได้)
+  fieldSkills: {
+    human: { base: 75, ap: { gray: 6,  yellow: 12, red: null }, workHours: { gray: 1, yellow: 2, red: null } },
+    cat:   { base: 90, ap: { gray: 10, yellow: 18, red: 30   }, workHours: { gray: 1, yellow: 1, red: 2 } },
+  },
+
+  // Last Stand ของ Robertson (GAMESCREEN_SPEC §5)
+  lastStand: {
+    durationHours: 10,
+    apCost: 0,                                        // ฟรีทุกสกิล
+    workHours: { gray: 1, yellow: 2, red: 3 },        // เข้าโซนแดงได้ด้วย
+    blockedSkills: ['crowd'],                         // Crowd Control ใช้ไม่ได้
+    oncePerGame: true,
+  },
 
   // คะแนน
   scoreRescue: 1,
   scoreCasualty: -1,
 
   // ความเร็วเกม (มิลลิวินาทีจริงต่อ 1 ลูป)
-  loopDurationMsBySpeed: { 1: 4200 / 2, 2: 1000 / 2 }, // ปกติ ~10 นาทีทั้งเกม / เร็ว ~2.5 นาที (144 ลูป)
+  loopDurationMsBySpeed: { 1: 4200, 2: 2400 }, // ปกติ ~10 นาทีทั้งเกม / เร็ว ~5.8 นาที (144 ลูป)
 
   // จุดหยุดเวลาอัตโนมัติของเกม (Q3)
   autoPauseAtHour: [24, 48], // โซนแดง/เหลืองหมดอายุ
