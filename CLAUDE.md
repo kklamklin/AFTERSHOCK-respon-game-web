@@ -109,7 +109,7 @@
 | 2 | ฝัง `map.svg` จริง + ระบายสีตามระดับ + เลขคนบนโซน + ซูม/ปัด | ✅ |
 | 3 | เดินเวลา 144 ลูป · คนตายจริง · AP เพิ่มจริง · กล่องล่างขยับตาม | ✅ |
 | 4 | ป้ายสถานะ จนท. + คูลดาวน์บนไอคอนสกิล | ✅ |
-| 5 | Drag & Drop ลงโซน (หยุดเวลาตอนลาก · กากบาทโซนที่ลงไม่ได้ · หัก AP) | ⬜ |
+| 5 | Drag & Drop ลงโซน (หยุดเวลาตอนลาก · กากบาทโซนที่ลงไม่ได้ · หัก AP) | ✅ |
 | 6 | แผงข้อมูลตอนลาก — อัตราสำเร็จแยกส่วน + ความเสี่ยงบาดเจ็บ | ⬜ |
 | 7 | ครบเวลา → ทอย 2 ชั้น → rescued/casualty → โซนเขียว + Detail Feed | ⬜ |
 | 8 | Injured / Unconscious / CRITICAL / Last Stand | ⬜ |
@@ -135,7 +135,9 @@ src/
     map.js                                 ✅ map.svg จริง + ซูม/ปัด
     gameScreen.js                          ✅ หน้าเกมหลัก
     tutorial.js                            ✅ VN สอนเล่น
-    dragdrop.js panels.js feed.js hud.js screens.js  ⬜ stub
+    dragdrop.js                            ✅ ลากไอคอนสกิลลงโซน
+    panels.js feed.js hud.js               ⬜ stub
+    screens.js                             ✅ หน้าจอนอกเกม
   utils/rng.js        ⬜ stub
 assets/               รูปตัวละคร/ไอคอนสกิล/พื้นหลัง (มาแล้วส่วนใหญ่)
 map.svg               แผนที่ 48 โซนจริง

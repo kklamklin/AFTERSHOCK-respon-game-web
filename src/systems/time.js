@@ -4,7 +4,7 @@ import { payHourlyAP } from './actionPoints.js';
 
 // เดินเวลาทีละ 1 ลูป — ลำดับประมวลผลตาม AFTERSHOCKMASTER §17
 //   1. นับลูป  2. คนตายทุกโซน  3. ถ้าครบชั่วโมง จ่าย AP + ลดตัวนับต่าง ๆ  4. เช็คจบเกม
-export function tickLoop(state, { onHourTick, onZoneCleared, onGameEnd } = {}) {
+export function tickLoop(state, { onHourTick, onZoneCleared, onMissionComplete, onGameEnd } = {}) {
   if (state.ended) return;
 
   state.loop += 1;
@@ -20,7 +20,7 @@ export function tickLoop(state, { onHourTick, onZoneCleared, onGameEnd } = {}) {
     }
   }
 
-  tickTimers(state);
+  const finished = tickTimers(state);
 
   if (state.loop % CONFIG.loopsPerHour === 0) {
     state.hour = state.loop / CONFIG.loopsPerHour;
@@ -28,17 +28,25 @@ export function tickLoop(state, { onHourTick, onZoneCleared, onGameEnd } = {}) {
     onHourTick?.(state.hour);
   }
 
+  // จนท. ที่ทำงานครบเวลา — รอบที่ 7 จะเอาไปทอยผล ตอนนี้แค่แจ้งว่าจบภารกิจ
+  for (const opKey of finished) onMissionComplete?.(opKey, state.units[opKey].mission);
+
   if (state.loop >= CONFIG.totalLoops || allZonesResolved(state)) {
     state.ended = true;
     onGameEnd?.(state.loop >= CONFIG.totalLoops ? 'timeup' : 'empty');
   }
 }
 
-// ตัวนับที่ลดลงทุก 1 ลูป — เวลาทำงานในโซน · คูลดาวน์สกิล · อายุบัฟ · เวลาฟื้นตัว · CRITICAL
-// (รอบ 5-8 จะเป็นคนตั้งค่าพวกนี้ ตรงนี้แค่เดินถอยหลังให้)
+// ตัวนับที่ลดลงทุก 1 ลูป — ความไม่ว่างของ จนท. · คูลดาวน์สกิล · อายุบัฟ · เวลาฟื้นตัว · CRITICAL
+// คืน array ของ จนท. ที่ "ภารกิจลงพื้นที่ครบเวลาพอดีในลูปนี้"
 function tickTimers(state) {
-  for (const unit of Object.values(state.units)) {
-    unit.workRemainLoops = Math.max(0, unit.workRemainLoops - 1);
+  const finished = [];
+
+  for (const [opKey, unit] of Object.entries(state.units)) {
+    const wasBusy = unit.busyRemainLoops > 0;
+    unit.busyRemainLoops = Math.max(0, unit.busyRemainLoops - 1);
+    if (wasBusy && unit.busyRemainLoops === 0 && unit.mission) finished.push(opKey);
+
     unit.recoverRemainLoops = Math.max(0, unit.recoverRemainLoops - 1);
     for (const skillId of Object.keys(unit.skillCooldowns)) {
       unit.skillCooldowns[skillId] = Math.max(0, unit.skillCooldowns[skillId] - 1);
@@ -46,13 +54,27 @@ function tickTimers(state) {
   }
 
   for (const zone of Object.values(state.zones)) {
-    zone.buffs = zone.buffs.filter((b) => (b.remainLoops -= 1) > 0);
+    zone.buffs = zone.buffs.filter((b) => expireBuff(state, b));
   }
-  state.globalBuffs = state.globalBuffs.filter((b) => (b.remainLoops -= 1) > 0);
+  state.globalBuffs = state.globalBuffs.filter((b) => expireBuff(state, b));
 
   if (state.criticalCountdownLoops != null) {
     state.criticalCountdownLoops = Math.max(0, state.criticalCountdownLoops - 1);
   }
+
+  return finished;
+}
+
+// คืน true = บัฟยังอยู่ · false = หมดอายุแล้วให้ลบทิ้ง
+// Scan Area หมดอายุเมื่อไหร่ ต้องคืน "ช่อง" ให้ Lia ด้วย (GAMESCREEN_SPEC §3.4)
+function expireBuff(state, buff) {
+  buff.remainLoops -= 1;
+  if (buff.remainLoops > 0) return true;
+  if (buff.type === 'scan') {
+    const lia = state.units.elf;
+    lia.scanStacks = Math.min(CONFIG.buffs.scan.maxStacks, (lia.scanStacks ?? 0) + 1);
+  }
+  return false;
 }
 
 function allZonesResolved(state) {
@@ -62,7 +84,12 @@ export function loopDurationMs(state) {
   return CONFIG.loopDurationMsBySpeed[state.speed] ?? CONFIG.loopDurationMsBySpeed[1];
 }
 
-// ตัวควบคุมการเดินเวลาแบบ interval ผูกกับ speed (0=หยุด)
+// ตัวควบคุมการเดินเวลา
+//
+// แยก 2 เรื่องออกจากกันให้ชัด — เคยรวมกันแล้วพัง:
+//   state.speed   = "ความเร็วที่เลือกไว้" มีแค่ 1 หรือ 2 เท่านั้น ไม่เคยเป็น 0
+//   state.running = "ตอนนี้เวลาเดินอยู่ไหม"
+// ถ้าเอา 0 ไปยัดใส่ speed ตอนหยุด พอจะเดินต่อจะไม่รู้ว่าต้องกลับไปที่ความเร็วเท่าไหร่
 export function createClock(state, onTick) {
   let timer = null;
 
@@ -73,21 +100,22 @@ export function createClock(state, onTick) {
 
   function restart() {
     stop();
-    if (state.speed === 0 || state.ended) return;
+    if (!state.running || state.ended) return;
     timer = setInterval(() => onTick(), loopDurationMs(state));
   }
 
   return {
-    setSpeed(speed) {
-      state.speed = speed;
-      state.running = speed !== 0;
+    setRunning(run) {
+      state.running = !!run && !state.ended;
       restart();
     },
-    pause() {
-      state.speed = 0;
+    setRate(rate) {
+      state.speed = rate;
+      restart(); // เปลี่ยนความเร็วตอนหยุดอยู่ก็ได้ ไว้กดเดินต่อค่อยใช้ค่าใหม่
+    },
+    stop() {
       state.running = false;
       stop();
     },
-    stop,
   };
 }

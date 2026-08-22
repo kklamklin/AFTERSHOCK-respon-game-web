@@ -511,6 +511,8 @@ html, body {
   font-family: system-ui, sans-serif; font-weight: 700; fill: var(--ink);
   text-anchor: middle; dominant-baseline: central;
   pointer-events: none; user-select: none;
+  /* ขอบขาวรอบตัวเลข — โซนเตี้ย ๆ ไอคอน จนท./บัฟ จะมาทับ ถ้าไม่มีขอบจะอ่านไม่ออก */
+  paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round;
 }
 
 .map-zoom {
@@ -583,3 +585,47 @@ html, body {
   .game-top { padding: calc(var(--u) * 0.8) calc(var(--u) * 2); }
   .game-bottom { padding: calc(var(--u) * 0.8) calc(var(--u) * 2) calc(var(--u) * 1); }
 }
+
+/* ── ลากไอคอนสกิลไปวางบนโซน (GAMESCREEN_SPEC §10) ──────────────── */
+.skill-icon { touch-action: none; }             /* กันหน้าจอเลื่อนตามนิ้วตอนลาก */
+.skill-icon.is-clickable { cursor: pointer; }
+.skill-row:not(.is-blocked):not(.is-noap):not(.is-cooldown) .skill-icon:hover { box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.35); }
+.skill-icon.is-source { opacity: 0.35; }
+
+.drag-ghost {
+  position: fixed; z-index: 2000;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  border: 2px solid var(--line, #1b1f24); border-radius: 50%;
+  background: #fff; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+.drag-ghost img { width: 86%; height: 86%; object-fit: contain; }
+.drag-ghost .skill-using,
+.drag-ghost .skill-cd,
+.drag-ghost .skill-block { display: none !important; }
+
+/* ── เลเยอร์ทับบนโซน: ไอคอน จนท. · บัฟ · กากบาทตอนลาก (§11) ───── */
+.map-overlay, .map-overlay * { pointer-events: none; }
+.zone-op, .zone-op-halo, .zone-cross { display: none; }
+.zone-op.is-on, .zone-op-halo.is-on, .zone-cross.is-on { display: inline; }
+.zone-op-halo { fill: #fff; stroke: #1b1f24; stroke-width: 1.2; }
+.zone-timer, .zone-buffs {
+  dominant-baseline: central;
+  font-family: system-ui, sans-serif; font-weight: 700;
+  fill: #1b1f24; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round;
+}
+.zone-timer { text-anchor: start; }
+.zone-buffs { text-anchor: end; }
+.zone-cross {
+  text-anchor: middle; dominant-baseline: central;
+  font-family: system-ui, sans-serif; font-weight: 700;
+  fill: #E5484D; opacity: 0.75;
+}
+
+/* ระหว่างลาก: โซนที่ลงไม่ได้จางลง · โซนเป้าหมายใต้ปลายนิ้วเรืองขึ้น */
+.map-viewport.is-dragging .map-zone { transition: none; }
+.map-viewport.is-dragging .map-zone.is-invalid { opacity: 0.4; }
+.map-viewport.is-dragging .map-count { opacity: 0.5; }
+.map-zone.is-target { stroke: #2b6cb0 !important; stroke-width: 4; }

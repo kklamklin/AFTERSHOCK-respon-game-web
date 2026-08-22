@@ -10,8 +10,9 @@ import { state, resetState } from '../state.js';
 import { CONFIG } from '../config.js';
 import { createClock, tickLoop } from '../systems/time.js';
 import { summarizeByTier } from '../systems/zones.js';
-import { skillStatus, unitStatusLabel } from '../systems/skills.js';
-import { renderMap, applyZoneColors, updateAllZones, updateZone } from './map.js';
+import { skillStatus, unitStatusLabel, useGlobalSkill, clearMission } from '../systems/skills.js';
+import { attachDrag, cancelDrag } from './dragdrop.js';
+import { renderMap, applyZoneColors, updateAllZones, updateZone, updateZoneMarkers } from './map.js';
 
 const PORTRAIT_DIR = 'assets/characters/';
 const SKILL_DIR = 'assets/skills/';
@@ -133,6 +134,17 @@ function buildSkillRow(speciesKey, skillId, skill) {
   const block = el('span', 'skill-block', '✕'); // กากบาทตอนใช้ไม่ได้
   icon.append(img, el('span', 'skill-using', 'USING'), cd, block);
   iconWrap.appendChild(icon);
+
+  // Air Deploy บัฟทั้งแมพ → กดใช้เลย ไม่ต้องลาก (§3.1) · ที่เหลือลากไปวางบนโซน (§10)
+  if (CONFIG.buffs[skillId]?.scope === 'global') {
+    icon.classList.add('is-clickable');
+    icon.addEventListener('click', () => {
+      const done = useGlobalSkill(state, speciesKey, skillId);
+      if (done) dragCtx.onChange?.(done, null);
+    });
+  } else {
+    attachDrag(icon, speciesKey, skillId, dragCtx);
+  }
 
   // แถวจุดบอกช่อง Scan Area ที่เหลือ (เฉพาะ Lia — §3.4)
   const dots = el('div', 'skill-stacks');
@@ -305,6 +317,17 @@ function buildFeed(entries) {
   return feed;
 }
 
+// สะพานระหว่างไอคอนสกิลกับหน้าเกม — renderGameScreen เติมค่าจริงให้ตอนสร้างหน้า
+// ประกาศไว้ตรงนี้เพราะ buildSkillRow ถูกเรียกก่อนที่นาฬิกาจะถูกสร้าง
+const dragCtx = {
+  state,
+  getMapHandle: () => null,
+  pause: () => {},
+  resume: () => {},
+  onChange: () => {},
+  onHoverZone: () => {},
+};
+
 // ── ปุ่มซูมแผนที่ (§11 ซูมเฉพาะแผนที่ UI รอบนอกไม่ขยับ) ─────────
 let zoomHandle = null;
 
@@ -331,6 +354,7 @@ let activeClock = null;
 let cancelSmooth = null;
 
 export function stopGameClock() {
+  cancelDrag();
   activeClock?.stop();
   activeClock = null;
   cancelSmooth?.();
@@ -351,12 +375,8 @@ export function renderGameScreen(root, { onExit } = {}) {
     // รอบที่ 9 จะเปลี่ยนเป็นแผงเมนูในเกมจริง (Continue / Setting / How to play / Operator / Return to menu)
     onMenu: () => { stopGameClock(); onExit?.(); },
     onTime: () => {}, // รอบที่ 9 — หน้าเวลาที่เหลือ
-    onRunToggle: () => { clock.setSpeed(state.running ? 0 : state.speed); top.paintSpeed(); },
-    onRateToggle: () => {
-      const next = state.speed === 2 ? 1 : 2;
-      if (state.running) clock.setSpeed(next); else state.speed = next;
-      top.paintSpeed();
-    },
+    onRunToggle: () => { clock.setRunning(!state.running); top.paintSpeed(); },
+    onRateToggle: () => { clock.setRate(state.speed === 2 ? 1 : 2); top.paintSpeed(); },
   });
   root.appendChild(top.bar);
 
@@ -406,13 +426,17 @@ export function renderGameScreen(root, { onExit } = {}) {
   function paintAll() {
     bottom.paint();
     paintLive();
-    if (mapHandle) updateAllZones(mapHandle, state.zones);
+    if (mapHandle) {
+      updateAllZones(mapHandle, state.zones);
+      updateZoneMarkers(mapHandle, state);
+    }
   }
 
   function tick() {
     loopStartedAt = performance.now();
     tickLoop(state, {
       onZoneCleared: (zone) => { if (mapHandle) updateZone(mapHandle, zone); },
+      onMissionComplete: (opKey) => clearMission(state, opKey), // รอบที่ 7 จะทอยผลก่อนตรงนี้
       onGameEnd: () => {
         stopGameClock();
         top.paintSpeed();
@@ -434,6 +458,13 @@ export function renderGameScreen(root, { onExit } = {}) {
   const clock = createClock(state, tick);
   activeClock = clock;
 
+  // ต่อสายให้ตัวลากวาง: หยุด/เดินเวลา · หาแผนที่ · วาดใหม่หลังวางเสร็จ
+  dragCtx.getMapHandle = () => mapHandle;
+  dragCtx.pause = () => clock.setRunning(false);
+  dragCtx.resume = () => clock.setRunning(true);
+  dragCtx.onChange = () => { paintAll(); top.paintSpeed(); };
+  dragCtx.onHoverZone = () => {}; // รอบที่ 6 — แผงข้อมูลโซนตอนลาก
+
   // แผนที่จริงโหลดแบบ async (fetch map.svg) — เวลาเริ่มเดินหลังแผนที่พร้อม
   applyZoneColors(document.head);
   renderMap(mapViewport, state.zones)
@@ -441,7 +472,7 @@ export function renderGameScreen(root, { onExit } = {}) {
       mapHandle = handle;
       zoomHandle = handle.panzoom;
       paintAll();
-      if (activeClock === clock) { clock.setSpeed(CONFIG.startSpeed); top.paintSpeed(); }
+      if (activeClock === clock) { clock.setRate(CONFIG.startSpeed); clock.setRunning(true); top.paintSpeed(); }
     })
     .catch((err) => {
       mapViewport.innerHTML = '';

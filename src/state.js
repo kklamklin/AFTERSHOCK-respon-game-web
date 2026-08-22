@@ -38,11 +38,15 @@ export function createInitialState() {
 function createUnit() {
   return {
     status: 'normal',        // normal | injured | lost | laststand
-    zoneId: null,            // โซนที่กำลังปฏิบัติการอยู่ (null = ว่าง)
-    workRemainLoops: 0,      // เวลาทำงานที่เหลือในโซน
+    busyRemainLoops: 0,      // ตัวนี้ใช้งานไม่ได้อีกกี่ลูป (ลงพื้นที่อยู่ หรือกำลังทำ Crowd Control)
     recoverRemainLoops: 0,   // เวลาฟื้นจาก injured / lost / เวลาที่เหลือของ Last Stand
     skillCooldowns: {},      // { [skillId]: ลูปที่เหลือ }
     scanStacks: null,        // เฉพาะ Lia — ช่อง Scan Area ที่เหลือ (§3.4)
+
+    // ภารกิจลงพื้นที่ที่ทำอยู่ — null ถ้าไม่ได้อยู่ในโซนไหน
+    // บันทึกเงื่อนไขตอน "ปล่อยไอคอน" ไว้เลย เพราะ Last Stand ต้องคิดด้วยเงื่อนไขตอนออกเดินทาง
+    // แม้บัฟจะหมดอายุระหว่างทาง (GAMESCREEN_SPEC §5.3)
+    mission: null,           // { zoneId, skillId, tier, lastStand, totalLoops }
   };
 }
 
