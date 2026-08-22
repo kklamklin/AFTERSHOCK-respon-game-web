@@ -9,7 +9,7 @@ export const CONFIG = {
   survivorsPerZone: {
     gray:   { min: 8,  max: 11 },
     yellow: { min: 26, max: 36 },
-    red:    { min: 60, max: 80 },
+    red:    { min: 60, max: 76 },
   },
 
   // จำนวนโซนต่อระดับ (จาก map.svg §3.1)

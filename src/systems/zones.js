@@ -27,17 +27,23 @@ export function generateZones() {
     total += count;
   }
 
-  // ปรับตัวสุดท้ายให้รวมได้ 1,200 พอดี (§4.3) — เกลี่ยส่วนต่างเข้าโซนสุ่ม
+  // ปรับตัวสุดท้ายให้รวมได้ 1,200 พอดี (§4.3) — เกลี่ยส่วนต่างทีละ 1 คนวนทั่วทุกโซน
+  // เกลี่ยแบบวนรอบ (ไม่ใช่สุ่มซ้ำโซนเดิม) และห้ามหลุดช่วง min-max ของระดับนั้น
+  // ไม่งั้นโซนใดโซนหนึ่งอาจโดนลบซ้ำจนต่ำกว่าช่วงที่สเปกกำหนด
   let diff = CONFIG.totalSurvivors - total;
   const step = diff > 0 ? 1 : -1;
-  let guard = 0;
-  while (diff !== 0 && guard < 100000) {
-    const i = randInt(0, initialCounts.length - 1);
-    if (initialCounts[i] + step >= 1) {
-      initialCounts[i] += step;
+  let slack = 0; // ถ้าเกลี่ยในช่วงปกติไม่พอ ค่อยผ่อนขอบทีละ 1
+  while (diff !== 0 && slack < 50) {
+    let moved = false;
+    for (let i = 0; i < initialCounts.length && diff !== 0; i += 1) {
+      const { min, max } = CONFIG.survivorsPerZone[levels[i]];
+      const next = initialCounts[i] + step;
+      if (next < Math.max(1, min - slack) || next > max + slack) continue;
+      initialCounts[i] = next;
       diff -= step;
+      moved = true;
     }
-    guard += 1;
+    if (!moved) slack += 1;
   }
 
   counters.gray = 0; counters.yellow = 0; counters.red = 0;

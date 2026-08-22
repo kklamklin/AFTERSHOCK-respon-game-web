@@ -6,6 +6,8 @@
 // ไฟล์นี้อยู่ใน ui/ จึงห้ามคำนวณกฎเกม — รับค่ามาแสดงอย่างเดียว
 
 import { OPERATORS } from '../data/operators.js';
+import { state } from '../state.js';
+import { renderMap, applyZoneColors } from './map.js';
 
 const PORTRAIT_DIR = 'assets/characters/';
 const SKILL_DIR = 'assets/skills/';
@@ -239,6 +241,25 @@ function buildFeed(entries) {
   return feed;
 }
 
+// ── ปุ่มซูมแผนที่ (§11 ซูมเฉพาะแผนที่ UI รอบนอกไม่ขยับ) ─────────
+let zoomHandle = null;
+
+function buildZoomButtons() {
+  const box = el('div', 'map-zoom');
+  const mk = (label, title, fn) => {
+    const b = el('button', 'map-zoom-btn', label);
+    b.title = title;
+    b.addEventListener('click', () => zoomHandle?.[fn]());
+    return b;
+  };
+  box.append(
+    mk('+', 'ซูมเข้า', 'zoomIn'),
+    mk('−', 'ซูมออก', 'zoomOut'),
+    mk('⌖', 'กลับมุมมองเต็มแผนที่', 'reset'),
+  );
+  return box;
+}
+
 // ── ประกอบทั้งหน้า ──────────────────────────────────────────────
 export function renderGameScreen(root, { onExit } = {}) {
   const data = structuredClone(PLACEHOLDER);
@@ -260,7 +281,10 @@ export function renderGameScreen(root, { onExit } = {}) {
 
   const mapWrap = el('div', 'game-map-wrap');
   const mapBox = el('div', 'game-map');
-  mapBox.appendChild(el('div', 'game-map-note', 'แผนที่ 48 โซน — รอบที่ 2'));
+  const mapViewport = el('div', 'map-viewport');
+  mapViewport.appendChild(el('div', 'game-map-note', 'กำลังโหลดแผนที่…'));
+  mapBox.appendChild(mapViewport);
+  mapBox.appendChild(buildZoomButtons());
   // Feed ลอยอยู่มุมขวาบนของแผนที่ (§8) — วางไว้ในกรอบแผนที่เพื่อไม่ให้บังแถบ จนท. ฝั่งขวา
   mapBox.appendChild(buildFeed(data.feed));
   mapWrap.appendChild(mapBox);
@@ -270,4 +294,14 @@ export function renderGameScreen(root, { onExit } = {}) {
   root.appendChild(body);
 
   root.appendChild(buildBottom(data.tiers));
+
+  // แผนที่จริงโหลดแบบ async (fetch map.svg) — ใส่ทีหลังเมื่อโหลดเสร็จ
+  // เลขคนบนโซนมาจาก state.zones จริงแล้ว ส่วนกล่อง Ⓐ/Ⓑ/Ⓒ ยังเป็นค่าหลอกจนถึงรอบที่ 3
+  applyZoneColors(document.head);
+  renderMap(mapViewport, state.zones)
+    .then((handle) => { zoomHandle = handle.panzoom; })
+    .catch((err) => {
+      mapViewport.innerHTML = '';
+      mapViewport.appendChild(el('div', 'game-map-note', `โหลดแผนที่ไม่สำเร็จ: ${err.message}`));
+    });
 }

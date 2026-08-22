@@ -20,30 +20,7 @@ html, body {
   padding: 16px;
 }
 
-.zone-grid {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 6px;
-  max-width: 900px;
-}
-
-.zone {
-  aspect-ratio: 1;
-  border: 2px solid #000;
-  border-radius: 6px;
-  background: #D9D9D9;
-  color: #222;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  transition: background 0.3s, border-color 0.3s;
-}
-
-.zone-inner { text-align: center; line-height: 1.2; }
-.zone-id { font-size: 10px; opacity: 0.7; }
-.zone-count { font-size: 18px; font-weight: 700; }
-.zone-rate { font-size: 9px; opacity: 0.6; }
-
-.zone.cleared { background: #D4F4DD !important; border-color: #3DD68C !important; }
+/* (กริด placeholder เดิมถูกแทนที่ด้วย map.svg จริงแล้ว — ดู "แผนที่" ด้านล่าง) */
 
 /* §I หน้าปก / เมนูหลัก — วางทับเกมจริงจนกว่าจะเชื่อมปุ่ม Play */
 .screen-overlay {
@@ -432,10 +409,10 @@ html, body {
 .game-side--right .skill-label { text-align: left; }
 
 .skill-icon-wrap { flex: none; position: relative; padding-top: calc(var(--u) * 1.35); }
-.skill-badge {
-  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-  font-size: calc(var(--u) * 1.4); line-height: 1;
-}
+/* ไอคอนบอกประเภทสกิล (📥 ลงพื้นที่ / ✨ บัฟ) — ชิดขอบนอกของแต่ละฝั่ง */
+.skill-badge { position: absolute; top: 0; font-size: calc(var(--u) * 1.4); line-height: 1; }
+.game-side--left .skill-badge { left: calc(var(--u) * -0.9); }
+.game-side--right .skill-badge { right: calc(var(--u) * -0.9); }
 .skill-icon {
   position: relative; overflow: hidden;
   width: calc(var(--u) * 4.2); height: calc(var(--u) * 4.2);
@@ -470,13 +447,48 @@ html, body {
 
 /* ── แผนที่ (รอบที่ 2 จะเอา map.svg จริงมาใส่ตรงนี้) ─────────── */
 .game-map-wrap { min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
-.game-map { position: relative; }
-.game-map {
-  width: 100%; height: 100%;
+.game-map { position: relative; width: 100%; height: 100%; }
+.game-map-note {
+  position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  border: 2px dashed #c9ced6; border-radius: calc(var(--u) * 0.5);
+  font-size: calc(var(--u) * 1.6); color: var(--muted);
 }
-.game-map-note { font-size: calc(var(--u) * 1.6); color: var(--muted); }
+
+/* ช่องมองแผนที่ — ซูม/ปัดเกิดขึ้นในนี้เท่านั้น UI รอบนอกไม่ขยับตาม (§11) */
+.map-viewport {
+  position: relative; width: 100%; height: 100%;
+  overflow: hidden; touch-action: none; cursor: default;
+}
+.map-viewport.is-zoomed { cursor: grab; }
+.map-viewport.is-zoomed:active { cursor: grabbing; }
+
+.map-svg {
+  display: block; width: 100%; height: 100%;
+  transform-origin: center center;
+}
+.map-zone {
+  stroke-width: 1.5;
+  transition: fill 0.3s, stroke 0.3s;
+}
+.map-count {
+  font-family: system-ui, sans-serif; font-weight: 700; fill: var(--ink);
+  text-anchor: middle; dominant-baseline: central;
+  pointer-events: none; user-select: none;
+}
+
+.map-zoom {
+  position: absolute; left: calc(var(--u) * 0.6); bottom: calc(var(--u) * 0.6);
+  display: flex; flex-direction: column; gap: calc(var(--u) * 0.3);
+}
+.map-zoom-btn {
+  width: calc(var(--u) * 2.8); height: calc(var(--u) * 2.8);
+  font-size: calc(var(--u) * 1.6); line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, 0.9); color: var(--ink);
+  border: 1px solid #c9ced6; border-radius: calc(var(--u) * 0.4);
+  cursor: pointer; padding: 0;
+}
+.map-zoom-btn:hover { background: #eef1f5; }
 
 /* ── Detail Feed มุมขวาบน (§8) ───────────────────────────────── */
 .game-feed {
