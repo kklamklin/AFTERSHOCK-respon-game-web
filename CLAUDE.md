@@ -99,20 +99,22 @@
 
 จะ deploy ผ่าน **GitHub Pages** แล้วทำ QR code ให้เพื่อนสแกนเล่นบนมือถือ — ทำตอนเกมเล่นได้จริงแล้วเท่านั้น และรอให้เจ้าของสั่ง
 
-## ลำดับงานที่วางไว้
+## ลำดับงานที่วางไว้ (แบ่งเป็น 10 รอบ เคาะกับเจ้าของแล้ว)
+
+หน้าเมนู/Settings/Intel/Tutorial เสร็จหมดแล้ว · ตารางนี้คือหน้าเกมหลัก
 
 | # | งาน | สถานะ |
 |---|---|---|
-| 1 | CONFIG + state | ✅ |
-| 2 | โซน 48 + กระจายคน 1,200 + render แผนที่ | ✅ |
-| 3 | ระบบเวลา 144 ลูป + ⏸▶⏩ + การตาย | ✅ |
-| 4 | ไอคอน จนท./สกิล บนจอ | ⬜ |
-| 5 | Drag & Drop ลงโซน (หยุดเวลาตอนลาก, กากบาทโซนที่ลงไม่ได้, หัก AP) | ⬜ |
-| 6 | แผงล่างตอนลาก — อัตราสำเร็จแยกส่วน + ความเสี่ยงบาดเจ็บ | ⬜ |
-| 7 | ครบเวลา → ทอยผล → rescued/casualty → โซนเขียว | ⬜ |
-| 8 | Injured / Lost Consciousness / CRITICAL | ⬜ |
-| 9 | Detail Feed + คะแนนลอย + หน้า Start/Tutorial/Result | ⬜ |
-| 10 | asset จริง + build รวมไฟล์เดียว | ⬜ |
+| 1 | โครง layout + HUD (AP · Time · ปุ่มเวลา 2 ปุ่ม · กล่อง Ⓐ/Ⓑ/Ⓒ) | ✅ |
+| 2 | ฝัง `map.svg` จริง + ระบายสีตามระดับ + เลขคนบนโซน + ซูม/ปัด | ✅ |
+| 3 | เดินเวลา 144 ลูป · คนตายจริง · AP เพิ่มจริง · กล่องล่างขยับตาม | ✅ |
+| 4 | ป้ายสถานะ จนท. + คูลดาวน์บนไอคอนสกิล | ⬜ |
+| 5 | Drag & Drop ลงโซน (หยุดเวลาตอนลาก · กากบาทโซนที่ลงไม่ได้ · หัก AP) | ⬜ |
+| 6 | แผงข้อมูลตอนลาก — อัตราสำเร็จแยกส่วน + ความเสี่ยงบาดเจ็บ | ⬜ |
+| 7 | ครบเวลา → ทอย 2 ชั้น → rescued/casualty → โซนเขียว + Detail Feed | ⬜ |
+| 8 | Injured / Unconscious / CRITICAL / Last Stand | ⬜ |
+| 9 | เมนู ☰ ในเกม + หน้าเวลาที่เหลือ + ป๊อปอัพหยุดเวลาอัตโนมัติ | ⬜ |
+| 10 | หน้า Result + asset จริง + build รวมไฟล์เดียว | ⬜ |
 
 ## แผนผังไฟล์
 
@@ -125,14 +127,17 @@ src/
   styles.css          ✅
   data/operators.js   ✅ จนท. 4 ตัว + สกิล
   systems/            ตรรกะเกม — ห้ามแตะ DOM
-    zones.js  time.js                      ✅ เขียนแล้ว
-    survivors.js death.js actionPoints.js  ⬜ stub
+    zones.js  time.js  actionPoints.js     ✅ เขียนแล้ว
+    survivors.js death.js                  ⬜ stub
     successRate.js outcomes.js danger.js score.js  ⬜ stub
   ui/                 แสดงผล/อินพุต — ห้ามคำนวณกฎเกม
-    map.js                                 ✅ placeholder grid
+    map.js                                 ✅ map.svg จริง + ซูม/ปัด
+    gameScreen.js                          ✅ หน้าเกมหลัก
+    tutorial.js                            ✅ VN สอนเล่น
     dragdrop.js panels.js feed.js hud.js screens.js  ⬜ stub
   utils/rng.js        ⬜ stub
-assets/               รูป (ยังไม่มี ใส่ทีหลังทับชื่อเดิม)
+assets/               รูปตัวละคร/ไอคอนสกิล/พื้นหลัง (มาแล้วส่วนใหญ่)
+map.svg               แผนที่ 48 โซนจริง
 build/build.js        ⬜ stub — รวมเป็นไฟล์เดียว + Base64
 dist/index.html       ไฟล์ส่งงานสุดท้าย
 docs/                 สเปกทั้งหมด

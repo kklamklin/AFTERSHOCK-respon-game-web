@@ -67,19 +67,73 @@ export function generateZones() {
   return zones;
 }
 
+// อัตราตายต่อลูป — เชิงเส้น: ถ้าไม่มีใครไปช่วย คนจะตายหมดพอดีเมื่อครบอายุโซน (§4.4)
+// Scan Area ที่ลงในโซนนั้นชะลอการตายลงครึ่งหนึ่งตลอดอายุบัฟ (GAMESCREEN_SPEC §3.2)
 export function deathPerLoop(zone) {
   const lifespan = CONFIG.zoneLifespanLoops[zone.level];
-  return zone.initial / lifespan;
+  const base = zone.initial / lifespan;
+  const slowed = zone.buffs?.some((b) => b.type === 'scan');
+  return slowed ? base * CONFIG.buffs.scan.deathSlowFactor : base;
 }
 
 export function deathPerHour(zone) {
   return deathPerLoop(zone) * CONFIG.loopsPerHour;
 }
 
-// เรียกทุก 1 ลูป — ลด trapped ตามอัตราตายเชิงเส้น (§5)
+// การลบทศนิยม 144 ครั้งทำให้ trapped ลงเอยที่ ~1e-14 แทนที่จะเป็น 0 พอดี
+// ถ้าไม่ปัดทิ้ง โซนจะ "ยังมีคนอยู่" ทั้งที่แสดงผลเป็น 0 และไม่มีวันปิดเป็นเขียว
+const EPSILON = 1e-6;
+
+export function isZoneEmpty(zone) {
+  return zone.trapped < EPSILON;
+}
+
+// เรียกทุก 1 ลูป — ลด trapped ตามอัตราตายเชิงเส้น (§5) · คืนจำนวนคนที่ตายรอบนี้
 export function tickZoneDeath(zone) {
-  if (zone.cleared || zone.trapped <= 0) return;
+  if (zone.cleared || isZoneEmpty(zone)) return 0;
   const dead = Math.min(zone.trapped, deathPerLoop(zone));
   zone.trapped -= dead;
   zone.casualty += dead;
+  if (isZoneEmpty(zone)) zone.trapped = 0;
+  return dead;
+}
+
+// ตัวเลขสำหรับ "แสดงผล" (§7.5) — เก็บเป็นทศนิยม แต่โชว์เป็นจำนวนเต็ม
+// ปัด trapped ลง แล้วให้ casualty รับเศษที่เหลือ เพื่อให้ trapped + rescued + casualty = initial เป๊ะเสมอ
+export function displayCounts(zone) {
+  const trapped = Math.floor(zone.trapped);
+  const rescued = Math.round(zone.rescued);
+  return { trapped, rescued, casualty: zone.initial - trapped - rescued };
+}
+
+// สรุปรายระดับสำหรับกล่องล่างสุด Ⓐ/Ⓑ/Ⓒ (GAMESCREEN_SPEC §9.1)
+//   casualty%   = คนตายในระดับนั้น ÷ คนเริ่มต้นของระดับนั้น
+//   clear%      = จำนวนโซนที่เคลียร์ ÷ จำนวนโซนในระดับนั้น   ← นับโซน ไม่ใช่นับคน
+//   population% = คนที่ยังติดอยู่ ÷ คนเริ่มต้นของระดับนั้น
+export function summarizeByTier(zones) {
+  const acc = {};
+  for (const level of ['gray', 'yellow', 'red']) {
+    acc[level] = { initial: 0, trapped: 0, casualty: 0, zones: 0, clearedZones: 0 };
+  }
+
+  for (const zone of Object.values(zones)) {
+    const t = acc[zone.level];
+    const d = displayCounts(zone);
+    t.initial += zone.initial;
+    t.trapped += d.trapped;
+    t.casualty += d.casualty;
+    t.zones += 1;
+    if (zone.cleared) t.clearedZones += 1;
+  }
+
+  const pct = (part, whole) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
+  const out = {};
+  for (const [level, t] of Object.entries(acc)) {
+    out[level] = {
+      casualty: pct(t.casualty, t.initial),
+      clear: pct(t.clearedZones, t.zones),
+      population: pct(t.trapped, t.initial),
+    };
+  }
+  return out;
 }

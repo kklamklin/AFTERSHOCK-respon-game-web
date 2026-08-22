@@ -85,6 +85,9 @@ export const CONFIG = {
   scoreRescue: 1,
   scoreCasualty: -1,
 
+  // เกมเริ่มด้วยสถานะเดินเวลา ไม่ได้เริ่มด้วยหยุด (GAMESCREEN_SPEC §2)
+  startSpeed: 1,
+
   // ความเร็วเกม (มิลลิวินาทีจริงต่อ 1 ลูป)
   loopDurationMsBySpeed: { 1: 4200, 2: 2400 }, // ปกติ ~10 นาทีทั้งเกม / เร็ว ~5.8 นาที (144 ลูป)
 

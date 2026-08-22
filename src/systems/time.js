@@ -1,34 +1,61 @@
 import { CONFIG } from '../config.js';
-import { tickZoneDeath } from './zones.js';
+import { tickZoneDeath, isZoneEmpty } from './zones.js';
+import { payHourlyAP } from './actionPoints.js';
 
-// เดินเวลาทีละ 1 ลูป (§2 ของ docs/gamesystemfinal.md, §15 ลำดับประมวลผล)
+// เดินเวลาทีละ 1 ลูป — ลำดับประมวลผลตาม AFTERSHOCKMASTER §17
+//   1. นับลูป  2. คนตายทุกโซน  3. ถ้าครบชั่วโมง จ่าย AP + ลดตัวนับต่าง ๆ  4. เช็คจบเกม
 export function tickLoop(state, { onHourTick, onZoneCleared, onGameEnd } = {}) {
   if (state.ended) return;
 
   state.loop += 1;
 
   for (const zone of Object.values(state.zones)) {
-    const wasTrapped = zone.trapped > 0 && !zone.cleared;
-    tickZoneDeath(zone);
-    if (wasTrapped && zone.trapped <= 0 && !zone.cleared) {
+    const dead = tickZoneDeath(zone);
+    state.totalCasualty += dead;
+    // คนในโซนหมด (ตายหมด) → ปิดโซนเป็นเขียวเหมือนกรณีช่วยสำเร็จ (§5.4)
+    if (!zone.cleared && isZoneEmpty(zone)) {
       zone.trapped = 0;
+      zone.cleared = true;
       onZoneCleared?.(zone, 'expired');
     }
   }
 
   if (state.loop % CONFIG.loopsPerHour === 0) {
     state.hour = state.loop / CONFIG.loopsPerHour;
+    payHourlyAP(state);
+    tickHourlyTimers(state);
     onHourTick?.(state.hour);
   }
 
   if (state.loop >= CONFIG.totalLoops || allZonesResolved(state)) {
     state.ended = true;
-    onGameEnd?.();
+    onGameEnd?.(state.loop >= CONFIG.totalLoops ? 'timeup' : 'empty');
+  }
+}
+
+// ตัวนับที่ลดลงทุก 1 ชั่วโมง — คูลดาวน์ จนท./สกิล · อายุบัฟ · เวลาฟื้นตัว
+// (รอบนี้ยังไม่มีใครตั้งค่าพวกนี้ แต่วางกลไกไว้ให้รอบ 5-8 มาต่อได้เลย)
+function tickHourlyTimers(state) {
+  for (const unit of Object.values(state.units)) {
+    unit.cdRemainHours = Math.max(0, (unit.cdRemainHours ?? 0) - 1);
+    unit.recoverRemainHours = Math.max(0, (unit.recoverRemainHours ?? 0) - 1);
+    for (const skillId of Object.keys(unit.skillCooldowns ?? {})) {
+      unit.skillCooldowns[skillId] = Math.max(0, unit.skillCooldowns[skillId] - 1);
+    }
+  }
+
+  for (const zone of Object.values(state.zones)) {
+    zone.buffs = (zone.buffs ?? []).filter((b) => (b.remainHours -= 1) > 0);
+  }
+  state.globalBuffs = (state.globalBuffs ?? []).filter((b) => (b.remainHours -= 1) > 0);
+
+  if (state.criticalCountdownHours != null) {
+    state.criticalCountdownHours -= 1;
   }
 }
 
 function allZonesResolved(state) {
-  return Object.values(state.zones).every((z) => z.trapped <= 0);
+  return Object.values(state.zones).every(isZoneEmpty);
 }
 
 export function loopDurationMs(state) {

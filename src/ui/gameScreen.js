@@ -1,34 +1,26 @@
-// หน้าจอเกมหลัก — โครง Layout (รอบที่ 1)
+// หน้าจอเกมหลัก
 // อ้างอิง docs/GAMESCREEN_SPEC.md §1 ผังหน้าจอ · §2 ปุ่มเวลา · §3 สกิล · §9 กล่องล่าง · §12 สถานะ
 //
-// รอบนี้ทำ "โครงที่มองเห็น" อย่างเดียว — ตัวเลขทั้งหมดเป็นค่าหลอกจาก PLACEHOLDER ด้านล่าง
-// ยังไม่ผูกกับ state.js / ยังไม่มีแผนที่จริง / ยังลากไม่ได้ (รอบ 2-5 ค่อยต่อ)
-// ไฟล์นี้อยู่ใน ui/ จึงห้ามคำนวณกฎเกม — รับค่ามาแสดงอย่างเดียว
+// ต่อกับ state จริงแล้ว: เวลา · AP · เลขคนบนโซน · กล่องสรุป Ⓐ/Ⓑ/Ⓒ
+// ยังเป็นค่าหลอก: Detail Feed · สถานะบาดเจ็บ · ไอคอน Air Deploy (รอรอบ 5-8)
+// ไฟล์นี้อยู่ใน ui/ จึงห้ามคำนวณกฎเกม — เรียก systems/ มาคำนวณแล้วเอาผลมาแสดงเท่านั้น
 
 import { OPERATORS } from '../data/operators.js';
-import { state } from '../state.js';
-import { renderMap, applyZoneColors } from './map.js';
+import { state, resetState } from '../state.js';
+import { CONFIG } from '../config.js';
+import { createClock, tickLoop } from '../systems/time.js';
+import { summarizeByTier } from '../systems/zones.js';
+import { renderMap, applyZoneColors, updateAllZones, updateZone } from './map.js';
 
 const PORTRAIT_DIR = 'assets/characters/';
 const SKILL_DIR = 'assets/skills/';
 
-// ค่าหลอกสำหรับรอบนี้ — ตรงกับตัวเลขในดราฟลายมือ เพื่อให้เทียบรูปกันได้ตรง ๆ
-// รอบที่ 3 จะเปลี่ยนไปอ่านจาก state.js แทนทั้งก้อน
+const TIER_LETTER = { gray: 'A', yellow: 'B', red: 'C' };
+
 const PLACEHOLDER = {
-  ap: 45,
-  hour: 23,
-  speed: 1,        // 1 = ปกติ · 2 = เร็ว
-  running: true,   // true = เวลาเดินอยู่
-  airDeployOn: true,
-  tiers: {
-    gray:   { letter: 'A', casualty: 33, clear: 67, population: 45 },
-    yellow: { letter: 'B', casualty: 45, clear: 23, population: 66 },
-    red:    { letter: 'C', casualty: 83, clear: 45, population: 7 },
-  },
-  feed: [
-    { ok: true,  zone: 'GRAY-12', text: 'ช่วยได้ 8 คน (91%)' },
-    { ok: false, zone: 'RED-03',  text: '🩹 Lyla บาดเจ็บ' },
-  ],
+  // ยังเป็นค่าหลอกจนกว่าจะถึงรอบที่ 5-8 (บัฟ / ผลลัพธ์ / สถานะบาดเจ็บ)
+  airDeployOn: false,
+  feed: [],
   // สถานะ จนท. — null = ปกติ (§12)
   // รอบนี้ใส่ Robertson บาดเจ็บไว้ 1 ตัว เพื่อให้เห็นหน้าตาป้ายสถานะ + สไปรต์ที่สลับไป
   // ตอนเล่นจริงเกมเริ่มด้วยทุกคนปกติ (รอบที่ 8 จะต่อกับ state จริง)
@@ -66,11 +58,11 @@ function buildTopBar(data, handlers) {
   for (let i = 0; i < 3; i += 1) menuBtn.appendChild(el('span', 'game-menu-bar'));
   menuBtn.addEventListener('click', () => handlers.onMenu?.());
   const ap = el('div', 'game-ap');
-  ap.append(el('span', 'game-ap-label', 'AP :'), el('span', 'game-ap-value', String(data.ap)));
+  ap.append(el('span', 'game-ap-label', 'AP :'), el('span', 'game-ap-value', '0'));
   left.append(menuBtn, ap);
 
   const center = el('div', 'game-top-center');
-  const timeBtn = el('button', 'game-time', `Time : ${data.hour} Hr`);
+  const timeBtn = el('button', 'game-time', 'Time : 0 Hr');
   timeBtn.addEventListener('click', () => handlers.onTime?.());
   center.appendChild(timeBtn);
 
@@ -79,7 +71,7 @@ function buildTopBar(data, handlers) {
   heli.title = 'Air Deploy กำลังมีผลทั้งแมพ';
   heli.hidden = !data.airDeployOn;
 
-  // ปุ่มเวลา 2 ปุ่ม (§2) — รอบนี้สลับหน้าตาอย่างเดียว ยังไม่ได้ผูกกับนาฬิกาจริง
+  // ปุ่มเวลา 2 ปุ่ม (§2)
   const speedBox = el('div', 'game-speed');
   const runBtn = el('button', 'spd-btn spd-run');
   const rateBtn = el('button', 'spd-btn spd-rate');
@@ -89,26 +81,26 @@ function buildTopBar(data, handlers) {
   bar.append(left, center, right);
 
   function paintSpeed() {
-    runBtn.textContent = data.running ? '⏸' : '▶';
-    runBtn.title = data.running ? 'หยุดเวลา' : 'เดินเวลาต่อ';
+    runBtn.textContent = state.running ? '⏸' : '▶';
+    runBtn.title = state.running ? 'หยุดเวลา' : 'เดินเวลาต่อ';
     // ปุ่มความเร็วค้างเลขเดิมไว้เสมอ แม้ตอนหยุด (§2)
-    rateBtn.textContent = data.speed === 2 ? '2️⃣' : '1️⃣';
-    rateBtn.title = data.speed === 2 ? 'ความเร็ว 2 เท่า' : 'ความเร็วปกติ';
-    bar.classList.toggle('is-paused', !data.running);
+    rateBtn.textContent = state.speed === 2 ? '2️⃣' : '1️⃣';
+    rateBtn.title = state.speed === 2 ? 'ความเร็ว 2 เท่า' : 'ความเร็วปกติ';
+    bar.classList.toggle('is-paused', !state.running);
   }
-  runBtn.addEventListener('click', () => {
-    data.running = !data.running;
-    paintSpeed();
-    handlers.onSpeedChange?.(data.running ? data.speed : 0);
-  });
-  rateBtn.addEventListener('click', () => {
-    data.speed = data.speed === 2 ? 1 : 2;
-    paintSpeed();
-    if (data.running) handlers.onSpeedChange?.(data.speed);
-  });
-  paintSpeed();
+  runBtn.addEventListener('click', () => handlers.onRunToggle?.());
+  rateBtn.addEventListener('click', () => handlers.onRateToggle?.());
 
-  return { bar, apValue: ap.querySelector('.game-ap-value'), timeBtn, heli };
+  const apValue = ap.querySelector('.game-ap-value');
+  return {
+    bar,
+    paintSpeed,
+    paintHud() {
+      apValue.textContent = String(Math.floor(state.ap));
+      timeBtn.textContent = `Time : ${state.hour} Hr`;
+      heli.hidden = !(data.airDeployOn || state.globalBuffs.some((b) => b.type === 'air'));
+    },
+  };
 }
 
 // ── แถบ จนท. ซ้าย/ขวา (§1.2, §3, §12) ───────────────────────────
@@ -207,24 +199,37 @@ const STAT_ROWS = [
   { key: 'population', label: 'Zone Population' },
 ];
 
-function buildBottom(tiers) {
+function buildBottom() {
   const box = el('div', 'game-bottom');
   const summary = el('div', 'stat-summary');
+  const valueEls = {};
+
   for (const tier of TIER_ORDER) {
-    const t = tiers[tier];
     const col = el('div', 'stat-col');
-    col.appendChild(el('div', `stat-badge stat-badge--${tier}`, t.letter));
+    col.appendChild(el('div', `stat-badge stat-badge--${tier}`, TIER_LETTER[tier]));
     const rows = el('div', 'stat-rows');
+    valueEls[tier] = {};
     for (const { key, label } of STAT_ROWS) {
       const row = el('div', 'stat-row');
-      row.append(el('span', 'stat-label', label), el('span', 'stat-value', `${t[key]}%`));
+      const value = el('span', 'stat-value', '0%');
+      row.append(el('span', 'stat-label', label), value);
+      valueEls[tier][key] = value;
       rows.appendChild(row);
     }
     col.appendChild(rows);
     summary.appendChild(col);
   }
   box.appendChild(summary);
-  return box;
+
+  return {
+    box,
+    paint() {
+      const tiers = summarizeByTier(state.zones); // คำนวณใน systems/ ที่นี่แค่เอามาแสดง
+      for (const tier of TIER_ORDER) {
+        for (const { key } of STAT_ROWS) valueEls[tier][key].textContent = `${tiers[tier][key]}%`;
+      }
+    },
+  };
 }
 
 // ── Detail Feed มุมขวาบน (§8) ───────────────────────────────────
@@ -261,20 +266,37 @@ function buildZoomButtons() {
 }
 
 // ── ประกอบทั้งหน้า ──────────────────────────────────────────────
+// นาฬิกาของหน้าจอที่กำลังเปิดอยู่ — เก็บไว้ระดับโมดูลเพื่อให้หยุดได้ตอนออกจากหน้าเกม
+// ไม่งั้น interval จะค้างเดินอยู่เบื้องหลังแม้ผู้เล่นกลับไปหน้าเมนูแล้ว
+let activeClock = null;
+
+export function stopGameClock() {
+  activeClock?.stop();
+  activeClock = null;
+}
+
 export function renderGameScreen(root, { onExit } = {}) {
+  stopGameClock();
+  resetState(); // เริ่มเกมใหม่ทุกครั้งที่เข้าหน้านี้ (สุ่มผู้รอด 1,200 คนใหม่)
+
   const data = structuredClone(PLACEHOLDER);
 
   root.innerHTML = '';
   root.className = 'screen-overlay screen--game';
 
-  const { bar } = buildTopBar(data, {
-    // ชั่วคราวสำหรับรอบนี้: ☰ พากลับเมนูหลักไปก่อน เพื่อให้ทดสอบ flow ได้ไม่ตัน
+  const top = buildTopBar(data, {
+    // ชั่วคราว: ☰ พากลับเมนูหลักไปก่อน เพื่อให้ทดสอบ flow ได้ไม่ตัน
     // รอบที่ 9 จะเปลี่ยนเป็นแผงเมนูในเกมจริง (Continue / Setting / How to play / Operator / Return to menu)
-    onMenu: () => onExit?.(),
-    onTime: () => {},          // รอบที่ 9 — หน้าเวลาที่เหลือ
-    onSpeedChange: () => {},   // รอบที่ 3 — ต่อกับนาฬิกาจริง
+    onMenu: () => { stopGameClock(); onExit?.(); },
+    onTime: () => {}, // รอบที่ 9 — หน้าเวลาที่เหลือ
+    onRunToggle: () => { clock.setSpeed(state.running ? 0 : state.speed); top.paintSpeed(); },
+    onRateToggle: () => {
+      const next = state.speed === 2 ? 1 : 2;
+      if (state.running) clock.setSpeed(next); else state.speed = next;
+      top.paintSpeed();
+    },
   });
-  root.appendChild(bar);
+  root.appendChild(top.bar);
 
   const body = el('div', 'game-body');
   body.appendChild(buildSide('left', 'Field Operator', ['human', 'cat'], data.status));
@@ -293,15 +315,47 @@ export function renderGameScreen(root, { onExit } = {}) {
   body.appendChild(buildSide('right', 'Baseplace', ['elf', 'spirit'], data.status));
   root.appendChild(body);
 
-  root.appendChild(buildBottom(data.tiers));
+  const bottom = buildBottom();
+  root.appendChild(bottom.box);
 
-  // แผนที่จริงโหลดแบบ async (fetch map.svg) — ใส่ทีหลังเมื่อโหลดเสร็จ
-  // เลขคนบนโซนมาจาก state.zones จริงแล้ว ส่วนกล่อง Ⓐ/Ⓑ/Ⓒ ยังเป็นค่าหลอกจนถึงรอบที่ 3
+  // ── เดินเวลา (§2 · AFTERSHOCKMASTER §17) ────────────────────────
+  let mapHandle = null;
+
+  function paintAll() {
+    top.paintHud();
+    bottom.paint();
+    if (mapHandle) updateAllZones(mapHandle, state.zones);
+  }
+
+  function tick() {
+    tickLoop(state, {
+      onZoneCleared: (zone) => { if (mapHandle) updateZone(mapHandle, zone); },
+      onGameEnd: () => {
+        stopGameClock();
+        top.paintSpeed();
+        // รอบที่ 10 จะเปลี่ยนตรงนี้เป็นการไปหน้า Result
+      },
+    });
+    paintAll();
+  }
+
+  const clock = createClock(state, tick);
+  activeClock = clock;
+
+  // แผนที่จริงโหลดแบบ async (fetch map.svg) — เวลาเริ่มเดินหลังแผนที่พร้อม
   applyZoneColors(document.head);
   renderMap(mapViewport, state.zones)
-    .then((handle) => { zoomHandle = handle.panzoom; })
+    .then((handle) => {
+      mapHandle = handle;
+      zoomHandle = handle.panzoom;
+      paintAll();
+      if (activeClock === clock) { clock.setSpeed(CONFIG.startSpeed); top.paintSpeed(); }
+    })
     .catch((err) => {
       mapViewport.innerHTML = '';
       mapViewport.appendChild(el('div', 'game-map-note', `โหลดแผนที่ไม่สำเร็จ: ${err.message}`));
     });
+
+  paintAll();
+  top.paintSpeed();
 }
