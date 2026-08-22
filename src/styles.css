@@ -70,6 +70,8 @@ html, body {
 .logo-block--sm .logo-subtitle { font-size: 20px; }
 
 .logo-icons { display: flex; gap: 12px; margin-top: 8px; }
+/* หน้าปก: แถวไอคอนต้องอยู่กึ่งกลางตรงกับโลโก้ (เมนูหลักยังชิดซ้ายเหมือนเดิม) */
+.logo-block--lg .logo-icons { justify-content: center; }
 .chibi-slot {
   width: 48px; height: 48px; border-radius: 50%;
   border: 2px solid var(--ring, #999);
