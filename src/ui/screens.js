@@ -5,6 +5,7 @@
 import { OPERATORS } from '../data/operators.js';
 import { OPERATOR_INTEL } from '../data/operatorIntel.js';
 import { renderTutorial } from './tutorial.js';
+import { renderGameScreen } from './gameScreen.js';
 
 // ลำดับต้องตรงกับหน้าตาดราฟ: มนุษย์(หน้ากาก) → แมว → เอลฟ์(Lia) → ภูต(Mudongzock)
 // ยังไม่มี asset ไอคอนจิบิจริง ใช้ emoji วางตำแหน่งจองไว้ก่อน สลับเป็นรูปจริงทีหลังได้โดยไม่ต้องแก้โครงสร้าง
@@ -44,6 +45,7 @@ function buildLogo({ size = 'lg', subtitle = 'Response' } = {}) {
 const SCREEN_CLASSES = [
   'screen--splash', 'screen--menu', 'screen--blank', 'screen--settings',
   'screen--quit', 'screen--intel', 'screen--howto', 'screen--roster', 'screen--card', 'screen--vn',
+  'screen--game',
 ];
 
 function setScreenClass(root, cls) {
@@ -445,8 +447,9 @@ export function initScreens(root) {
   const showOperatorMenu = () => renderOperatorMenu(root, { onBack: showIntel, onNavigate: onOperatorNavigate });
   const showRoster = (side) => renderOperatorRoster(root, { side, onBack: showOperatorMenu, onSelect: (key) => showCard(key, side) });
   const showCard = (speciesKey, side) => renderOperatorCard(root, { speciesKey, onBack: () => showRoster(side) });
-  // Play -> Tutorial (visual novel) -> หน้าเกมจริง (ยังไม่ทำ ใช้ blank ไปก่อนตามที่สั่ง)
-  const showTutorial = () => renderTutorial(root, { onFinish: () => showBlank('เกมหลัก (ยังไม่ทำ)', showMenu) });
+  // Play -> Tutorial (visual novel) -> หน้าเกมหลัก
+  const showGame = () => renderGameScreen(root, { onExit: showMenu });
+  const showTutorial = () => renderTutorial(root, { onFinish: showGame });
 
   function onMenuNavigate(id) {
     if (id === 'settings') showSettings();

@@ -15,21 +15,24 @@ export const OPERATORS = {
     portraits: {
       normal: 'Field-op-robertson.png',
       injured: 'Field-op-robertson-injured.png',
-      lost: 'Field-op-robertson-finalstand.png',
+      // Robertson ใช้ภาพ injured ทั้งตอนบาดเจ็บและหมดสติ (GAMESCREEN_SPEC §12)
+      lost: 'Field-op-robertson-injured.png',
+      laststand: 'Field-op-robertson-finalstand.png',
     },
     hasSpecialSkill: false, // TODO: บางตัวมีสกิลพิเศษเพิ่ม — รอ asset/สเปกเพิ่มเติม ยังไม่ต้องทำ
     skills: {
       sar: {
         name: 'Search & Rescue', icon: 'Icon-skills-robertson-search&rescue.PNG', type: 'field',
         zones: {
-          gray:   { ap: 8,  cd: 1 },
-          yellow: { ap: 16, cd: 2 },
-          // แดง: เข้าไม่ได้
+          gray:   { ap: 6,  cd: 1 },
+          yellow: { ap: 12, cd: 2 },
+          // แดง: เข้าไม่ได้ (ยกเว้นตอน Last Stand — GAMESCREEN_SPEC §5.2)
         },
       },
       crowd: {
         name: 'Crowd Control', icon: 'Icon-skills-robertson-crowd_control.PNG', type: 'buff',
-        buff: 25, scope: 'zone', durationHours: 3, ap: 14, cd: 3, risky: true,
+        // ไม่จองโซน · ไม่มีความเสี่ยงบาดเจ็บ (GAMESCREEN_SPEC §3.3) — ต้นทุนจริงคือคูลดาวน์ 3 ชม.
+        buff: 25, scope: 'zone', durationHours: 3, ap: 14, cd: 3, risky: false,
       },
     },
   },
@@ -39,12 +42,12 @@ export const OPERATORS = {
     portraits: {
       normal: 'Field-op-Lyla.png',
       injured: 'Field-op-Lyla-injured.png',
-      lost: 'Field-op-Lyla-unconscious.png', // ✅ มีไฟล์จริงแล้ว (ชื่อไฟล์จริงคือ "unconscious" ไม่ใช่ "finalstand" เหมือน Robertson)
+      lost: 'Field-op-Lyla-unconscious.png', // ✅ มีไฟล์จริงแล้ว · Lyla ไม่มี Last Stand
     },
     hasSpecialSkill: false, // TODO: เช่นเดียวกับด้านบน
     skills: {
       hsar: {
-        name: 'Hardly Search & Rescue', icon: 'Icon-skills-Lyla-hardsearch&extract.png', type: 'field',
+        name: 'Hardsearch & Extract', icon: 'Icon-skills-Lyla-hardsearch&extract.png', type: 'field',
         zones: {
           gray:   { ap: 10, cd: 1 },
           yellow: { ap: 18, cd: 1 },
@@ -69,7 +72,7 @@ export const OPERATORS = {
         buff: 15, scope: 'multi', durationHours: 3, ap: 10, cd: 0,
       },
       alert: {
-        name: 'Alert', icon: 'Icon-skills-Ria-alert_allied.PNG', type: 'shield', // TODO: เปลี่ยนเป็น Lia เมื่อเจ้าของแก้ชื่อไฟล์จริง
+        name: 'Alert Allied', icon: 'Icon-skills-Ria-alert_allied.PNG', type: 'shield', // TODO: เปลี่ยนเป็น Lia เมื่อเจ้าของแก้ชื่อไฟล์จริง
         buff: 0, immune: true, scope: 'zone', durationHours: 3, ap: 35, cd: 4,
       },
     },

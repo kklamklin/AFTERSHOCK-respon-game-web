@@ -316,3 +316,221 @@ html, body {
 }
 .vn-confirm-yes { background: #d1453b; color: #fff; }
 .vn-confirm-no { background: #eee; color: #1b1f24; }
+
+/* ════════════════════════════════════════════════════════════════
+   หน้าจอเกมหลัก — โครง Layout (รอบที่ 1)
+   อ้างอิง docs/GAMESCREEN_SPEC.md §1 ผังหน้าจอ
+   ────────────────────────────────────────────────────────────────
+   ทุกขนาดในหน้านี้อิงตัวแปร --u (หน่วยเดียว) ที่ผูกกับความสูงจอ
+   เพราะเกมบังคับแนวนอนและต้องพอดีจอเดียวไม่มีสกรอลล์ ทั้งบนมือถือและคอม
+   ════════════════════════════════════════════════════════════════ */
+.screen--game {
+  --u: clamp(7px, 1.45vh, 14px);
+  --portrait: calc(var(--u) * 10);
+  --ink: #1b1f24;
+  --line: #1b1f24;
+  --muted: #7c848e;
+  background: #fff; color: var(--ink);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  user-select: none; -webkit-user-select: none;
+}
+
+/* ── แถบบน ───────────────────────────────────────────────────── */
+.game-top {
+  flex: none;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: calc(var(--u) * 1.5);
+  padding: calc(var(--u) * 1.2) calc(var(--u) * 2);
+}
+.game-top-left { display: flex; align-items: center; gap: calc(var(--u) * 2.4); }
+.game-top-right { display: flex; align-items: center; gap: calc(var(--u) * 1.2); justify-content: flex-end; }
+
+.game-menu-btn {
+  display: flex; flex-direction: column; justify-content: center;
+  gap: calc(var(--u) * 0.55);
+  width: calc(var(--u) * 5); height: calc(var(--u) * 4);
+  padding: 0; border: none; background: none; cursor: pointer;
+}
+.game-menu-bar { display: block; height: calc(var(--u) * 0.42); background: var(--ink); border-radius: 2px; }
+.game-menu-btn:hover .game-menu-bar { background: #e8484a; }
+
+.game-ap { display: flex; align-items: baseline; gap: calc(var(--u) * 0.6); }
+.game-ap-label { font-size: calc(var(--u) * 2.1); font-weight: 700; color: #e8484a; letter-spacing: 1px; }
+.game-ap-value { font-size: calc(var(--u) * 2.6); font-weight: 800; color: #e8484a; font-variant-numeric: tabular-nums; }
+
+.game-time {
+  font-family: inherit; font-size: calc(var(--u) * 2.1); font-weight: 700;
+  letter-spacing: 1px; color: var(--ink); background: #fff;
+  border: 2px solid var(--line); border-radius: calc(var(--u) * 0.5);
+  padding: calc(var(--u) * 0.7) calc(var(--u) * 2);
+  cursor: pointer; white-space: nowrap;
+}
+.game-time:hover { background: #f2f4f7; }
+
+.game-air { font-size: calc(var(--u) * 3); margin-right: auto; line-height: 1; }
+.game-air[hidden] { display: none; }
+
+.game-speed {
+  display: flex; align-items: center; gap: calc(var(--u) * 0.4);
+  border: 2px solid var(--line); border-radius: calc(var(--u) * 0.5);
+  padding: calc(var(--u) * 0.4) calc(var(--u) * 0.8);
+}
+.spd-btn {
+  border: none; background: none; cursor: pointer; padding: 0;
+  width: calc(var(--u) * 3.4); height: calc(var(--u) * 3.4);
+  font-size: calc(var(--u) * 2.2); line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.spd-btn:hover { transform: scale(1.12); }
+
+/* ── ตัวกลาง: จนท.ซ้าย / แผนที่ / จนท.ขวา ────────────────────── */
+.game-body {
+  flex: 1; min-height: 0; position: relative;
+  display: grid; grid-template-columns: minmax(0, 20fr) minmax(0, 46fr) minmax(0, 20fr);
+  gap: calc(var(--u) * 1.5);
+  padding: 0 calc(var(--u) * 2);
+}
+
+.game-side { display: flex; flex-direction: column; min-height: 0; overflow: hidden; gap: calc(var(--u) * 1.4); }
+.side-title {
+  flex: none; margin: 0; font-size: calc(var(--u) * 2.1); font-weight: 700; letter-spacing: 1px;
+  line-height: 1.15; padding-bottom: calc(var(--u) * 0.4); border-bottom: 2px solid var(--line);
+}
+.game-side--left .side-title { color: #2f9e44; }
+.game-side--right .side-title { color: #e8484a; text-align: right; }
+
+.op-block { flex: none; display: flex; flex-direction: column; gap: calc(var(--u) * 0.6); }
+.op-head { flex: none; display: flex; align-items: flex-start; gap: calc(var(--u) * 1.2); }
+.game-side--right .op-head { flex-direction: row-reverse; }
+
+.op-card { flex: none; display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * 0.3); }
+.op-portrait {
+  width: var(--portrait); height: var(--portrait);
+  border: 2px solid var(--line); background: #f2f4f7;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.op-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.op-name { font-size: calc(var(--u) * 1.5); }
+
+.op-status { flex: 1; min-width: 0; padding-top: calc(var(--u) * 1.5); line-height: 1.25; }
+.game-side--right .op-status { text-align: right; }
+.op-status[hidden] { display: none; }
+.op-status-label { font-size: calc(var(--u) * 1.55); font-weight: 700; white-space: pre-line; }
+.op-status-time { font-size: calc(var(--u) * 1.9); font-weight: 700; font-variant-numeric: tabular-nums; }
+.op-status--injured { color: #e0a020; }
+.op-status--lost, .op-status--laststand { color: #e5484d; }
+
+.op-skills { display: flex; flex-direction: column; gap: calc(var(--u) * 0.6); }
+.skill-row { flex: none; display: flex; align-items: center; gap: calc(var(--u) * 0.9); }
+.game-side--right .skill-row { flex-direction: row-reverse; }
+
+.skill-label {
+  flex: 1; min-width: 0; text-align: right;
+  font-size: calc(var(--u) * 1.4); line-height: 1.2;
+}
+.game-side--right .skill-label { text-align: left; }
+
+.skill-icon-wrap { flex: none; position: relative; padding-top: calc(var(--u) * 1.35); }
+.skill-badge {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  font-size: calc(var(--u) * 1.4); line-height: 1;
+}
+.skill-icon {
+  position: relative; overflow: hidden;
+  width: calc(var(--u) * 4.2); height: calc(var(--u) * 4.2);
+  border: 2px solid var(--line); border-radius: 50%; background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: grab;
+}
+.skill-icon img { width: 86%; height: 86%; object-fit: contain; }
+.skill-using {
+  position: absolute; left: 0; right: 0; bottom: 22%;
+  background: #f2c94c; color: #1b1f24;
+  font-size: calc(var(--u) * 0.95); font-weight: 700; letter-spacing: 0.5px;
+  text-align: center; padding: calc(var(--u) * 0.12) 0;
+  display: none;
+}
+.skill-row.is-using .skill-using { display: block; }
+
+.skill-costs {
+  flex: none; display: flex; flex-direction: column; gap: calc(var(--u) * 0.25);
+  font-size: calc(var(--u) * 1.35); font-variant-numeric: tabular-nums;
+}
+.skill-cost { display: flex; align-items: center; gap: calc(var(--u) * 0.5); }
+.skill-cost b { font-weight: 600; }
+.skill-cost small { font-size: calc(var(--u) * 0.95); color: var(--muted); }
+.cost-ring {
+  width: calc(var(--u) * 1.15); height: calc(var(--u) * 1.15);
+  border-radius: 50%; border: 2px solid; flex: none;
+}
+.cost-ring--gray { border-color: #8a8f96; }
+.cost-ring--yellow { border-color: #E8C13F; }
+.cost-ring--red { border-color: #E5484D; }
+
+/* ── แผนที่ (รอบที่ 2 จะเอา map.svg จริงมาใส่ตรงนี้) ─────────── */
+.game-map-wrap { min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.game-map { position: relative; }
+.game-map {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px dashed #c9ced6; border-radius: calc(var(--u) * 0.5);
+}
+.game-map-note { font-size: calc(var(--u) * 1.6); color: var(--muted); }
+
+/* ── Detail Feed มุมขวาบน (§8) ───────────────────────────────── */
+.game-feed {
+  position: absolute; top: calc(var(--u) * 1); right: calc(var(--u) * 1);
+  width: calc(var(--u) * 21); max-width: 46%;
+  display: flex; flex-direction: column; gap: calc(var(--u) * 0.6);
+  pointer-events: none; z-index: 5;
+}
+.feed-card {
+  background: rgba(255, 255, 255, 0.96);
+  border-left: calc(var(--u) * 0.5) solid;
+  border-radius: calc(var(--u) * 0.4);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  padding: calc(var(--u) * 0.7) calc(var(--u) * 1);
+  line-height: 1.3;
+}
+.feed-card--ok { border-color: #3DD68C; }
+.feed-card--fail { border-color: #E5484D; }
+.feed-head { font-size: calc(var(--u) * 1.35); font-weight: 700; }
+.feed-body { font-size: calc(var(--u) * 1.25); color: #4a5058; }
+
+/* ── กล่องสรุปล่างสุด (§9.1) ─────────────────────────────────── */
+.game-bottom { flex: none; padding: calc(var(--u) * 1.2) calc(var(--u) * 2) calc(var(--u) * 1.6); }
+.stat-summary {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: calc(var(--u) * 2);
+  border: 2px solid var(--line); border-radius: calc(var(--u) * 0.5);
+  padding: calc(var(--u) * 1.2) calc(var(--u) * 2);
+}
+.stat-col { display: flex; align-items: center; gap: calc(var(--u) * 1.2); min-width: 0; }
+.stat-badge {
+  flex: none;
+  width: calc(var(--u) * 3.6); height: calc(var(--u) * 3.6);
+  border-radius: 50%; border: 2px solid; background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: calc(var(--u) * 1.8); font-weight: 700;
+}
+.stat-badge--gray { border-color: #8a8f96; background: #D9D9D9; }
+.stat-badge--yellow { border-color: #E8C13F; background: #FDF3D0; color: #9a7b12; }
+.stat-badge--red { border-color: #E5484D; background: #FBE4E4; color: #c0272c; }
+
+.stat-rows { flex: none; width: calc(var(--u) * 24); max-width: 100%; display: flex; flex-direction: column; gap: calc(var(--u) * 0.15); }
+.stat-row { display: flex; align-items: baseline; gap: calc(var(--u) * 0.8); }
+.stat-label { flex: 1; min-width: 0; font-size: calc(var(--u) * 1.35); }
+.stat-value {
+  flex: none; font-size: calc(var(--u) * 1.4); font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* จอเตี้ย (มือถือแนวนอน ~360-500px) — ย่อรูป จนท. ลงเพื่อให้ 2 คนต่อฝั่งพอดีจอ ไม่ล้น */
+@media (max-height: 520px) {
+  .screen--game { --portrait: calc(var(--u) * 7.2); }
+  .game-side { gap: calc(var(--u) * 0.9); }
+  .game-body { gap: calc(var(--u) * 1); }
+  .game-top { padding: calc(var(--u) * 0.8) calc(var(--u) * 2); }
+  .game-bottom { padding: calc(var(--u) * 0.8) calc(var(--u) * 2) calc(var(--u) * 1); }
+}

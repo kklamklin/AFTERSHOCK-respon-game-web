@@ -2,24 +2,13 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>AFTERSHOCK — dev</title>
 <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
+  <!-- ทุกหน้าจอ (ปก → เมนู → tutorial → เกมหลัก → result) วาดลงใน div เดียวนี้ -->
   <div id="screen-root" class="screen-overlay"></div>
-
-  <div class="hud">
-    <span id="hud-hour">0/72 ชม.</span>
-    <span id="hud-ap">0 AP</span>
-    <span id="hud-loop">ลูป 0/144</span>
-  </div>
-  <div class="controls">
-    <button id="btn-pause">⏸</button>
-    <button id="btn-play">▶</button>
-    <button id="btn-fast">⏩</button>
-  </div>
-  <div class="map" id="map"></div>
 
   <script type="module" src="src/main.js"></script>
 </body>
