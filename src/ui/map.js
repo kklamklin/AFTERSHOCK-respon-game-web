@@ -26,15 +26,58 @@ function cropViewBox(svg) {
     `${box.x - pad} ${box.y - pad} ${box.width + pad * 2} ${box.height + pad * 2}`);
 }
 
+// จุดกลางที่ "อยู่ในรูปทรงจริง"
+// โซนรูปตัว L / เว้าแหว่ง จุดกึ่งกลางกรอบสี่เหลี่ยมอาจตกนอกตัวโซน ทำให้เลขไปโผล่ข้างนอก
+// จึงหว่านจุดทดสอบเป็นตาราง เลือกจุดที่อยู่ในเนื้อโซนและห่างจากขอบมากที่สุด
+const GRID = 13;
+
+function visualCenter(path, box) {
+  const svg = path.ownerSVGElement;
+  const inside = [];
+  const outside = [];
+
+  for (let i = 0; i < GRID; i += 1) {
+    for (let j = 0; j < GRID; j += 1) {
+      const pt = svg.createSVGPoint();
+      pt.x = box.x + (box.width * (i + 0.5)) / GRID;
+      pt.y = box.y + (box.height * (j + 0.5)) / GRID;
+      (path.isPointInFill?.(pt) ? inside : outside).push(pt);
+    }
+  }
+
+  if (!inside.length) return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+
+  // เรียงจุดที่อยู่ในเนื้อโซนตาม "ความห่างจากขอบ" มากไปน้อย
+  const ranked = inside
+    .map((c) => ({
+      pt: c,
+      clear: Math.min(...outside.map((o) => (c.x - o.x) ** 2 + (c.y - o.y) ** 2), Infinity),
+    }))
+    .sort((a, b) => b.clear - a.clear);
+
+  // บางโซนใน map.svg วางทับกัน จุดที่อยู่ในเนื้อโซนนี้อาจถูกโซนอื่นบังอยู่ข้างบน
+  // เลือกจุดที่ "จิ้มแล้วโดนโซนนี้จริง" เป็นอันดับแรก เพื่อให้เลขกับจุดที่วางไอคอนตรงกับที่ผู้เล่นกดได้
+  const ctm = svg.getScreenCTM();
+  if (ctm) {
+    for (const cand of ranked.slice(0, 24)) {
+      const s = cand.pt.matrixTransform(ctm);
+      if (document.elementFromPoint(s.x, s.y)?.closest?.('.map-zone') === path) {
+        return { x: cand.pt.x, y: cand.pt.y };
+      }
+    }
+  }
+  return { x: ranked[0].pt.x, y: ranked[0].pt.y };
+}
+
 // ใส่ตัวเลขคนติดอยู่ไว้กลางโซน — ขนาดตัวอักษรย่อตามขนาดโซน โซนเล็กจะได้ไม่ล้น
-function placeLabel(svg, path, zone) {
+function placeLabel(svg, path, zone, center) {
   const box = path.getBBox();
   const size = Math.max(11, Math.min(26, box.width / 2.4, box.height / 1.5));
 
   const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   text.setAttribute('class', 'map-count');
-  text.setAttribute('x', box.x + box.width / 2);
-  text.setAttribute('y', box.y + box.height / 2);
+  text.setAttribute('x', center.x);
+  text.setAttribute('y', center.y);
   text.setAttribute('font-size', size.toFixed(1));
   text.dataset.zoneId = zone.id;
   text.textContent = String(Math.floor(zone.trapped));
@@ -63,6 +106,7 @@ export async function renderMap(container, zones) {
   const zoneEls = new Map();
   const countEls = new Map();
   const boxes = new Map();
+  const centers = new Map();
 
   for (const zone of Object.values(zones)) {
     const path = svg.querySelector(`#${CSS.escape(zone.id)}`);
@@ -74,14 +118,46 @@ export async function renderMap(container, zones) {
     path.dataset.zoneId = zone.id;
     path.dataset.level = zone.level;
     zoneEls.set(zone.id, path);
-    boxes.set(zone.id, path.getBBox());
-    countEls.set(zone.id, placeLabel(svg, path, zone));
+    const box = path.getBBox();
+    boxes.set(zone.id, box);
+    centers.set(zone.id, visualCenter(path, box));
+    countEls.set(zone.id, placeLabel(svg, path, zone, centers.get(zone.id)));
   }
 
-  const handle = { svg, zoneEls, countEls, boxes, container };
+  warnHiddenZones(svg, zoneEls);
+
+  const handle = { svg, zoneEls, countEls, boxes, centers, container };
   buildOverlay(handle, zones);
   handle.panzoom = createPanZoom(container, svg);
   return handle;
+}
+
+// เตือนถ้ามีโซนที่ถูกโซนอื่นทับจนกดไม่ได้เลย — ถ้าเกิดขึ้นแปลว่า map.svg วาดซ้อนกัน
+// โซนแบบนั้นผู้เล่นจะมองไม่เห็นและช่วยคนในนั้นไม่ได้ตลอดเกม
+function warnHiddenZones(svg, zoneEls) {
+  const ctm = svg.getScreenCTM();
+  if (!ctm) return;
+  const hidden = [];
+
+  for (const [zoneId, path] of zoneEls) {
+    const box = path.getBBox();
+    let reachable = false;
+    for (let i = 0; i < 5 && !reachable; i += 1) {
+      for (let j = 0; j < 5 && !reachable; j += 1) {
+        const pt = svg.createSVGPoint();
+        pt.x = box.x + (box.width * (i + 0.5)) / 5;
+        pt.y = box.y + (box.height * (j + 0.5)) / 5;
+        if (!path.isPointInFill?.(pt)) continue;
+        const sp = pt.matrixTransform(ctm);
+        if (document.elementFromPoint(sp.x, sp.y)?.closest?.('.map-zone') === path) reachable = true;
+      }
+    }
+    if (!reachable) hidden.push(zoneId);
+  }
+
+  if (hidden.length) {
+    console.warn(`⚠ map.svg: โซนเหล่านี้ถูกโซนอื่นวาดทับจนกดไม่ได้ — ${hidden.join(', ')}`);
+  }
 }
 
 // ── เลเยอร์ทับบนโซน: ไอคอน จนท. · ไอคอนบัฟ · กากบาทตอนลาก (§11) ──
@@ -101,32 +177,26 @@ function buildOverlay(handle, zones) {
 
   for (const zone of Object.values(zones)) {
     const box = handle.boxes.get(zone.id);
-    if (!box) continue;
-    const cx = box.x + box.width / 2;
-    const cy = box.y + box.height / 2;
+    const center = handle.centers.get(zone.id);
+    if (!box || !center) continue;
+    const { x: cx, y: cy } = center;
     // ขนาดไอคอนย่อตามขนาดโซน โซนเล็กจะได้ไม่ล้นออกนอกกรอบมากนัก
     const size = Math.max(13, Math.min(28, box.width * 0.42, box.height * 0.5));
-    const pad = 2;
 
-    // แยกตำแหน่งกันคนละมุม ไม่งั้นในโซนเล็กจะทับกันจนอ่านไม่ออก:
-    //   เลขคนติดอยู่ = กลางโซน (วาดไว้แล้วใน placeLabel)
-    //   ไอคอน จนท. + เวลาที่เหลือ = มุมบนซ้าย
-    //   ไอคอนบัฟ = มุมบนขวา
+    // เรียงแนวตั้งรอบจุดกลาง: ไอคอน จนท. อยู่บน · เลขคนอยู่กลาง · ไอคอนบัฟอยู่ล่าง
+    // (เคยวางกองไว้จุดเดียวกันหมด อ่านไม่ออกในโซนเล็ก)
     const g = svgEl('g', { class: 'zone-mark' });
-    const halo = svgEl('circle', {
-      class: 'zone-op-halo', cx: box.x + pad + size / 2, cy: box.y + pad + size / 2, r: size * 0.56,
-    });
+    const halo = svgEl('circle', { class: 'zone-op-halo', cx, cy: cy - size * 0.9, r: size * 0.56 });
     const icon = svgEl('image', {
-      class: 'zone-op', x: box.x + pad, y: box.y + pad, width: size, height: size,
+      class: 'zone-op', x: cx - size / 2, y: cy - size * 1.4, width: size, height: size,
       preserveAspectRatio: 'xMidYMid meet',
     });
     const timer = svgEl('text', {
-      class: 'zone-timer', x: box.x + pad + size + 2, y: box.y + pad + size * 0.6,
+      class: 'zone-timer', x: cx + size * 0.62, y: cy - size * 0.9,
       'font-size': (size * 0.55).toFixed(1),
     });
     const buffs = svgEl('text', {
-      class: 'zone-buffs', x: box.x + box.width - pad, y: box.y + pad + size * 0.42,
-      'font-size': (size * 0.6).toFixed(1),
+      class: 'zone-buffs', x: cx, y: cy + size * 0.85, 'font-size': (size * 0.6).toFixed(1),
     });
     const cross = svgEl('text', { class: 'zone-cross', x: cx, y: cy, 'font-size': (size * 1.1).toFixed(1) });
     cross.textContent = '✕';

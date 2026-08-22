@@ -12,6 +12,7 @@ import { createClock, tickLoop } from '../systems/time.js';
 import { summarizeByTier } from '../systems/zones.js';
 import { skillStatus, unitStatusLabel, useGlobalSkill, clearMission } from '../systems/skills.js';
 import { attachDrag, cancelDrag } from './dragdrop.js';
+import { buildZoneDetail } from './panels.js';
 import { renderMap, applyZoneColors, updateAllZones, updateZone, updateZoneMarkers } from './map.js';
 
 const PORTRAIT_DIR = 'assets/characters/';
@@ -273,6 +274,7 @@ const STAT_ROWS = [
 function buildBottom() {
   const box = el('div', 'game-bottom');
   const summary = el('div', 'stat-summary');
+  const detail = buildZoneDetail();
   const valueEls = {};
 
   for (const tier of TIER_ORDER) {
@@ -290,10 +292,17 @@ function buildBottom() {
     col.appendChild(rows);
     summary.appendChild(col);
   }
-  box.appendChild(summary);
+  box.append(summary, detail.box);
 
   return {
     box,
+    // สลับระหว่าง "สรุป Ⓐ/Ⓑ/Ⓒ" กับ "รายละเอียดโซนที่กำลังลากอยู่เหนือ" (§9)
+    showZone(zoneId, opKey, skillId) {
+      // ไม่ซ่อนกล่องสรุป — ปล่อยให้อยู่ในผังเหมือนเดิม แล้วให้แผงลอยมาทับ
+      // ความสูงกล่องล่างจะได้คงที่ แผนที่ไม่ขยับระหว่างลาก
+      if (zoneId && opKey) detail.show(state, zoneId, opKey, skillId);
+      else detail.hide();
+    },
     paint() {
       const tiers = summarizeByTier(state.zones); // คำนวณใน systems/ ที่นี่แค่เอามาแสดง
       for (const tier of TIER_ORDER) {
@@ -462,8 +471,8 @@ export function renderGameScreen(root, { onExit } = {}) {
   dragCtx.getMapHandle = () => mapHandle;
   dragCtx.pause = () => clock.setRunning(false);
   dragCtx.resume = () => clock.setRunning(true);
-  dragCtx.onChange = () => { paintAll(); top.paintSpeed(); };
-  dragCtx.onHoverZone = () => {}; // รอบที่ 6 — แผงข้อมูลโซนตอนลาก
+  dragCtx.onChange = () => { bottom.showZone(null); paintAll(); top.paintSpeed(); };
+  dragCtx.onHoverZone = (zoneId, opKey, skillId) => bottom.showZone(zoneId, opKey, skillId);
 
   // แผนที่จริงโหลดแบบ async (fetch map.svg) — เวลาเริ่มเดินหลังแผนที่พร้อม
   applyZoneColors(document.head);

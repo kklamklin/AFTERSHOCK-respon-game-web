@@ -11,7 +11,7 @@
 // (state.units, CONFIG ฯลฯ) — `name` คือชื่อตัวละครที่โชว์ผู้เล่น
 export const OPERATORS = {
   human: {
-    name: 'Robertson', side: 'field', base: 75,
+    name: 'Robertson', side: 'field',
     portraits: {
       normal: 'Field-op-robertson.png',
       injured: 'Field-op-robertson-injured.png',
@@ -38,7 +38,7 @@ export const OPERATORS = {
   },
 
   cat: {
-    name: 'Lyla', side: 'field', base: 90,
+    name: 'Lyla', side: 'field',
     portraits: {
       normal: 'Field-op-Lyla.png',
       injured: 'Field-op-Lyla-injured.png',

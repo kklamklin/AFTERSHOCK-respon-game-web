@@ -550,7 +550,12 @@ html, body {
 .feed-body { font-size: calc(var(--u) * 1.25); color: #4a5058; }
 
 /* ── กล่องสรุปล่างสุด (§9.1) ─────────────────────────────────── */
-.game-bottom { flex: none; padding: calc(var(--u) * 1.2) calc(var(--u) * 2) calc(var(--u) * 1.6); }
+.game-bottom {
+  position: relative; flex: none;
+  /* สูงคงที่ กว้างพอให้ทั้งกล่องสรุปและแผงข้อมูลตอนลากอยู่ได้โดยไม่ดันแผนที่ */
+  min-height: calc(var(--u) * 11.6);
+  padding: calc(var(--u) * 1.2) calc(var(--u) * 2) calc(var(--u) * 1.6);
+}
 .stat-summary {
   display: grid; grid-template-columns: repeat(3, 1fr);
   gap: calc(var(--u) * 2);
@@ -579,9 +584,13 @@ html, body {
 
 /* จอเตี้ย (มือถือแนวนอน ~360-500px) — ย่อรูป จนท. ลงเพื่อให้ 2 คนต่อฝั่งพอดีจอ ไม่ล้น */
 @media (max-height: 520px) {
-  .screen--game { --portrait: calc(var(--u) * 7.2); }
-  .game-side { gap: calc(var(--u) * 0.9); }
+  /* กล่องล่างสูงคงที่ พื้นที่ที่เหลือให้แถบ จนท. จึงน้อยลง ต้องย่อรูปลงอีก */
+  .screen--game { --portrait: calc(var(--u) * 6.2); }
+  .game-side { gap: calc(var(--u) * 0.7); }
   .game-body { gap: calc(var(--u) * 1); }
+  .op-block { gap: calc(var(--u) * 0.35); }
+  .op-skills { gap: calc(var(--u) * 0.45); }
+  .side-title { font-size: calc(var(--u) * 1.9); }
   .game-top { padding: calc(var(--u) * 0.8) calc(var(--u) * 2); }
   .game-bottom { padding: calc(var(--u) * 0.8) calc(var(--u) * 2) calc(var(--u) * 1); }
 }
@@ -617,7 +626,7 @@ html, body {
   fill: #1b1f24; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round;
 }
 .zone-timer { text-anchor: start; }
-.zone-buffs { text-anchor: end; }
+.zone-buffs { text-anchor: middle; }
 .zone-cross {
   text-anchor: middle; dominant-baseline: central;
   font-family: system-ui, sans-serif; font-weight: 700;
@@ -629,3 +638,75 @@ html, body {
 .map-viewport.is-dragging .map-zone.is-invalid { opacity: 0.4; }
 .map-viewport.is-dragging .map-count { opacity: 0.5; }
 .map-zone.is-target { stroke: #2b6cb0 !important; stroke-width: 4; }
+
+/* ── แผงข้อมูลโซนตอนลาก (GAMESCREEN_SPEC §9.2) ─────────────────
+   สูงเท่ากล่องสรุป Ⓐ/Ⓑ/Ⓒ เป๊ะ ๆ เพื่อไม่ให้แผนที่ขยับตอนกำลังลาก */
+.zone-detail[hidden] { display: none; }
+.zone-detail {
+  /* ลอยทับกล่องสรุป Ⓐ/Ⓑ/Ⓒ แทนที่จะสลับที่กัน —
+     ถ้าปล่อยให้กล่องล่างสูงเปลี่ยนตอนแผงโผล่ แผนที่จะหด โซนใต้ปลายนิ้วจะเลื่อนหนีทันที
+     (บั๊กนี้เจอจริงตอนเทส: เล็งโซนแดงแต่ไปลงโซนเหลือง) */
+  position: absolute;
+  left: calc(var(--u) * 2); right: calc(var(--u) * 2);
+  top: calc(var(--u) * 1.2); bottom: calc(var(--u) * 1.6);
+  background: #fff; overflow: hidden; z-index: 2;
+  display: grid; grid-template-columns: auto 1fr 1.35fr 1fr;
+  gap: calc(var(--u) * 1.6); align-items: center;
+  border: 2px solid var(--line); border-radius: calc(var(--u) * 0.5);
+  padding: calc(var(--u) * 1.2) calc(var(--u) * 2);
+}
+.zone-detail.is-reject { border-color: #E5484D; background: #fff6f6; }
+
+.zd-col { display: flex; flex-direction: column; gap: calc(var(--u) * 0.15); min-width: 0; }
+.zd-col--head { gap: calc(var(--u) * 0.3); }
+
+.zd-zone {
+  display: flex; align-items: center; gap: calc(var(--u) * 0.7);
+  font-size: calc(var(--u) * 1.7); font-weight: 700; letter-spacing: 0.5px;
+}
+.zd-zone-letter {
+  width: calc(var(--u) * 2.3); height: calc(var(--u) * 2.3); flex: none;
+  border-radius: 50%; border: 2px solid; background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: calc(var(--u) * 1.4);
+}
+.zd-zone--gray .zd-zone-letter { border-color: #8a8f96; background: #D9D9D9; }
+.zd-zone--yellow .zd-zone-letter { border-color: #E8C13F; background: #FDF3D0; color: #9a7b12; }
+.zd-zone--red .zd-zone-letter { border-color: #E5484D; background: #FBE4E4; color: #c0272c; }
+.zd-op { font-size: calc(var(--u) * 1.2); line-height: 1.3; color: #4a5058; }
+
+.zd-row { display: flex; align-items: baseline; gap: calc(var(--u) * 0.8); }
+.zd-label { flex: 1; min-width: 0; font-size: calc(var(--u) * 1.2); line-height: 1.35; color: #4a5058; }
+.zd-value {
+  flex: none; font-size: calc(var(--u) * 1.3); line-height: 1.35; font-weight: 700;
+  font-variant-numeric: tabular-nums; text-align: right;
+}
+.zd-value.is-big { font-size: calc(var(--u) * 1.9); }
+.zd-value.is-good { color: #2f9e44; }
+.zd-value.is-bad { color: #E5484D; }
+
+/* ชิปแสดงที่มาของอัตราสำเร็จ — +90 ฐาน · +15 Scan · −55 พื้นที่ */
+.zd-chips { flex-direction: row; flex-wrap: wrap; gap: calc(var(--u) * 0.4); align-content: center; }
+.zd-chip {
+  display: inline-flex; align-items: baseline; gap: calc(var(--u) * 0.3);
+  padding: calc(var(--u) * 0.15) calc(var(--u) * 0.6);
+  border-radius: calc(var(--u) * 0.35); border: 1px solid;
+  font-variant-numeric: tabular-nums;
+}
+.zd-chip b { font-size: calc(var(--u) * 1.3); }
+.zd-chip small { font-size: calc(var(--u) * 1.05); opacity: 0.75; }
+.zd-chip.is-plus { border-color: #9ad3ae; background: #eefaf1; color: #1f7a37; }
+.zd-chip.is-minus { border-color: #f0b3b5; background: #fdf0f0; color: #c0272c; }
+
+.zd-reject {
+  position: absolute; left: 0; right: 0; bottom: calc(var(--u) * -0.2);
+  text-align: center; font-size: calc(var(--u) * 1.3); font-weight: 700; color: #E5484D;
+}
+
+/* จอเตี้ยมาก (iPhone SE แนวนอน ~375px) — ลดหน่วยฐานลงอีกขั้นให้ทุกอย่างพอดีจอเดียว */
+@media (max-height: 430px) {
+  .screen--game { --u: clamp(5.6px, 1.45vh, 14px); --portrait: calc(var(--u) * 6); }
+  .game-top { padding: calc(var(--u) * 0.6) calc(var(--u) * 1.6); }
+  .game-body { padding: 0 calc(var(--u) * 1.6); }
+  .game-bottom { padding: calc(var(--u) * 0.8) calc(var(--u) * 1.6) calc(var(--u) * 0.9); }
+}
