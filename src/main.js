@@ -3,9 +3,16 @@
 // flow: ปก → เมนูหลัก → (Settings / Intel / Quit) → Play → Tutorial → หน้าเกมหลัก
 // ดู src/ui/screens.js สำหรับการเชื่อมหน้าจอทั้งหมด
 //
-// หมายเหตุ: นาฬิกาเกมจริง (systems/time.js) กับแผนที่ (ui/map.js) ยังไม่ได้ต่อเข้าหน้าเกมหลัก
-// จะต่อในรอบที่ 2 (แผนที่จริง) และรอบที่ 3 (เดินเวลา) ตาม docs/GAMESCREEN_SPEC.md §14
+// นาฬิกา แผนที่ และแถบ จนท. ต่อกับ state จริงหมดแล้ว — ดู src/ui/gameScreen.js
 
 import { initScreens } from './ui/screens.js';
+import { state } from './state.js';
+import { CONFIG } from './config.js';
 
 initScreens(document.getElementById('screen-root'));
+
+// ── ช่องทาง debug ตอน dev ───────────────────────────────────────
+// เปิด Console ในเบราว์เซอร์แล้วพิมพ์ AFTERSHOCK.state เพื่อดู/แก้สถานะเกมสด ๆ ได้
+// ใช้ทดสอบสถานะที่ยังไม่มีทางเกิดเองในเกม (บาดเจ็บ / หมดสติ / Last Stand)
+// build รวมไฟล์เดียว (รอบที่ 10) จะตัดบรรทัดนี้ทิ้ง
+globalThis.AFTERSHOCK = { state, CONFIG };

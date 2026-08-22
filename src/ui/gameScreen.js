@@ -10,6 +10,7 @@ import { state, resetState } from '../state.js';
 import { CONFIG } from '../config.js';
 import { createClock, tickLoop } from '../systems/time.js';
 import { summarizeByTier } from '../systems/zones.js';
+import { skillStatus, unitStatusLabel } from '../systems/skills.js';
 import { renderMap, applyZoneColors, updateAllZones, updateZone } from './map.js';
 
 const PORTRAIT_DIR = 'assets/characters/';
@@ -18,23 +19,19 @@ const SKILL_DIR = 'assets/skills/';
 const TIER_LETTER = { gray: 'A', yellow: 'B', red: 'C' };
 
 const PLACEHOLDER = {
-  // ยังเป็นค่าหลอกจนกว่าจะถึงรอบที่ 5-8 (บัฟ / ผลลัพธ์ / สถานะบาดเจ็บ)
+  // ยังเป็นค่าหลอกจนกว่าจะถึงรอบที่ 7 (Detail Feed)
   airDeployOn: false,
   feed: [],
-  // สถานะ จนท. — null = ปกติ (§12)
-  // รอบนี้ใส่ Robertson บาดเจ็บไว้ 1 ตัว เพื่อให้เห็นหน้าตาป้ายสถานะ + สไปรต์ที่สลับไป
-  // ตอนเล่นจริงเกมเริ่มด้วยทุกคนปกติ (รอบที่ 8 จะต่อกับ state จริง)
-  status: {
-    human: { kind: 'injured', label: 'Warning\nINJURED :', hours: 0.57 },
-    cat:   null,
-    elf:   null,
-    spirit: null,
-  },
 };
 
 // สไปรต์ที่ใช้ตามสถานะ (§12) — ชื่อไฟล์ทั้งหมดมาจาก operators.js ที่เดียว
-function portraitFor(op, status) {
-  return op.portraits[status?.kind ?? 'normal'] ?? op.portraits.normal;
+function portraitFor(op, statusKind) {
+  return op.portraits[statusKind ?? 'normal'] ?? op.portraits.normal;
+}
+
+// ลูปที่เหลือ → ชั่วโมงทศนิยม 2 ตำแหน่ง (§12) · frac = ความคืบหน้าภายในลูปปัจจุบัน 0..1
+function loopsToHours(loops, frac = 0) {
+  return Math.max(0, (loops - frac) / CONFIG.loopsPerHour).toFixed(2);
 }
 
 // ค่า AP ที่โชว์ข้างไอคอนสกิล (§3.1) — ดึงจาก operators.js ที่เดียว ห้ามพิมพ์เลขซ้ำที่นี่
@@ -127,12 +124,20 @@ function buildSkillRow(speciesKey, skillId, skill) {
   const iconWrap = el('div', 'skill-icon-wrap');
   // 📥 = ลงพื้นที่ (จนท. ติดคูลดาวน์) · ✨ = บัฟ (§3.1)
   iconWrap.appendChild(el('div', 'skill-badge', skill.type === 'field' ? '📥' : '✨'));
+
   const icon = el('div', 'skill-icon');
   const img = el('img');
   img.src = SKILL_DIR + skill.icon;
   img.alt = skill.name;
-  icon.append(img, el('span', 'skill-using', 'USING'));
+  const cd = el('span', 'skill-cd');          // ตัวเลขคูลดาวน์ที่เหลือ
+  const block = el('span', 'skill-block', '✕'); // กากบาทตอนใช้ไม่ได้
+  icon.append(img, el('span', 'skill-using', 'USING'), cd, block);
   iconWrap.appendChild(icon);
+
+  // แถวจุดบอกช่อง Scan Area ที่เหลือ (เฉพาะ Lia — §3.4)
+  const dots = el('div', 'skill-stacks');
+  iconWrap.appendChild(dots);
+
   row.appendChild(iconWrap);
 
   const costs = el('div', 'skill-costs');
@@ -146,10 +151,33 @@ function buildSkillRow(speciesKey, skillId, skill) {
   }
   row.appendChild(costs);
 
-  return row;
+  // ทาสีใหม่ตามสถานะปัจจุบัน — เรียกทุกลูป
+  function paint() {
+    const st = skillStatus(state, speciesKey, skillId);
+    row.classList.toggle('is-using', st.using);
+    // ติดคูลดาวน์ให้โชว์ "ตัวเลขที่เหลือ" แทนกากบาท เพราะตัวเลขบอกเหตุผลได้ในตัวอยู่แล้ว
+    row.classList.toggle('is-cooldown', st.reason === 'cooldown');
+    row.classList.toggle('is-blocked', !st.usable && !st.using && st.reason !== 'cooldown');
+    row.classList.toggle('is-noap', st.reason === 'no-ap');
+    // คูลดาวน์นับเป็นครึ่งชั่วโมง ทศนิยมตำแหน่งเดียวจึงพอดีและไม่ล้นวงกลม
+    cd.textContent = st.cooldownLoops > 0
+      ? (st.cooldownLoops / CONFIG.loopsPerHour).toFixed(1)
+      : '';
+
+    if (st.maxStacks != null) {
+      if (dots.childElementCount !== st.maxStacks) {
+        dots.innerHTML = '';
+        for (let i = 0; i < st.maxStacks; i += 1) dots.appendChild(el('i', 'stack-dot'));
+      }
+      [...dots.children].forEach((d, i) => d.classList.toggle('is-on', i < st.stacks));
+      dots.title = `เหลือ ${st.stacks}/${st.maxStacks} ช่อง`;
+    }
+  }
+
+  return { row, paint };
 }
 
-function buildOperator(speciesKey, status) {
+function buildOperator(speciesKey) {
   const op = OPERATORS[speciesKey];
   const block = el('div', 'op-block');
   block.dataset.op = speciesKey;
@@ -159,37 +187,68 @@ function buildOperator(speciesKey, status) {
   const card = el('div', 'op-card');
   const frame = el('div', 'op-portrait');
   const img = el('img');
-  img.src = PORTRAIT_DIR + portraitFor(op, status);
   img.alt = op.name;
   frame.appendChild(img);
   card.append(frame, el('div', 'op-name', op.name));
 
-  // ป้ายสถานะข้างรูป (§12) — รอบนี้ยังเป็นค่าหลอก
+  // ป้ายสถานะข้างรูป (§12)
   const statusEl = el('div', 'op-status');
-  statusEl.hidden = !status;
-  if (status) {
-    statusEl.classList.add(`op-status--${status.kind}`);
-    statusEl.append(el('div', 'op-status-label', status.label)); // ขึ้นบรรทัดใหม่ด้วย \n (CSS pre-line)
-    statusEl.append(el('div', 'op-status-time', status.hours.toFixed(2)));
-  }
+  const statusLabel = el('div', 'op-status-label');
+  const statusTime = el('div', 'op-status-time');
+  statusEl.append(statusLabel, statusTime);
 
   head.append(card, statusEl);
   block.appendChild(head);
 
   const skills = el('div', 'op-skills');
+  const skillRows = [];
   for (const [skillId, skill] of Object.entries(op.skills)) {
-    skills.appendChild(buildSkillRow(speciesKey, skillId, skill));
+    const built = buildSkillRow(speciesKey, skillId, skill);
+    skillRows.push(built);
+    skills.appendChild(built.row);
   }
   block.appendChild(skills);
 
-  return block;
+  let shownSprite = null;
+  let shownKind = null;
+
+  function paint(frac) {
+    const st = unitStatusLabel(state, speciesKey);
+
+    // สไปรต์เปลี่ยนตามสถานะ — ตั้ง src ใหม่เฉพาะตอนเปลี่ยนจริง ไม่งั้นรูปจะกะพริบทุกลูป
+    const sprite = portraitFor(op, st?.kind);
+    if (sprite !== shownSprite) {
+      img.src = PORTRAIT_DIR + sprite;
+      shownSprite = sprite;
+    }
+
+    statusEl.hidden = !st;
+    if (st) {
+      if (st.kind !== shownKind) {
+        statusEl.className = `op-status op-status--${st.kind}`;
+        statusLabel.textContent = st.label;
+        shownKind = st.kind;
+      }
+      statusTime.textContent = loopsToHours(st.loops, frac);
+    } else {
+      shownKind = null;
+    }
+
+    for (const r of skillRows) r.paint();
+  }
+
+  return { block, paint };
 }
 
-function buildSide(side, title, keys, status) {
+function buildSide(side, title, keys) {
   const aside = el('aside', `game-side game-side--${side}`);
   aside.appendChild(el('h2', 'side-title', title));
-  for (const key of keys) aside.appendChild(buildOperator(key, status[key]));
-  return aside;
+  const ops = keys.map((key) => {
+    const built = buildOperator(key);
+    aside.appendChild(built.block);
+    return built;
+  });
+  return { aside, paint: (frac) => ops.forEach((o) => o.paint(frac)) };
 }
 
 // ── กล่องสรุปล่างสุด (§9.1) ──────────────────────────────────────
@@ -269,10 +328,13 @@ function buildZoomButtons() {
 // นาฬิกาของหน้าจอที่กำลังเปิดอยู่ — เก็บไว้ระดับโมดูลเพื่อให้หยุดได้ตอนออกจากหน้าเกม
 // ไม่งั้น interval จะค้างเดินอยู่เบื้องหลังแม้ผู้เล่นกลับไปหน้าเมนูแล้ว
 let activeClock = null;
+let cancelSmooth = null;
 
 export function stopGameClock() {
   activeClock?.stop();
   activeClock = null;
+  cancelSmooth?.();
+  cancelSmooth = null;
 }
 
 export function renderGameScreen(root, { onExit } = {}) {
@@ -299,7 +361,8 @@ export function renderGameScreen(root, { onExit } = {}) {
   root.appendChild(top.bar);
 
   const body = el('div', 'game-body');
-  body.appendChild(buildSide('left', 'Field Operator', ['human', 'cat'], data.status));
+  const leftSide = buildSide('left', 'Field Operator', ['human', 'cat']);
+  body.appendChild(leftSide.aside);
 
   const mapWrap = el('div', 'game-map-wrap');
   const mapBox = el('div', 'game-map');
@@ -312,7 +375,8 @@ export function renderGameScreen(root, { onExit } = {}) {
   mapWrap.appendChild(mapBox);
   body.appendChild(mapWrap);
 
-  body.appendChild(buildSide('right', 'Baseplace', ['elf', 'spirit'], data.status));
+  const rightSide = buildSide('right', 'Baseplace', ['elf', 'spirit']);
+  body.appendChild(rightSide.aside);
   root.appendChild(body);
 
   const bottom = buildBottom();
@@ -321,13 +385,32 @@ export function renderGameScreen(root, { onExit } = {}) {
   // ── เดินเวลา (§2 · AFTERSHOCKMASTER §17) ────────────────────────
   let mapHandle = null;
 
-  function paintAll() {
+  // เวลาเริ่มของลูปล่าสุด — ใช้คำนวณ "เศษของลูป" ให้ตัวเลขนับถอยหลังไหลลื่น (§12 แสดงทศนิยม 2 ตำแหน่ง)
+  let loopStartedAt = performance.now();
+
+  function loopFraction() {
+    if (!state.running) return 0;
+    const ms = CONFIG.loopDurationMsBySpeed[state.speed] ?? CONFIG.loopDurationMsBySpeed[1];
+    return Math.min(1, (performance.now() - loopStartedAt) / ms);
+  }
+
+  // ส่วนที่วาดใหม่ได้ถี่ ๆ ระหว่างลูป — แถบ จนท. กับ AP
+  // (AP ต้องอยู่ในนี้ด้วย ไม่งั้นตอนหักแต้มจากการใช้สกิลในรอบที่ 5 เลขจะค้างจนกว่าจะถึงลูปถัดไป)
+  function paintLive() {
+    const frac = loopFraction();
     top.paintHud();
+    leftSide.paint(frac);
+    rightSide.paint(frac);
+  }
+
+  function paintAll() {
     bottom.paint();
+    paintLive();
     if (mapHandle) updateAllZones(mapHandle, state.zones);
   }
 
   function tick() {
+    loopStartedAt = performance.now();
     tickLoop(state, {
       onZoneCleared: (zone) => { if (mapHandle) updateZone(mapHandle, zone); },
       onGameEnd: () => {
@@ -338,6 +421,15 @@ export function renderGameScreen(root, { onExit } = {}) {
     });
     paintAll();
   }
+
+  // ตัวเลขนับถอยหลังข้างรูป จนท. เดินระหว่างลูปด้วย ไม่กระตุกทีละครึ่งชั่วโมง
+  let rafId = null;
+  function smoothLoop() {
+    rafId = requestAnimationFrame(smoothLoop);
+    if (state.running && !state.ended) paintLive();
+  }
+  smoothLoop();
+  cancelSmooth = () => { if (rafId) cancelAnimationFrame(rafId); rafId = null; };
 
   const clock = createClock(state, tick);
   activeClock = clock;

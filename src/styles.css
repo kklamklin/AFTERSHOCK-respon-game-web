@@ -397,6 +397,7 @@ html, body {
 .op-status-time { font-size: calc(var(--u) * 1.9); font-weight: 700; font-variant-numeric: tabular-nums; }
 .op-status--injured { color: #e0a020; }
 .op-status--lost, .op-status--laststand { color: #e5484d; }
+.op-status--laststand .op-status-label { white-space: pre-line; }
 
 .op-skills { display: flex; flex-direction: column; gap: calc(var(--u) * 0.6); }
 .skill-row { flex: none; display: flex; align-items: center; gap: calc(var(--u) * 0.9); }
@@ -429,6 +430,42 @@ html, body {
   display: none;
 }
 .skill-row.is-using .skill-using { display: block; }
+
+/* กากบาทตอนใช้สกิลไม่ได้ (หมดสติ · ติดคูลดาวน์ · AP ไม่พอ · ช่อง Scan หมด) — §10.1 */
+.skill-block {
+  position: absolute; inset: 0;
+  display: none; align-items: center; justify-content: center;
+  font-size: calc(var(--u) * 3.4); font-weight: 700; line-height: 1;
+  color: #E5484D; background: rgba(255, 255, 255, 0.55);
+}
+.skill-row.is-blocked .skill-block { display: flex; }
+.skill-row.is-blocked .skill-icon { cursor: not-allowed; }
+.skill-row.is-blocked .skill-label,
+.skill-row.is-blocked .skill-costs { opacity: 0.45; }
+.skill-row.is-cooldown .skill-icon { cursor: not-allowed; }
+.skill-row.is-cooldown .skill-label { opacity: 0.6; }
+/* แต้มไม่พอ = จางลงเฉย ๆ ไม่ต้องกากบาททับ (ยังลากไม่ได้เหมือนกัน) */
+.skill-row.is-noap .skill-block { display: none; }
+.skill-row.is-noap .skill-icon { opacity: 0.4; cursor: not-allowed; }
+
+/* ตัวเลขคูลดาวน์บนไอคอน (§12) */
+.skill-cd {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: calc(var(--u) * 1.55); font-weight: 700; color: #fff;
+  background: rgba(27, 31, 36, 0.66);
+  font-variant-numeric: tabular-nums; letter-spacing: -0.5px;
+}
+.skill-cd:empty { display: none; }
+
+/* จุดบอกช่อง Scan Area ที่เหลือ (§3.4) */
+.skill-stacks { display: flex; gap: calc(var(--u) * 0.28); justify-content: center; margin-top: calc(var(--u) * 0.3); }
+.skill-stacks:empty { display: none; }
+.stack-dot {
+  width: calc(var(--u) * 0.62); height: calc(var(--u) * 0.62);
+  border-radius: 50%; border: 1px solid #9aa1aa; background: transparent;
+}
+.stack-dot.is-on { background: #2b6cb0; border-color: #2b6cb0; }
 
 .skill-costs {
   flex: none; display: flex; flex-direction: column; gap: calc(var(--u) * 0.25);

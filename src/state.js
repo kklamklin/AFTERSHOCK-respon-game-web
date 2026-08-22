@@ -2,6 +2,7 @@
 // เก็บเป็น object เดียวที่ import ใช้ร่วมกันทุกที่ · systems/ เป็นคนแก้ค่า · ui/ อ่านอย่างเดียว
 
 import { generateZones } from './systems/zones.js';
+import { CONFIG } from './config.js';
 
 export function createInitialState() {
   return {
@@ -16,12 +17,12 @@ export function createInitialState() {
     units: {
       human:  createUnit(),
       cat:    createUnit(),
-      elf:    createUnit(),
+      elf:    { ...createUnit(), scanStacks: CONFIG.buffs.scan.maxStacks },
       spirit: createUnit(),
     },
 
-    globalBuffs: [],              // [{ type:'air', rate:15, remainHours }]
-    criticalCountdownHours: null, // ตั้งค่าเมื่อ Field ล้มทั้งคู่ (§13)
+    globalBuffs: [],              // [{ type:'air', rate:15, remainLoops }]
+    criticalCountdownLoops: null, // ตั้งค่าเมื่อ Field ล้มทั้งคู่ (§13)
     lastStandUsed: false,         // Last Stand ใช้ได้ครั้งเดียวต่อเกม (§5)
 
     totalRescued: 0,
@@ -32,14 +33,16 @@ export function createInitialState() {
   };
 }
 
+// ตัวนับเวลาทุกตัวเก็บเป็น "ลูป" (1 ลูป = 30 นาทีในเกม) ไม่ใช่ชั่วโมง
+// เพราะเกมเดินทีละลูป — เก็บละเอียดกว่าแล้วค่อยหารสองตอนแสดงผลเป็นชั่วโมง
 function createUnit() {
   return {
-    status: 'normal',       // normal | injured | lost | laststand
-    zoneId: null,           // โซนที่กำลังปฏิบัติการอยู่
-    cdRemainHours: 0,       // เวลาทำงานที่เหลือในโซน
-    recoverRemainHours: 0,  // เวลาฟื้นจาก injured / lost
-    skillCooldowns: {},     // { [skillId]: ชั่วโมงที่เหลือ }
-    scanStacks: null,       // ใช้เฉพาะ Lia — จำนวนช่อง Scan Area ที่เหลือ (§3.4)
+    status: 'normal',        // normal | injured | lost | laststand
+    zoneId: null,            // โซนที่กำลังปฏิบัติการอยู่ (null = ว่าง)
+    workRemainLoops: 0,      // เวลาทำงานที่เหลือในโซน
+    recoverRemainLoops: 0,   // เวลาฟื้นจาก injured / lost / เวลาที่เหลือของ Last Stand
+    skillCooldowns: {},      // { [skillId]: ลูปที่เหลือ }
+    scanStacks: null,        // เฉพาะ Lia — ช่อง Scan Area ที่เหลือ (§3.4)
   };
 }
 

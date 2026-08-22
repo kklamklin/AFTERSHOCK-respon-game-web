@@ -20,10 +20,11 @@ export function tickLoop(state, { onHourTick, onZoneCleared, onGameEnd } = {}) {
     }
   }
 
+  tickTimers(state);
+
   if (state.loop % CONFIG.loopsPerHour === 0) {
     state.hour = state.loop / CONFIG.loopsPerHour;
     payHourlyAP(state);
-    tickHourlyTimers(state);
     onHourTick?.(state.hour);
   }
 
@@ -33,31 +34,30 @@ export function tickLoop(state, { onHourTick, onZoneCleared, onGameEnd } = {}) {
   }
 }
 
-// ตัวนับที่ลดลงทุก 1 ชั่วโมง — คูลดาวน์ จนท./สกิล · อายุบัฟ · เวลาฟื้นตัว
-// (รอบนี้ยังไม่มีใครตั้งค่าพวกนี้ แต่วางกลไกไว้ให้รอบ 5-8 มาต่อได้เลย)
-function tickHourlyTimers(state) {
+// ตัวนับที่ลดลงทุก 1 ลูป — เวลาทำงานในโซน · คูลดาวน์สกิล · อายุบัฟ · เวลาฟื้นตัว · CRITICAL
+// (รอบ 5-8 จะเป็นคนตั้งค่าพวกนี้ ตรงนี้แค่เดินถอยหลังให้)
+function tickTimers(state) {
   for (const unit of Object.values(state.units)) {
-    unit.cdRemainHours = Math.max(0, (unit.cdRemainHours ?? 0) - 1);
-    unit.recoverRemainHours = Math.max(0, (unit.recoverRemainHours ?? 0) - 1);
-    for (const skillId of Object.keys(unit.skillCooldowns ?? {})) {
+    unit.workRemainLoops = Math.max(0, unit.workRemainLoops - 1);
+    unit.recoverRemainLoops = Math.max(0, unit.recoverRemainLoops - 1);
+    for (const skillId of Object.keys(unit.skillCooldowns)) {
       unit.skillCooldowns[skillId] = Math.max(0, unit.skillCooldowns[skillId] - 1);
     }
   }
 
   for (const zone of Object.values(state.zones)) {
-    zone.buffs = (zone.buffs ?? []).filter((b) => (b.remainHours -= 1) > 0);
+    zone.buffs = zone.buffs.filter((b) => (b.remainLoops -= 1) > 0);
   }
-  state.globalBuffs = (state.globalBuffs ?? []).filter((b) => (b.remainHours -= 1) > 0);
+  state.globalBuffs = state.globalBuffs.filter((b) => (b.remainLoops -= 1) > 0);
 
-  if (state.criticalCountdownHours != null) {
-    state.criticalCountdownHours -= 1;
+  if (state.criticalCountdownLoops != null) {
+    state.criticalCountdownLoops = Math.max(0, state.criticalCountdownLoops - 1);
   }
 }
 
 function allZonesResolved(state) {
   return Object.values(state.zones).every(isZoneEmpty);
 }
-
 export function loopDurationMs(state) {
   return CONFIG.loopDurationMsBySpeed[state.speed] ?? CONFIG.loopDurationMsBySpeed[1];
 }
