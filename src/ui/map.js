@@ -70,25 +70,12 @@ function visualCenter(path, box) {
   return { x: ranked[0].pt.x, y: ranked[0].pt.y };
 }
 
-// ใส่ตัวเลขคนติดอยู่ไว้กลางโซน — ขนาดตัวอักษรย่อตามขนาดโซน โซนเล็กจะได้ไม่ล้น
-function placeLabel(svg, path, zone, center) {
-  const box = path.getBBox();
-  const size = Math.max(11, Math.min(26, box.width / 2.4, box.height / 1.5));
-
-  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-  text.setAttribute('class', 'map-count');
-  text.setAttribute('x', center.x);
-  text.setAttribute('y', center.y);
-  text.setAttribute('font-size', size.toFixed(1));
-  text.dataset.zoneId = zone.id;
-  text.textContent = String(Math.floor(zone.trapped));
-  svg.appendChild(text);
-  return text;
-}
+// หมายเหตุ: เคยมีตัวเลข "คนติดอยู่" พิมพ์ไว้กลางโซนทุกโซน
+// เจ้าของสั่งเอาออก — ตัวเลขไปโผล่ในแผงล่างตอนลากไอคอนผ่านโซนแทน (ดู ui/panels.js §9.2)
 
 /**
  * วาดแผนที่ลงใน container
- * @returns handle สำหรับอัปเดตทีหลัง — { svg, zoneEls, countEls, panzoom }
+ * @returns handle สำหรับอัปเดตทีหลัง — { svg, zoneEls, panzoom }
  */
 export async function renderMap(container, zones) {
   container.innerHTML = await loadMapSvg();
@@ -105,7 +92,6 @@ export async function renderMap(container, zones) {
   cropViewBox(svg);
 
   const zoneEls = new Map();
-  const countEls = new Map();
   const boxes = new Map();
   const centers = new Map();
 
@@ -122,12 +108,11 @@ export async function renderMap(container, zones) {
     const box = path.getBBox();
     boxes.set(zone.id, box);
     centers.set(zone.id, visualCenter(path, box));
-    countEls.set(zone.id, placeLabel(svg, path, zone, centers.get(zone.id)));
   }
 
   warnHiddenZones(svg, zoneEls);
 
-  const handle = { svg, zoneEls, countEls, boxes, centers, container };
+  const handle = { svg, zoneEls, boxes, centers, container };
   buildOverlay(handle, zones);
   handle.panzoom = createPanZoom(container, svg);
   return handle;
@@ -227,14 +212,6 @@ export function updateZoneMarkers(handle, state) {
     const m = handle.marks?.get(zone.id);
     if (!m) continue;
 
-    // ไอคอน จนท. อยู่กลางโซน จึงต้องดันเลขคนขึ้นไปข้างบน ไม่งั้นทับกันจนอ่านไม่ออก
-    // ไม่มีใครลงพื้นที่ก็คืนเลขกลับมาอยู่กลางเหมือนเดิม
-    const count = handle.countEls?.get(zone.id);
-    if (count) {
-      const lifted = zone.unit ? m.cy - m.size * 0.78 : m.cy;
-      if (count.getAttribute('y') !== String(lifted)) count.setAttribute('y', lifted);
-    }
-
     const unit = zone.unit;
     m.icon.classList.toggle('is-on', !!unit);
     m.halo.classList.toggle('is-on', !!unit);
@@ -321,10 +298,8 @@ export function setDragMarks(handle, { active, invalidIds = null, hoverId = null
 // อัปเดตโซนเดียว — เรียกทุกลูปจากรอบที่ 3 เป็นต้นไป
 export function updateZone(handle, zone) {
   const path = handle.zoneEls.get(zone.id);
-  const count = handle.countEls.get(zone.id);
-  if (!path || !count) return;
+  if (!path) return;
   path.dataset.level = zone.cleared ? 'green' : zone.level;
-  count.textContent = zone.cleared ? '' : String(Math.floor(zone.trapped));
 }
 
 export function updateAllZones(handle, zones) {

@@ -49,7 +49,7 @@ html, body {
 .logo-icons { display: flex; gap: 10px; margin-top: 8px; align-items: center; }
 
 /* วางรูปตัวละครไว้ข้างชื่อเกมแทนที่จะอยู่ใต้ (หน้าเมนู) */
-.logo-block--row { flex-direction: row; align-items: center; gap: 22px; }
+.logo-block--row { flex-direction: row; align-items: flex-start; gap: 22px; }
 .logo-block--row .logo-text { display: flex; flex-direction: column; gap: 4px; }
 .logo-block--row .logo-icons { margin-top: 0; }
 .chibi-slot {
@@ -84,9 +84,16 @@ html, body {
 /* เมนูหลัก
    ทุกขนาดยืดตามความสูงจอ เพราะเกมบังคับแนวนอนและมือถือสูงแค่ ~376px
    ถ้าตั้งเป็น px ตายตัว โลโก้ขนาดจอคอมจะดันเมนู Quit หลุดจอบนมือถือ */
-.screen--menu { justify-content: flex-start; padding: clamp(20px, 5.2vh, 48px) 0 0 clamp(28px, 3.4vw, 64px); }
+.screen--menu {
+  --menu-title: clamp(34px, 7.1vh, 64px);
+  justify-content: flex-start;
+  padding: clamp(20px, 5.2vh, 48px) 0 0 clamp(28px, 3.4vw, 64px);
+}
 .menu-top { margin-bottom: clamp(16px, 5vh, 48px); }
-.screen--menu .logo-title { font-size: clamp(34px, 7.1vh, 64px); }
+.screen--menu .logo-title { font-size: var(--menu-title); }
+/* ฟอนต์ Impact มีช่องว่างเหนือตัวอักษรราว 22% ของขนาดฟอนต์
+   ถ้าจัดชิดบนตรง ๆ ไอคอนจะลอยสูงกว่าตัวอักษร — ดันลงมาให้ยอดตรงกันพอดี */
+.screen--menu .logo-block--row .logo-icons { margin-top: calc(var(--menu-title) * 0.22); }
 .screen--menu .logo-subtitle { font-size: clamp(15px, 3.1vh, 28px); }
 .screen--menu .chibi-slot--img {
   width: clamp(30px, 6.2vh, 56px); height: clamp(30px, 6.2vh, 56px);
@@ -526,13 +533,6 @@ html, body {
   stroke-width: 1.5;
   transition: fill 0.3s, stroke 0.3s;
 }
-.map-count {
-  font-family: system-ui, sans-serif; font-weight: 700; fill: var(--ink);
-  text-anchor: middle; dominant-baseline: central;
-  pointer-events: none; user-select: none;
-  /* ขอบขาวรอบตัวเลข — โซนเตี้ย ๆ ไอคอน จนท./บัฟ จะมาทับ ถ้าไม่มีขอบจะอ่านไม่ออก */
-  paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round;
-}
 
 .map-zoom {
   position: absolute; left: calc(var(--u) * 0.6); bottom: calc(var(--u) * 0.6);
@@ -653,7 +653,6 @@ html, body {
 /* ระหว่างลาก: โซนที่ลงไม่ได้จางลง · โซนเป้าหมายใต้ปลายนิ้วเรืองขึ้น */
 .map-viewport.is-dragging .map-zone { transition: none; }
 .map-viewport.is-dragging .map-zone.is-invalid { opacity: 0.4; }
-.map-viewport.is-dragging .map-count { opacity: 0.5; }
 .map-zone.is-target { stroke: #2b6cb0 !important; stroke-width: 4; }
 
 /* ── แผงข้อมูลโซนตอนลาก (GAMESCREEN_SPEC §9.2) ─────────────────
