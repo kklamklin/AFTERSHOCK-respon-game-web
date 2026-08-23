@@ -112,7 +112,7 @@
 | 5 | Drag & Drop ลงโซน (หยุดเวลาตอนลาก · กากบาทโซนที่ลงไม่ได้ · หัก AP) | ✅ |
 | 6 | แผงข้อมูลตอนลาก — อัตราสำเร็จแยกส่วน + ความเสี่ยงบาดเจ็บ | ✅ |
 | 7 | ครบเวลา → ทอย 2 ชั้น → rescued/casualty → โซนเขียว + Detail Feed | ✅ |
-| 8 | Injured / Unconscious / CRITICAL / Last Stand | ⬜ |
+| 8 | Injured / Unconscious / CRITICAL / Last Stand | ✅ |
 | 9 | เมนู ☰ ในเกม + หน้าเวลาที่เหลือ + ป๊อปอัพหยุดเวลาอัตโนมัติ | ⬜ |
 | 10 | หน้า Result + asset จริง + build รวมไฟล์เดียว | ⬜ |
 
@@ -130,6 +130,7 @@ src/
     zones.js  time.js  actionPoints.js     ✅ เขียนแล้ว
     survivors.js death.js                  ⬜ stub
     skills.js                              ✅ สถานะ/เงื่อนไขใช้สกิล
+    status.js                              ✅ บาดเจ็บ/หมดสติ/LastStand/CRITICAL
     successRate.js danger.js               ✅ สูตรอัตราสำเร็จ/อันตราย
     outcomes.js                            ✅ ทอยผลภารกิจ 2 ชั้น
     score.js                               ⬜ stub

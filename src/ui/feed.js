@@ -6,6 +6,13 @@
 import { OPERATORS } from '../data/operators.js';
 import { zoneLabel } from '../systems/zones.js';
 
+// ผลของการทอยอันตรายหลังภารกิจล้มเหลว (§4.3 · §5)
+const DANGER_TEXT = {
+  injured: (n) => `🩹 ${n} บาดเจ็บ`,
+  lost: (n) => `💀 ${n} หมดสติ`,
+  laststand: (n) => `⚡ ${n} ลุกขึ้นสู้ครั้งสุดท้าย!`,
+};
+
 const MAX_CARDS = 3;
 const LIFETIME_MS = 6000;
 
@@ -37,8 +44,8 @@ export function createFeed() {
     } else {
       cls = 'fail';
       head = `🔴 ${zoneLabel(outcome.zoneId)} ไม่สำเร็จ`;
-      // รอบที่ 8 จะเติมสถานะบาดเจ็บต่อท้ายตรงนี้
-      body = outcome.note ?? `${name} กลับฐาน`;
+      body = DANGER_TEXT[outcome.danger?.to]?.(name) ?? `${name} กลับฐาน ปลอดภัย`;
+      if (outcome.danger?.to) cls = 'hurt';
     }
 
     const card = el('div', `feed-card feed-card--${cls}`);
@@ -56,11 +63,25 @@ export function createFeed() {
     timers.add(t);
   }
 
+  // ข้อความสั้น ๆ ที่ไม่ผูกกับโซน เช่น ฟื้นตัว / เข้า-ออก CRITICAL
+  function pushNote(text, cls = 'ok') {
+    const card = el('div', `feed-card feed-card--${cls}`);
+    card.appendChild(el('div', 'feed-head', text));
+    box.prepend(card);
+    while (box.childElementCount > MAX_CARDS) box.lastElementChild.remove();
+    const t = setTimeout(() => {
+      card.classList.add('is-out');
+      const t2 = setTimeout(() => { card.remove(); timers.delete(t2); }, 400);
+      timers.add(t2); timers.delete(t);
+    }, LIFETIME_MS);
+    timers.add(t);
+  }
+
   function clear() {
     for (const t of timers) clearTimeout(t);
     timers.clear();
     box.innerHTML = '';
   }
 
-  return { box, push, clear };
+  return { box, push, pushNote, clear };
 }

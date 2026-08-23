@@ -733,3 +733,32 @@ html, body {
   70%  { opacity: 1; transform: translateY(-14px); }
   100% { opacity: 0; transform: translateY(-26px); }
 }
+
+/* ── แถบเตือน CRITICAL (GAMESCREEN_SPEC §13) ───────────────────── */
+.game-critical[hidden] { display: none; }
+.game-critical {
+  position: absolute; top: calc(var(--u) * 7); left: 50%; transform: translateX(-50%);
+  z-index: 30; text-align: center;
+  background: rgba(229, 72, 77, 0.95); color: #fff;
+  border-radius: calc(var(--u) * 0.6);
+  padding: calc(var(--u) * 0.8) calc(var(--u) * 2.4);
+  box-shadow: 0 4px 18px rgba(229, 72, 77, 0.45);
+  animation: critPulse 1.1s ease-in-out infinite;
+}
+.crit-title { font-size: calc(var(--u) * 2); font-weight: 800; letter-spacing: 1px; }
+.crit-sub { font-size: calc(var(--u) * 1.25); opacity: 0.9; }
+.crit-time { font-size: calc(var(--u) * 2.2); font-weight: 800; font-variant-numeric: tabular-nums; }
+@keyframes critPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
+
+.feed-card--hurt { border-color: #E5484D; }
+
+/* ── ป้ายจบเกมชั่วคราว (รอบที่ 10 จะเปลี่ยนเป็นหน้า Result) ────── */
+.game-over {
+  position: absolute; inset: 0; z-index: 40;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: calc(var(--u) * 0.8);
+  background: rgba(255, 255, 255, 0.94);
+}
+.go-title { font-size: calc(var(--u) * 3); font-weight: 800; color: #e8484a; text-align: center; }
+.go-score { font-size: calc(var(--u) * 2.2); font-weight: 700; }
+.go-note { font-size: calc(var(--u) * 1.3); color: var(--muted); }

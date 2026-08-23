@@ -1,10 +1,11 @@
 import { CONFIG } from '../config.js';
 import { tickZoneDeath, isZoneEmpty } from './zones.js';
 import { payHourlyAP } from './actionPoints.js';
+import { tickRecovery, checkCritical } from './status.js';
 
 // เดินเวลาทีละ 1 ลูป — ลำดับประมวลผลตาม AFTERSHOCKMASTER §17
 //   1. นับลูป  2. คนตายทุกโซน  3. ถ้าครบชั่วโมง จ่าย AP + ลดตัวนับต่าง ๆ  4. เช็คจบเกม
-export function tickLoop(state, { onHourTick, onZoneCleared, onMissionComplete, onGameEnd } = {}) {
+export function tickLoop(state, { onHourTick, onZoneCleared, onMissionComplete, onStatusChange, onCritical, onGameEnd } = {}) {
   if (state.ended) return;
 
   state.loop += 1;
@@ -28,8 +29,20 @@ export function tickLoop(state, { onHourTick, onZoneCleared, onMissionComplete, 
     onHourTick?.(state.hour);
   }
 
-  // จนท. ที่ทำงานครบเวลา — รอบที่ 7 จะเอาไปทอยผล ตอนนี้แค่แจ้งว่าจบภารกิจ
+  // จนท. ที่ทำงานครบเวลา → คิดผลภารกิจ (อาจทำให้บาดเจ็บ/หมดสติ ต้องทำก่อนเช็ค CRITICAL)
   for (const opKey of finished) onMissionComplete?.(opKey, state.units[opKey].mission);
+
+  // ฟื้นตัวจากบาดเจ็บ/หมดสติ · หมดเวลา Last Stand แล้วล้ม (§5.4)
+  for (const ev of tickRecovery(state)) onStatusChange?.(ev);
+
+  // Field ล้มทั้งคู่ → นับถอยหลัง 3 ชม. ถ้าไม่มีใครฟื้นทันคือจบเกม (§13)
+  const critical = checkCritical(state);
+  if (critical) onCritical?.(critical, state.criticalCountdownLoops);
+  if (critical === 'over') {
+    state.ended = true;
+    onGameEnd?.('critical');
+    return;
+  }
 
   if (state.loop >= CONFIG.totalLoops || allZonesResolved(state)) {
     state.ended = true;

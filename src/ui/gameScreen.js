@@ -12,6 +12,7 @@ import { createClock, tickLoop } from '../systems/time.js';
 import { summarizeByTier } from '../systems/zones.js';
 import { skillStatus, unitStatusLabel, useGlobalSkill } from '../systems/skills.js';
 import { resolveMission } from '../systems/outcomes.js';
+import { OPERATORS as OPS_FOR_STATUS } from '../data/operators.js';
 import { createFeed } from './feed.js';
 import { attachDrag, cancelDrag } from './dragdrop.js';
 import { buildZoneDetail } from './panels.js';
@@ -342,6 +343,25 @@ function buildZoomButtons() {
   return box;
 }
 
+// ป้ายจบเกมชั่วคราว — รอบที่ 10 จะเปลี่ยนเป็นหน้า Result จริง
+const END_TITLE = {
+  timeup: 'หมดเวลา 72 ชั่วโมง',
+  empty: 'ไม่มีผู้รอดชีวิตเหลือให้ช่วยแล้ว',
+  critical: 'CRITICAL — เจ้าหน้าที่ภาคสนามหมดสติทั้งคู่',
+};
+
+function showGameOver(root, why, state) {
+  const box = el('div', 'game-over');
+  const rescued = Math.round(state.totalRescued);
+  const casualty = Math.round(state.totalCasualty);
+  box.append(
+    el('div', 'go-title', END_TITLE[why] ?? 'จบภารกิจ'),
+    el('div', 'go-score', `ช่วยได้ ${rescued} · เสียชีวิต ${casualty} · คะแนน ${rescued - casualty}`),
+    el('div', 'go-note', '(หน้าสรุปผลจริงจะทำในรอบที่ 10)'),
+  );
+  root.appendChild(box);
+}
+
 // ── ประกอบทั้งหน้า ──────────────────────────────────────────────
 // นาฬิกาของหน้าจอที่กำลังเปิดอยู่ — เก็บไว้ระดับโมดูลเพื่อให้หยุดได้ตอนออกจากหน้าเกม
 // ไม่งั้น interval จะค้างเดินอยู่เบื้องหลังแม้ผู้เล่นกลับไปหน้าเมนูแล้ว
@@ -398,6 +418,20 @@ export function renderGameScreen(root, { onExit } = {}) {
   const bottom = buildBottom();
   root.appendChild(bottom.box);
 
+  // แถบเตือน CRITICAL — Field ล้มทั้งคู่ นับถอยหลัง 3 ชม. (§13)
+  const critical = el('div', 'game-critical');
+  critical.hidden = true;
+  critical.append(el('div', 'crit-title', '⚠ CRITICAL'),
+                  el('div', 'crit-sub', 'เจ้าหน้าที่ภาคสนามหมดสติทั้งคู่'),
+                  el('div', 'crit-time'));
+  root.appendChild(critical);
+
+  function paintCritical() {
+    const loops = state.criticalCountdownLoops;
+    critical.hidden = loops == null;
+    if (loops != null) critical.querySelector('.crit-time').textContent = `${loopsToHours(loops, loopFraction())} ชม.`;
+  }
+
   // ── เดินเวลา (§2 · AFTERSHOCKMASTER §17) ────────────────────────
   let mapHandle = null;
 
@@ -417,11 +451,13 @@ export function renderGameScreen(root, { onExit } = {}) {
     top.paintHud();
     leftSide.paint(frac);
     rightSide.paint(frac);
+    if (state.criticalCountdownLoops != null) paintCritical();
   }
 
   function paintAll() {
     bottom.paint();
     paintLive();
+    paintCritical();
     if (mapHandle) {
       updateAllZones(mapHandle, state.zones);
       updateZoneMarkers(mapHandle, state);
@@ -445,9 +481,22 @@ export function renderGameScreen(root, { onExit } = {}) {
           else floatText(mapHandle, outcome.zoneId, '—', 'late');
         }
       },
-      onGameEnd: () => {
+      // ฟื้นตัว / หมดเวลา Last Stand — แจ้งใน Feed ให้ผู้เล่นรู้
+      onStatusChange: ({ opKey, from, to }) => {
+        const name = OPS_FOR_STATUS[opKey].name;
+        if (from === 'laststand') feed.pushNote(`⚡ ${name} หมดแรง — หมดสติ`, 'hurt');
+        else if (to === 'normal') feed.pushNote(`💚 ${name} กลับมาพร้อมปฏิบัติงาน`, 'ok');
+      },
+      onCritical: (kind) => {
+        paintCritical();
+        if (kind === 'start') feed.pushNote('⚠ CRITICAL — ภาคสนามหมดสติทั้งคู่', 'hurt');
+        if (kind === 'cancel') feed.pushNote('💚 พ้นภาวะ CRITICAL แล้ว', 'ok');
+      },
+      onGameEnd: (why) => {
         stopGameClock();
         top.paintSpeed();
+        paintCritical();
+        showGameOver(root, why, state);
         // รอบที่ 10 จะเปลี่ยนตรงนี้เป็นการไปหน้า Result
       },
     });
