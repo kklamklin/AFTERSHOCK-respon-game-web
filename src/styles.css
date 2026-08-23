@@ -762,3 +762,128 @@ html, body {
 .go-title { font-size: calc(var(--u) * 3); font-weight: 800; color: #e8484a; text-align: center; }
 .go-score { font-size: calc(var(--u) * 2.2); font-weight: 700; }
 .go-note { font-size: calc(var(--u) * 1.3); color: var(--muted); }
+
+/* ════════════════════════════════════════════════════════════════
+   เมนู ☰ ในเกม · หน้าเวลาที่เหลือ · ป๊อปอัพหยุดเวลา (รอบที่ 9)
+   อ้างอิง docs/GAMESCREEN_SPEC.md §6 · §7 · §2.1
+   ────────────────────────────────────────────────────────────────
+   ทุกอย่างเป็นชั้นทับบนหน้าเกม หน้าเกมข้างล่างยังอยู่ครบ ไม่ได้ถูกวาดใหม่
+   ════════════════════════════════════════════════════════════════ */
+.gm-host { position: absolute; inset: 0; z-index: 60; }
+.gm-host[hidden] { display: none; }
+.gm-host--panel, .gm-host--card { display: flex; }
+.gm-host--card { align-items: center; justify-content: center; }
+
+.gm-backdrop { position: absolute; inset: 0; background: rgba(20, 24, 28, 0.55); }
+
+/* ── §6 แผงเมนูเลื่อนออกมาจากซ้าย ─────────────────────────────── */
+.gm-panel {
+  position: relative;
+  width: min(calc(var(--u) * 22), 62vw);
+  height: 100%;
+  background: #fff;
+  border-right: 2px solid var(--line);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  display: flex; flex-direction: column;
+  gap: calc(var(--u) * 0.55);
+  padding: calc(var(--u) * 1.6) calc(var(--u) * 1.2);
+  animation: gmSlide 0.16s ease-out;
+}
+@keyframes gmSlide { from { transform: translateX(-100%); } to { transform: none; } }
+
+.gm-panel-title {
+  font-family: Impact, 'Arial Narrow Bold', sans-serif;
+  font-size: calc(var(--u) * 2.1); letter-spacing: 2px;
+  color: #e8484a; margin-bottom: calc(var(--u) * 0.6);
+}
+
+.gm-item {
+  flex: none;
+  padding: calc(var(--u) * 0.9) calc(var(--u) * 1);
+  border: 2px solid var(--line); border-radius: calc(var(--u) * 0.5);
+  background: #fff; color: var(--ink);
+  font-size: calc(var(--u) * 1.45); font-weight: 700; text-align: left;
+  cursor: pointer;
+}
+.gm-item:hover { background: #f2f4f6; }
+.gm-item--danger { border-color: #e8484a; color: #e8484a; margin-top: auto; }
+.gm-item--danger:hover { background: #fdecec; }
+
+/* ── การ์ดกลางจอ (ยืนยันออก · หน้าเวลา · ป๊อปอัพหยุดเวลา) ──────── */
+.gm-card {
+  position: relative;
+  background: #fff; border: 2px solid var(--line);
+  border-radius: calc(var(--u) * 0.7);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  padding: calc(var(--u) * 1.8) calc(var(--u) * 2.2);
+  display: flex; flex-direction: column; align-items: center;
+  gap: calc(var(--u) * 0.9);
+  max-width: 86vw;
+}
+.gm-card-title { font-size: calc(var(--u) * 2); font-weight: 800; text-align: center; }
+.gm-card-text {
+  font-size: calc(var(--u) * 1.35); color: var(--muted);
+  text-align: center; line-height: 1.5;
+}
+.gm-card-actions { display: flex; gap: calc(var(--u) * 1); }
+
+.gm-btn {
+  padding: calc(var(--u) * 0.7) calc(var(--u) * 1.6);
+  border: 2px solid var(--line); border-radius: calc(var(--u) * 0.5);
+  background: #fff; color: var(--ink);
+  font-size: calc(var(--u) * 1.35); font-weight: 700; cursor: pointer;
+}
+.gm-btn:hover { background: #f2f4f6; }
+.gm-btn--danger { border-color: #e8484a; background: #e8484a; color: #fff; }
+.gm-btn--danger:hover { background: #d13b40; }
+.gm-btn--go { border-color: #3DD68C; background: #3DD68C; color: #10381f; }
+.gm-card--notice { border-color: #e8484a; }
+
+/* ── §7 หน้าเวลาที่เหลือ ───────────────────────────────────────── */
+.gm-card--time { min-width: min(calc(var(--u) * 42), 88vw); }
+
+.gm-time-head {
+  display: flex; align-items: center; gap: calc(var(--u) * 1.2);
+  width: 100%;
+}
+.gm-time-now {
+  font-size: calc(var(--u) * 1.9); font-weight: 800;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.gm-time-bar {
+  flex: 1; height: calc(var(--u) * 1.1);
+  border: 2px solid var(--line); border-radius: calc(var(--u) * 0.6);
+  overflow: hidden; background: #fff;
+}
+.gm-time-fill { height: 100%; background: var(--ink); }
+
+.gm-time-label {
+  font-size: calc(var(--u) * 1.3); color: var(--muted);
+  letter-spacing: 0.5px;
+}
+
+.gm-time-row {
+  display: flex; justify-content: space-around; width: 100%;
+  gap: calc(var(--u) * 1);
+}
+.gm-time-col {
+  display: flex; flex-direction: column; align-items: center;
+  gap: calc(var(--u) * 0.45);
+}
+.gm-time-left {
+  font-size: calc(var(--u) * 2.1); font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.gm-time-pop { font-size: calc(var(--u) * 1.3); color: var(--muted); font-weight: 700; }
+.gm-time-col.is-gone .gm-time-left { color: #e8484a; }
+.gm-time-col.is-gone { opacity: 0.55; }
+
+.gm-tier-dot {
+  width: calc(var(--u) * 2.4); height: calc(var(--u) * 2.4);
+  border-radius: 50%; border: 2px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  font-size: calc(var(--u) * 1.3); font-weight: 800;
+}
+.gm-tier-dot--gray { background: #D9D9D9; }
+.gm-tier-dot--yellow { background: #FDF3D0; border-color: #E8C13F; }
+.gm-tier-dot--red { background: #FBE4E4; border-color: #E5484D; }

@@ -17,6 +17,7 @@ import { createFeed } from './feed.js';
 import { attachDrag, cancelDrag } from './dragdrop.js';
 import { buildZoneDetail } from './panels.js';
 import { renderMap, applyZoneColors, updateAllZones, updateZone, updateZoneMarkers, floatText } from './map.js';
+import { createGameMenu } from './gameMenu.js';
 
 const PORTRAIT_DIR = 'assets/characters/';
 const SKILL_DIR = 'assets/skills/';
@@ -367,6 +368,7 @@ function showGameOver(root, why, state) {
 // ไม่งั้น interval จะค้างเดินอยู่เบื้องหลังแม้ผู้เล่นกลับไปหน้าเมนูแล้ว
 let activeClock = null;
 let cancelSmooth = null;
+let activeMenu = null;
 
 export function stopGameClock() {
   cancelDrag();
@@ -374,6 +376,8 @@ export function stopGameClock() {
   activeClock = null;
   cancelSmooth?.();
   cancelSmooth = null;
+  activeMenu?.destroy();
+  activeMenu = null;
 }
 
 export function renderGameScreen(root, { onExit } = {}) {
@@ -385,11 +389,13 @@ export function renderGameScreen(root, { onExit } = {}) {
   root.innerHTML = '';
   root.className = 'screen-overlay screen--game';
 
+  // ประกาศไว้ก่อน เพราะปุ่มบนแถบบนอ้างถึงมัน แต่ตัวมันต้องสร้างหลังนาฬิกา
+  let menu = null;
+
   const top = buildTopBar(data, {
-    // ชั่วคราว: ☰ พากลับเมนูหลักไปก่อน เพื่อให้ทดสอบ flow ได้ไม่ตัน
-    // รอบที่ 9 จะเปลี่ยนเป็นแผงเมนูในเกมจริง (Continue / Setting / How to play / Operator / Return to menu)
-    onMenu: () => { stopGameClock(); onExit?.(); },
-    onTime: () => {}, // รอบที่ 9 — หน้าเวลาที่เหลือ
+    // ☰ และ Time หยุดเวลาอัตโนมัติ แล้วปิดค่อยเดินต่อ (§2.1) — จัดการอยู่ใน gameMenu.js
+    onMenu: () => menu.openMenu(),
+    onTime: () => menu.openTime(state),
     // วาดซ้ำ 1 ครั้งตอนกด เพราะลูปวาดสด ๆ ทำงานเฉพาะตอนเวลาเดิน
     // ถ้าไม่วาด เลขนับถอยหลังจะค้างที่เฟรมก่อนกดหยุด
     onRunToggle: () => { clock.setRunning(!state.running); top.paintSpeed(); paintLive(); },
@@ -466,6 +472,8 @@ export function renderGameScreen(root, { onExit } = {}) {
 
   function tick() {
     tickLoop(state, {
+      // ครบชั่วโมงสำคัญ → เด้งป๊อปอัพและหยุดเวลาให้ผู้เล่นทบทวนแผน (§2.1)
+      onHourTick: (hour) => menu?.checkHour(hour, state),
       onZoneCleared: (zone) => { if (mapHandle) updateZone(mapHandle, zone); },
       onMissionComplete: (opKey) => {
         // §4.2 ทอย 2 ชั้น → อัปเดตโซน/คะแนน → โชว์ผลบนแมพและใน Feed
@@ -513,6 +521,16 @@ export function renderGameScreen(root, { onExit } = {}) {
 
   const clock = createClock(state, tick);
   activeClock = clock;
+
+  // เมนู ☰ · หน้าเวลา · ป๊อปอัพหยุดเวลาอัตโนมัติ (§6 · §7 · §2.1)
+  // มันเป็นคนคุมการหยุด/เดินเวลาของตัวเอง จำได้ว่าก่อนเปิดเวลาเดินอยู่ไหม
+  menu = createGameMenu(root, {
+    pause: () => { clock.setRunning(false); top.paintSpeed(); paintLive(); },
+    resume: () => { clock.setRunning(true); top.paintSpeed(); },
+    isRunning: () => state.running,
+    quitToMenu: () => { stopGameClock(); onExit?.(); },
+  });
+  activeMenu = menu;
 
   // ต่อสายให้ตัวลากวาง: หยุด/เดินเวลา · หาแผนที่ · วาดใหม่หลังวางเสร็จ
   dragCtx.getMapHandle = () => mapHandle;
