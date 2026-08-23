@@ -5,12 +5,14 @@
 
 import { OPERATORS } from '../data/operators.js';
 import { zoneLabel } from '../systems/zones.js';
+import { iconNode } from '../data/icons.js';
 
 // ผลของการทอยอันตรายหลังภารกิจล้มเหลว (§4.3 · §5)
+// คู่กับคีย์ไอคอนใน data/icons.js — ไม่มีไฟล์ก็ใช้ emoji เดิม
 const DANGER_TEXT = {
-  injured: (n) => `🩹 ${n} บาดเจ็บ`,
-  lost: (n) => `💀 ${n} หมดสติ`,
-  laststand: (n) => `⚡ ${n} ลุกขึ้นสู้ครั้งสุดท้าย!`,
+  injured: (n) => `${n} บาดเจ็บ`,
+  lost: (n) => `${n} หมดสติ`,
+  laststand: (n) => `${n} ลุกขึ้นสู้ครั้งสุดท้าย!`,
 };
 
 const MAX_CARDS = 3;
@@ -33,23 +35,34 @@ export function createFeed() {
     let head;
     let body;
 
+    let headIcon;
+    let bodyIcon = null;
+
     if (outcome.kind === 'success') {
       cls = 'ok';
-      head = `🟢 ${zoneLabel(outcome.zoneId)} สำเร็จ`;
+      headIcon = 'success';
+      head = `${zoneLabel(outcome.zoneId)} สำเร็จ`;
       body = `ช่วยได้ ${outcome.saved} คน (${outcome.pct}%)`;
     } else if (outcome.kind === 'toolate') {
       cls = 'late';
-      head = `⚫ ${zoneLabel(outcome.zoneId)} ไปไม่ทัน`;
+      headIcon = 'toolate';
+      head = `${zoneLabel(outcome.zoneId)} ไปไม่ทัน`;
       body = `${name} กลับมามือเปล่า`;
     } else {
       cls = 'fail';
-      head = `🔴 ${zoneLabel(outcome.zoneId)} ไม่สำเร็จ`;
+      headIcon = 'fail';
+      head = `${zoneLabel(outcome.zoneId)} ไม่สำเร็จ`;
       body = DANGER_TEXT[outcome.danger?.to]?.(name) ?? `${name} กลับฐาน ปลอดภัย`;
-      if (outcome.danger?.to) cls = 'hurt';
+      if (outcome.danger?.to) { cls = 'hurt'; bodyIcon = outcome.danger.to; }
     }
 
     const card = el('div', `feed-card feed-card--${cls}`);
-    card.append(el('div', 'feed-head', head), el('div', 'feed-body', body));
+    const headLine = el('div', 'feed-head');
+    headLine.append(iconNode(headIcon, 'feed-glyph'), el('span', null, head));
+    const bodyLine = el('div', 'feed-body');
+    if (bodyIcon) bodyLine.appendChild(iconNode(bodyIcon, 'feed-glyph'));
+    bodyLine.appendChild(el('span', null, body));
+    card.append(headLine, bodyLine);
     box.prepend(card);
 
     while (box.childElementCount > MAX_CARDS) box.lastElementChild.remove();
@@ -64,9 +77,12 @@ export function createFeed() {
   }
 
   // ข้อความสั้น ๆ ที่ไม่ผูกกับโซน เช่น ฟื้นตัว / เข้า-ออก CRITICAL
-  function pushNote(text, cls = 'ok') {
+  function pushNote(text, cls = 'ok', iconKey = null) {
     const card = el('div', `feed-card feed-card--${cls}`);
-    card.appendChild(el('div', 'feed-head', text));
+    const line = el('div', 'feed-head');
+    if (iconKey) line.appendChild(iconNode(iconKey, 'feed-glyph'));
+    line.appendChild(el('span', null, text));
+    card.appendChild(line);
     box.prepend(card);
     while (box.childElementCount > MAX_CARDS) box.lastElementChild.remove();
     const t = setTimeout(() => {

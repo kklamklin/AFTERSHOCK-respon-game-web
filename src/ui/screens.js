@@ -8,14 +8,15 @@ import { renderTutorial } from './tutorial.js';
 import { renderGameScreen } from './gameScreen.js';
 import { renderResult } from './result.js';
 import { state } from '../state.js';
+import { iconNode } from '../data/icons.js';
 
 // ลำดับต้องตรงกับหน้าตาดราฟ: มนุษย์(หน้ากาก) → แมว → เอลฟ์(Lia) → ภูต(Mudongzock)
-// ยังไม่มี asset ไอคอนจิบิจริง ใช้ emoji วางตำแหน่งจองไว้ก่อน สลับเป็นรูปจริงทีหลังได้โดยไม่ต้องแก้โครงสร้าง
+// รูปจริงอยู่ใน assets/icons/ (จับคู่ชื่อไฟล์ที่ data/icons.js) — ยังไม่มีไฟล์ก็ใช้ emoji ไปก่อน
 const OPERATOR_CHIBI_PLACEHOLDERS = [
-  { emoji: '🥽', ring: '#e8703a' }, // Robertson
-  { emoji: '🐱', ring: '#2b2b2b' }, // Lyla
-  { emoji: '🧝', ring: '#e0b23c' }, // Lia
-  { emoji: '👻', ring: '#5b8fd6' }, // Mudongzock
+  { key: 'opHuman',  ring: '#e8703a' }, // Robertson
+  { key: 'opCat',    ring: '#2b2b2b' }, // Lyla
+  { key: 'opElf',    ring: '#e0b23c' }, // Lia
+  { key: 'opSpirit', ring: '#5b8fd6' }, // Mudongzock
 ];
 
 function buildLogo({ size = 'lg', subtitle = 'Response' } = {}) {
@@ -32,11 +33,11 @@ function buildLogo({ size = 'lg', subtitle = 'Response' } = {}) {
 
   const icons = document.createElement('div');
   icons.className = 'logo-icons';
-  for (const { emoji, ring } of OPERATOR_CHIBI_PLACEHOLDERS) {
+  for (const { key, ring } of OPERATOR_CHIBI_PLACEHOLDERS) {
     const icon = document.createElement('div');
     icon.className = 'chibi-slot';
     icon.style.setProperty('--ring', ring);
-    icon.textContent = emoji;
+    icon.appendChild(iconNode(key, 'chibi-glyph'));
     icons.appendChild(icon);
   }
 

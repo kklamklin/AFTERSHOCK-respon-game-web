@@ -3,6 +3,7 @@
 // ไม่แตะ logic เกมจริงเลย — เป็นแค่การเล่าเรื่องก่อนเข้าเกม
 
 import { TUTORIAL_SCRIPT, SPEAKER_META, TUTORIAL_SYNOPSIS } from '../data/tutorialScript.js';
+import { iconNode } from '../data/icons.js';
 
 const TYPE_SPEED_MS = 22; // ต่อ 1 ตัวอักษร
 
@@ -119,7 +120,8 @@ export function renderTutorial(root, { onFinish } = {}) {
       if (ins.team) {
         const team = document.createElement('div');
         team.className = 'vn-map-team';
-        team.innerHTML = '<span>🥽</span><span>🐱</span>';
+        team.innerHTML = '';
+    team.append(iconNode('opHuman', 'vn-glyph'), iconNode('opCat', 'vn-glyph'));
         wrap.appendChild(team);
       }
       if (ins.percent != null) {
@@ -155,10 +157,12 @@ export function renderTutorial(root, { onFinish } = {}) {
       wrap.className = 'vn-team';
       const field = document.createElement('div');
       field.className = `vn-team-group ${ins.highlight === 'field' ? 'vn-team-group--on' : ins.highlight ? 'vn-team-group--dim' : ''}`;
-      field.innerHTML = '<span>🥽</span><span>🐱</span>';
+      field.innerHTML = '';
+    field.append(iconNode('opHuman', 'vn-glyph'), iconNode('opCat', 'vn-glyph'));
       const support = document.createElement('div');
       support.className = `vn-team-group ${ins.highlight === 'support' ? 'vn-team-group--on' : ins.highlight ? 'vn-team-group--dim' : ''}`;
-      support.innerHTML = '<span>🧝</span><span>👻</span>';
+      support.innerHTML = '';
+    support.append(iconNode('opElf', 'vn-glyph'), iconNode('opSpirit', 'vn-glyph'));
       wrap.append(field, support);
       insertPanel.appendChild(wrap);
       return;

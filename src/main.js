@@ -6,9 +6,14 @@
 // นาฬิกา แผนที่ และแถบ จนท. ต่อกับ state จริงหมดแล้ว — ดู src/ui/gameScreen.js
 
 import { initScreens } from './ui/screens.js';
+import { probeIcons } from './data/icons.js';
 import { state } from './state.js';
 import { CONFIG } from './config.js';
 import * as rng from './utils/rng.js';
+
+// ตรวจก่อนว่าไฟล์ไอคอนใน assets/icons/ อันไหนมีจริง แล้วค่อยวาดหน้าแรก
+// อันที่ยังไม่มีไฟล์จะใช้ emoji เดิมไปก่อน — วางไฟล์ทับเมื่อไหร่ก็ขึ้นเอง ไม่ต้องแก้โค้ด
+await probeIcons();
 
 initScreens(document.getElementById('screen-root'));
 

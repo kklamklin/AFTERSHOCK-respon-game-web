@@ -18,6 +18,7 @@ import { attachDrag, cancelDrag } from './dragdrop.js';
 import { buildZoneDetail } from './panels.js';
 import { renderMap, applyZoneColors, updateAllZones, updateZone, updateZoneMarkers, floatText } from './map.js';
 import { createGameMenu } from './gameMenu.js';
+import { iconNode, iconPath, iconEmoji } from '../data/icons.js';
 
 const PORTRAIT_DIR = 'assets/characters/';
 const SKILL_DIR = 'assets/skills/';
@@ -68,25 +69,37 @@ function buildTopBar(data, handlers) {
   center.appendChild(timeBtn);
 
   const right = el('div', 'game-top-right');
-  const heli = el('div', 'game-air', '🚁');
-  heli.title = 'Air Deploy กำลังมีผลทั้งแมพ';
+  const heli = el('div', 'game-air');
+  heli.appendChild(iconNode('air', 'air-glyph', 'Air Deploy กำลังมีผลทั้งแมพ'));
   heli.hidden = !data.airDeployOn;
 
-  // ปุ่มเวลา 2 ปุ่ม (§2)
+  // ปุ่มเวลา 2 ปุ่ม (§2) — หน้าตาเหมือนเดิม แต่เป็นไฟล์ vector ถ้ามี ไม่งั้นใช้ emoji
   const speedBox = el('div', 'game-speed');
   const runBtn = el('button', 'spd-btn spd-run');
   const rateBtn = el('button', 'spd-btn spd-rate');
+  const setBtnIcon = (btn, key, label) => {
+    btn.innerHTML = '';
+    btn.appendChild(iconNode(key, 'spd-glyph', label));
+    btn.title = label;
+  };
   speedBox.append(runBtn, rateBtn);
   right.append(heli, speedBox);
 
   bar.append(left, center, right);
 
+  let shownRun = null, shownRate = null;
   function paintSpeed() {
-    runBtn.textContent = state.running ? '⏸' : '▶';
-    runBtn.title = state.running ? 'หยุดเวลา' : 'เดินเวลาต่อ';
+    const runKey = state.running ? 'pause' : 'play';
+    if (runKey !== shownRun) {
+      setBtnIcon(runBtn, runKey, state.running ? 'หยุดเวลา' : 'เดินเวลาต่อ');
+      shownRun = runKey;
+    }
     // ปุ่มความเร็วค้างเลขเดิมไว้เสมอ แม้ตอนหยุด (§2)
-    rateBtn.textContent = state.speed === 2 ? '2️⃣' : '1️⃣';
-    rateBtn.title = state.speed === 2 ? 'ความเร็ว 2 เท่า' : 'ความเร็วปกติ';
+    const rateKey = state.speed === 2 ? 'speed2' : 'speed1';
+    if (rateKey !== shownRate) {
+      setBtnIcon(rateBtn, rateKey, state.speed === 2 ? 'ความเร็ว 2 เท่า' : 'ความเร็วปกติ');
+      shownRate = rateKey;
+    }
     bar.classList.toggle('is-paused', !state.running);
   }
   runBtn.addEventListener('click', () => handlers.onRunToggle?.());
@@ -126,8 +139,11 @@ function buildSkillRow(speciesKey, skillId, skill) {
   row.appendChild(el('div', 'skill-label', skill.name));
 
   const iconWrap = el('div', 'skill-icon-wrap');
-  // 📥 = ลงพื้นที่ (จนท. ติดคูลดาวน์) · ✨ = บัฟ (§3.1)
-  iconWrap.appendChild(el('div', 'skill-badge', skill.type === 'field' ? '📥' : '✨'));
+  // ป้ายบอกประเภท: ลงพื้นที่ (จนท. ติดคูลดาวน์) หรือ บัฟ (§3.1)
+  const badge = el('div', 'skill-badge');
+  badge.appendChild(iconNode(skill.type === 'field' ? 'skillField' : 'skillBuff', 'badge-glyph',
+    skill.type === 'field' ? 'สกิลลงพื้นที่' : 'สกิลบัฟ'));
+  iconWrap.appendChild(badge);
 
   const icon = el('div', 'skill-icon');
   const img = el('img');
@@ -472,13 +488,13 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
       // ฟื้นตัว / หมดเวลา Last Stand — แจ้งใน Feed ให้ผู้เล่นรู้
       onStatusChange: ({ opKey, from, to }) => {
         const name = OPS_FOR_STATUS[opKey].name;
-        if (from === 'laststand') feed.pushNote(`⚡ ${name} หมดแรง — หมดสติ`, 'hurt');
-        else if (to === 'normal') feed.pushNote(`💚 ${name} กลับมาพร้อมปฏิบัติงาน`, 'ok');
+        if (from === 'laststand') feed.pushNote(`${name} หมดแรง — หมดสติ`, 'hurt', 'laststand');
+        else if (to === 'normal') feed.pushNote(`${name} กลับมาพร้อมปฏิบัติงาน`, 'ok', 'recovered');
       },
       onCritical: (kind) => {
         paintCritical();
-        if (kind === 'start') feed.pushNote('⚠ CRITICAL — ภาคสนามหมดสติทั้งคู่', 'hurt');
-        if (kind === 'cancel') feed.pushNote('💚 พ้นภาวะ CRITICAL แล้ว', 'ok');
+        if (kind === 'start') feed.pushNote('CRITICAL — ภาคสนามหมดสติทั้งคู่', 'hurt', 'lost');
+        if (kind === 'cancel') feed.pushNote('พ้นภาวะ CRITICAL แล้ว', 'ok', 'recovered');
       },
       // จบเกมทุกทาง (หมดเวลา · ช่วยครบ · CRITICAL) ไปหน้า Result เหมือนกัน (§13)
       // state.endReason ถูกตั้งไว้แล้วใน systems/time.js หน้า Result อ่านเอาเอง

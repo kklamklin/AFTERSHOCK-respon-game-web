@@ -151,6 +151,27 @@ Last Stand โผล่ 6–37% ของเกม · Air/Alert ถูกใช�
 **⚠️ `data/operators.js` ไม่เก็บตัวเลขเองแล้ว** — ราคา AP · เวลาทำงาน · ค่าบัฟ อ่านจาก `CONFIG` ทั้งหมด
 (เมื่อก่อนพิมพ์ซ้ำไว้ 2 ที่ ผลคือแก้ `config.js` แล้วเกมไม่เปลี่ยน เพราะโค้ดจริงอ่านจาก operators.js)
 
+## ไอคอนในเกม (assets/icons/)
+
+**อัปได้ทั้งโฟลเดอร์ ไม่ต้องเปลี่ยนชื่อไฟล์** — ตารางจับคู่ "ชื่อไฟล์ ↔ ที่ใช้ในเกม" อยู่ที่ `src/data/icons.js` ที่เดียว
+ทุกอันมี emoji สำรอง ไฟล์ไหนยังไม่มีก็ใช้ emoji เดิมไปก่อน เกมไม่พัง
+`probeIcons()` ใน `main.js` ตรวจตอนเปิดเกมว่าไฟล์ไหนโหลดได้จริง
+
+| ที่ใช้ในเกม | ไฟล์ | emoji สำรอง |
+|---|---|---|
+| ปุ่มหยุด/เดินเวลา | `pause-solid.svg` · `play-solid.svg` | ⏸ ▶ |
+| ปุ่มความเร็ว | `number1-square-solid.svg` · `number2-square-solid.svg` | 1️⃣ 2️⃣ |
+| บัฟ Crowd / Scan / Alert / Air | `crowd-control.svg` · `eye-solid.svg` · `alliedalert.svg` · `airdeploy.svg` | 👥 👁 ⚠ 🚁 |
+| ประเภทสกิล ลงพื้นที่ / บัฟ | `field-deploy.svg` · `sparks-solid.svg` | 📥 ✨ |
+| Feed สำเร็จ | `check-circle-solid.svg` | 🟢 |
+| สถานะ หมดสติ / Last Stand / ฟื้น | `unconscious.svg` · `finalstand.svg` · `heart-solid.svg` | 💀 ⚡ 💚 |
+| ปุ่ม Home | `home.svg` | 🏠 |
+| ตัวละครหน้าปก | `human.png` · `beastfolk.png` · `elf.png` · `mytics.png` | 🥽 🐱 🧝 👻 |
+
+**ยังไม่มีไฟล์ (ใช้ emoji อยู่):** ภารกิจล้มเหลว 🔴 · ไปไม่ทัน ⚫ · บาดเจ็บ 🩹 · ปุ่มเล่นใหม่ 🔄
+
+**ปล่อยเป็นตัวอักษรตามเดิม ไม่ต้องทำรูป:** ✕ กากบาท · ☰ เมนู · + − ⌖ ปุ่มซูม · Ⓐ Ⓑ Ⓒ ป้ายระดับโซน
+
 ## แผนผังไฟล์
 
 ```
@@ -161,6 +182,7 @@ src/
   main.js             ✅ จุดเริ่มต้น
   styles.css          ✅
   data/operators.js   ✅ จนท. 4 ตัว + สกิล
+  data/icons.js       ✅ จับคู่ไอคอนกับไฟล์ใน assets/icons/ + emoji สำรอง
   systems/            ตรรกะเกม — ห้ามแตะ DOM
     zones.js  time.js  actionPoints.js     ✅ เขียนแล้ว
     survivors.js death.js                  ⬜ stub

@@ -11,10 +11,11 @@ import { displayCounts, deathPerHour } from '../systems/zones.js';
 import { successBreakdown, buffsOn, BUFF_NAME } from '../systems/successRate.js';
 import { dangerChance, injuryChance } from '../systems/danger.js';
 import { dropCheck, apCost, workLoops } from '../systems/skills.js';
+import { iconNode } from '../data/icons.js';
 
 const TIER_LETTER = { gray: 'A', yellow: 'B', red: 'C' };
 const TIER_NAME = { gray: 'ปกติ', yellow: 'อันตราย', red: 'วิกฤต' };
-const BUFF_GLYPH = { crowd: '👥', scan: '👁', alert: '⚠', air: '🚁' };
+// ไอคอนบัฟมาจาก data/icons.js ที่เดียว (ไฟล์จริงถ้ามี ไม่งั้น emoji)
 
 // ข้อความบอกเหตุผลที่ลงโซนนี้ไม่ได้ (§10.1)
 const REJECT_TEXT = {
@@ -41,6 +42,24 @@ function row(label, value, valueClass) {
   const r = el('div', 'zd-row');
   r.append(el('span', 'zd-label', label), el('span', `zd-value ${valueClass ?? ''}`.trim(), value));
   return r;
+}
+
+// บรรทัด "บัฟที่มี" — วางไอคอนจริงต่อกับชื่อบัฟ
+function buffRow(buffs) {
+  const line = el('div', 'zd-row');
+  line.appendChild(el('span', 'zd-label', 'บัฟที่มี'));
+  const val = el('span', 'zd-value');
+  if (!buffs.length) {
+    val.textContent = '—';
+  } else {
+    for (const b of buffs) {
+      const chip = el('span', 'zd-buff');
+      chip.append(iconNode(b.type, 'zd-glyph'), el('span', null, BUFF_NAME[b.type] ?? b.type));
+      val.appendChild(chip);
+    }
+  }
+  line.appendChild(val);
+  return line;
 }
 
 export function buildZoneDetail() {
@@ -77,9 +96,7 @@ export function buildZoneDetail() {
       info.append(
         row('คนติดอยู่', `${d.trapped} คน`),
         row('อัตราตาย', `−${deathPerHour(zone, state.globalBuffs).toFixed(1)} คน/ชม.`, 'is-bad'),
-        row('บัฟที่มี', buffs.length
-          ? buffs.map((b) => `${BUFF_GLYPH[b.type] ?? ''}${BUFF_NAME[b.type] ?? b.type}`).join(' ')
-          : '—'),
+        buffRow(buffs),
       );
       box.appendChild(info);
 

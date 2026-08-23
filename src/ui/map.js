@@ -5,6 +5,7 @@
 // id ของ path ใน map.svg (zone-gray-01 … zone-red-08) ตรงกับ id ที่ systems/zones.js สร้าง 1:1
 
 import { CONFIG } from '../config.js';
+import { iconPath, iconEmoji } from '../data/icons.js';
 
 const VIEWBOX = { w: 1600, h: 1000 }; // ขนาดจริงของ map.svg
 
@@ -163,7 +164,7 @@ function warnHiddenZones(svg, zoneEls) {
 // ── เลเยอร์ทับบนโซน: ไอคอน จนท. · ไอคอนบัฟ · กากบาทตอนลาก (§11) ──
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const OP_ICON = { human: 'assets/skills/Field-op-robertson-icon.png', cat: 'assets/skills/Field-op-Lyla-icon.png' };
-const BUFF_GLYPH = { crowd: '👥', scan: '👁', alert: '⚠' };
+// ไอคอนบัฟบนโซน — ไฟล์จริงจาก data/icons.js ถ้ามี ไม่งั้นใช้ emoji เดิม
 
 function svgEl(tag, attrs = {}) {
   const node = document.createElementNS(SVG_NS, tag);
@@ -207,9 +208,8 @@ function buildOverlay(handle, zones) {
       class: 'zone-timer', x: cx + size * 0.62, y: cy,
       'font-size': (size * 0.58).toFixed(1),
     });
-    const buffs = svgEl('text', {
-      class: 'zone-buffs', x: cx, y: cy + size * 0.86, 'font-size': (size * 0.8).toFixed(1),
-    });
+    // ไอคอนบัฟเรียงกันใต้ไอคอน จนท. — เป็นกลุ่มเพราะแต่ละอันอาจเป็นรูปหรือ emoji
+    const buffs = svgEl('g', { class: 'zone-buffs' });
     const cross = svgEl('text', { class: 'zone-cross', x: cx, y: cy, 'font-size': (size * 1.1).toFixed(1) });
     cross.textContent = '✕';
 
@@ -250,8 +250,44 @@ export function updateZoneMarkers(handle, state) {
       m.timer.textContent = '';
     }
 
-    const glyphs = zone.buffs.map((b) => BUFF_GLYPH[b.type] ?? '').join('');
-    if (m.buffs.textContent !== glyphs) m.buffs.textContent = glyphs;
+    const types = zone.buffs.map((b) => b.type);
+    const key = types.join(',');
+    if (m.buffs.dataset.shown !== key) {
+      m.buffs.dataset.shown = key;
+      paintBuffIcons(m, types);
+    }
+  }
+}
+
+// วาดไอคอนบัฟใหม่ทั้งชุด — เรียกเฉพาะตอนชุดบัฟเปลี่ยน ไม่ได้เรียกทุกลูป
+function paintBuffIcons(m, types) {
+  m.buffs.innerHTML = '';
+  if (!types.length) return;
+
+  const s = m.size * 0.8;                  // ขนาดไอคอนบัฟ 1 อัน
+  const gap = s * 0.14;
+  const total = types.length * s + (types.length - 1) * gap;
+  let x = m.cx - total / 2;                // เรียงจากซ้าย ให้ทั้งแถวอยู่กลางโซน
+  const y = m.cy + m.size * 0.86;
+
+  for (const type of types) {
+    const path = iconPath(type);
+    if (path) {
+      const img = svgEl('image', {
+        class: 'zone-buff-img', href: path,
+        x: x.toFixed(1), y: (y - s / 2).toFixed(1), width: s.toFixed(1), height: s.toFixed(1),
+        preserveAspectRatio: 'xMidYMid meet',
+      });
+      m.buffs.appendChild(img);
+    } else {
+      const t = svgEl('text', {
+        class: 'zone-buff-glyph', x: (x + s / 2).toFixed(1), y: y.toFixed(1),
+        'font-size': s.toFixed(1),
+      });
+      t.textContent = iconEmoji(type);
+      m.buffs.appendChild(t);
+    }
+    x += s + gap;
   }
 }
 

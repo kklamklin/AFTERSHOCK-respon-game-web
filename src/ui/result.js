@@ -12,6 +12,7 @@
 // ไฟล์นี้อยู่ใน ui/ จึงไม่คำนวณคะแนนเอง — เรียก systems/score.js มาแล้วแสดงผลอย่างเดียว
 
 import { scoreBreakdown } from '../systems/score.js';
+import { iconNode } from '../data/icons.js';
 
 const num = (n) => n.toLocaleString('en-US');
 const signed = (n) => (n >= 0 ? `+${num(n)}` : `−${num(Math.abs(n))}`);
@@ -62,9 +63,11 @@ export function renderResult(root, { state, onHome, onReplay } = {}) {
   card.appendChild(stats);
 
   const actions = el('div', 'res-actions');
-  const home = el('button', 'res-btn', '🏠 Home');
+  const home = el('button', 'res-btn');
+  home.append(iconNode('home', 'res-glyph'), el('span', null, 'Home'));
   home.addEventListener('click', () => onHome?.());
-  const replay = el('button', 'res-btn res-btn--main', '🔄 เล่นใหม่');
+  const replay = el('button', 'res-btn res-btn--main');
+  replay.append(iconNode('replay', 'res-glyph'), el('span', null, 'เล่นใหม่'));
   replay.addEventListener('click', () => onReplay?.());
   actions.append(home, replay);
   card.appendChild(actions);
