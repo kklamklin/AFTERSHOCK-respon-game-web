@@ -102,6 +102,17 @@ export function tickZoneDeath(zone, globalBuffs = []) {
   return dead;
 }
 
+// จบเกมแล้ว — คนที่ยังติดอยู่ในโซนถือว่าเสียชีวิตทั้งหมด (เจ้าของเคาะแล้ว)
+// เคสนี้เกิดได้เพราะบัฟชะลอการตาย (Scan / Air Deploy) ยืดชีวิตโซนเกินอายุปกติ
+// เกมจึงจบลงตอนที่ยังมีคนไม่ตายค้างอยู่ · คืนจำนวนคนที่เพิ่งถูกนับเป็นเสียชีวิต
+export function settleTrapped(zone) {
+  if (zone.trapped <= 0) return 0;
+  const left = zone.trapped;
+  zone.trapped = 0;
+  zone.casualty += left;
+  return left;
+}
+
 // ตัวเลขสำหรับ "แสดงผล" (§7.5) — เก็บเป็นทศนิยม แต่โชว์เป็นจำนวนเต็ม
 // ปัด trapped ลง แล้วให้ casualty รับเศษที่เหลือ เพื่อให้ trapped + rescued + casualty = initial เป๊ะเสมอ
 export function displayCounts(zone) {

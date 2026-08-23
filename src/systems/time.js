@@ -1,5 +1,5 @@
 import { CONFIG } from '../config.js';
-import { tickZoneDeath, isZoneEmpty } from './zones.js';
+import { tickZoneDeath, isZoneEmpty, settleTrapped } from './zones.js';
 import { payHourlyAP } from './actionPoints.js';
 import { tickRecovery, checkCritical } from './status.js';
 
@@ -38,16 +38,23 @@ export function tickLoop(state, { onHourTick, onZoneCleared, onMissionComplete, 
   // Field ล้มทั้งคู่ → นับถอยหลัง 3 ชม. ถ้าไม่มีใครฟื้นทันคือจบเกม (§13)
   const critical = checkCritical(state);
   if (critical) onCritical?.(critical, state.criticalCountdownLoops);
-  if (critical === 'over') {
-    state.ended = true;
-    onGameEnd?.('critical');
-    return;
-  }
+  if (critical === 'over') return endGame(state, 'critical', onGameEnd);
 
   if (state.loop >= CONFIG.totalLoops || allZonesResolved(state)) {
-    state.ended = true;
-    onGameEnd?.(state.loop >= CONFIG.totalLoops ? 'timeup' : 'empty');
+    endGame(state, state.loop >= CONFIG.totalLoops ? 'timeup' : 'empty', onGameEnd);
   }
+}
+
+// ปิดเกม — ทางเดียวที่ state.ended จะเป็น true
+// คนที่ยังติดอยู่ตอนนี้นับเป็นเสียชีวิตทั้งหมด (เจ้าของเคาะแล้ว) เพื่อให้ยอดรวมลงตัวเสมอ:
+//   ช่วยได้ + เสียชีวิต = 1,200 เป๊ะ ไม่มีคนค้างอยู่ตรงกลาง
+function endGame(state, why, onGameEnd) {
+  for (const zone of Object.values(state.zones)) {
+    state.totalCasualty += settleTrapped(zone);
+  }
+  state.ended = true;
+  state.endReason = why; // เก็บไว้ให้หน้า Result (รอบที่ 10) อ่านได้โดยไม่ต้องรอ callback
+  onGameEnd?.(why);
 }
 
 // ตัวนับที่ลดลงทุก 1 ลูป — ความไม่ว่างของ จนท. · คูลดาวน์สกิล · อายุบัฟ · เวลาฟื้นตัว · CRITICAL

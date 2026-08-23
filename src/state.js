@@ -30,6 +30,7 @@ export function createInitialState() {
 
     feed: [],   // [{ hour, zoneId, success, rescued, injuredUnit }]
     ended: false,
+    endReason: null, // 'timeup' | 'empty' | 'critical' — ตั้งค่าตอนปิดเกมใน systems/time.js
   };
 }
 
