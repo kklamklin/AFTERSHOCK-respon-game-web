@@ -16,15 +16,20 @@ export const CONFIG = {
   // โซนเทา 26 (เดิมนับ 27 แต่ map.svg เขียน zone-gray-03 ซ้ำกับ zone-gray-12 — ลบตัวซ้ำแล้ว)
   zoneCounts: { gray: 26, yellow: 13, red: 8 },
 
-  // อายุโซน (ลูปที่คนตายหมดถ้าไม่มีใครช่วย)
-  zoneLifespanLoops: { gray: 144, yellow: 96, red: 48 },
+  // อายุโซน (ลูปที่คนตายหมดถ้าไม่มีใครช่วย) — เทา 72 ชม. · เหลือง 48 ชม. · แดง 32 ชม.
+  // แดงเคยเป็น 24 ชม. แต่ตายเร็วเกินกว่าจะบุกทันรอบสอง จึงยืดเป็น 32 ชม.
+  zoneLifespanLoops: { gray: 144, yellow: 96, red: 64 },
 
   // ความเสี่ยงพื้นที่ (ตัวลบอัตราสำเร็จ)
-  zonePenalty: { gray: -10, yellow: -30, red: -55 },
+  // เดิม เหลือง −30 / แดง −55 ทำให้โซนแดงเป็นดีลที่ขาดทุนเสมอ (Lyla สำเร็จแค่ 35%)
+  // ไม่มีใครมีเหตุผลจะเข้าโซนแดงเลย ทั้งที่ในนั้นมีคน 45% ของเมือง
+  zonePenalty: { gray: -10, yellow: -25, red: -40 },
 
   // โอกาสอันตรายพื้นฐาน (ก่อนคูณเวลา)
-  dangerBase: { gray: 0.05, yellow: 0.15, red: 0.30 },
-  dangerCap: 0.50,
+  // ทอยเฉพาะตอนภารกิจล้มเหลว บัฟจึงช่วย 2 ต่อ (สำเร็จมากขึ้น = โดนทอยอันตรายน้อยลง)
+  // เลขฐานเลยต้องสูงกว่าที่รู้สึก ไม่งั้นบาดเจ็บแทบไม่เกิดเลยทั้งเกม
+  dangerBase: { gray: 0.12, yellow: 0.30, red: 0.48 },
+  dangerCap: 0.72,
 
   // สีโซนตาม §3.2
   zoneColors: {
@@ -34,15 +39,23 @@ export const CONFIG = {
     green:  { fill: '#D4F4DD', stroke: '#3DD68C' },
   },
 
-  // AP
-  apBase: 5,
-  apBonusThresholds: [0.2, 0.4, 0.6, 0.8], // ช่วง % ผู้รอดที่หายไปแล้ว
-  apBonusValues: [0, 1, 2, 3, 4],
+  // ── AP ────────────────────────────────────────────────────────
+  // เดิม: เริ่ม 0 · 5/ชม. + โบนัสตามสัดส่วน "ผู้รอดที่หายไปแล้ว"
+  // โบนัสนั้นผูกกับจำนวนคนตาย แต้มก้อนใหญ่จึงมาถึงตอนไม่มีใครให้ช่วยแล้ว
+  // วัดจริงได้ว่าแต้มสูงสุดที่สะสมได้ทั้งเกมคือ 25 ทั้งที่โซนแดงราคา 30
+  // → ทั้งเกมไม่มีวินาทีไหนที่ลงโซนแดงได้เลย จึงเปลี่ยนเป็นเส้นโค้ง "หน้าหนัก"
+  apStart: 80,
+  // จ่ายทุกต้นชั่วโมง — ใช้ค่าของช่วงแรกที่ยังไม่ถึง untilHour
+  apCurve: [
+    { untilHour: 24, ap: 25 }, // ช่วงที่โซนแดงยังมีชีวิต ต้องบุกให้ทัน
+    { untilHour: 48, ap: 15 },
+    { untilHour: 72, ap: 8 },
+  ],
 
   // สถานะ จนท.
   injuredPenalty: -20,
-  injuredRecoverHours: 3,
-  lostConsciousHours: 4,
+  injuredRecoverHours: 6,
+  lostConsciousHours: 9,
   criticalCountdownHours: 3,
 
   // %ช่วยชีวิตตอนสำเร็จ — ทอย 2 ชั้น (GAMESCREEN_SPEC §4.2)
@@ -63,14 +76,22 @@ export const CONFIG = {
     crowd: { rate: 25, durationHours: 3, ap: 14, cooldownHours: 3, scope: 'zone' },
     scan:  { rate: 15, durationHours: 3, ap: 10, cooldownHours: 0, scope: 'zone',
              deathSlowFactor: 0.5, maxStacks: 5 },
-    alert: { rate: 0,  durationHours: 3, ap: 35, cooldownHours: 4, scope: 'zone', safe: true },
-    air:   { rate: 15, durationHours: 1, ap: 24, cooldownHours: 3, scope: 'global' },
+    // Alert เดิม 35 AP แพงเกินกว่าจะคุ้ม เพราะบาดเจ็บแทบไม่เกิด — ตอนนี้อันตรายแรงขึ้นแล้ว
+    // การเสีย จนท. ไป 6-9 ชม. กลางเกมคือหายนะ ประกันราคา 15 จึงคุ้มขึ้นมาจริง ๆ
+    alert: { rate: 0,  durationHours: 3, ap: 15, cooldownHours: 3, scope: 'zone', safe: true },
+    // Air Deploy เดิมอยู่แค่ 1 ชม. ราคา 24 → ไม่มีใครกดเลยสักครั้งใน 150 เกมที่จำลอง
+    // ตอนนี้เป็น "ปุ่มฉุกเฉิน" — ชะลอการตายทั้งแมพ 40% ใช้ตอนหลายโซนใกล้หมดอายุพร้อมกัน
+    air:   { rate: 15, durationHours: 3, ap: 20, cooldownHours: 4, scope: 'global',
+             deathSlowFactor: 0.6 },
   },
 
   // สกิลลงพื้นที่ — AP และเวลาทำงานแยกตามระดับโซน (null = ลงโซนนั้นไม่ได้)
+  // ตารางนี้คือ "แหล่งจริง" ของราคา/เวลา — data/operators.js อ่านค่าจากตรงนี้ ห้ามพิมพ์เลขซ้ำที่นั่น
+  // Robertson เข้าโซนแดงได้แล้ว แต่ช้ากว่า Lyla และฐานสำเร็จต่ำกว่ามาก (75−40 = 35%)
+  // ไม่บัฟคือส่งไปตาย — เป็นทางเลือกเสี่ยง ไม่ใช่ของแถม
   fieldSkills: {
-    human: { base: 75, ap: { gray: 6,  yellow: 12, red: null }, workHours: { gray: 1, yellow: 2, red: null } },
-    cat:   { base: 90, ap: { gray: 10, yellow: 18, red: 30   }, workHours: { gray: 1, yellow: 1, red: 2 } },
+    human: { base: 75, ap: { gray: 6,  yellow: 12, red: 20 }, workHours: { gray: 1, yellow: 2, red: 3 } },
+    cat:   { base: 90, ap: { gray: 10, yellow: 18, red: 30 }, workHours: { gray: 1, yellow: 1, red: 2 } },
   },
 
   // Last Stand ของ Robertson (GAMESCREEN_SPEC §5)
@@ -93,6 +114,6 @@ export const CONFIG = {
   loopDurationMsBySpeed: { 1: 4200, 2: 2400 }, // ปกติ ~10 นาทีทั้งเกม / เร็ว ~5.8 นาที (144 ลูป)
 
   // จุดหยุดเวลาอัตโนมัติของเกม (Q3)
-  autoPauseAtHour: [24, 48], // โซนแดง/เหลืองหมดอายุ
+  autoPauseAtHour: [32, 48], // โซนแดง/เหลืองหมดอายุ (ตรงกับ zoneLifespanLoops)
   autoPauseHoursLeft: 12,     // เตือนตอนเหลือ 12 ชม.สุดท้าย
 };

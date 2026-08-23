@@ -10,7 +10,7 @@ export function createInitialState() {
     hour: 0,
     speed: 1,        // 1 = ปกติ · 2 = เร็ว (ความเร็วที่ "เลือกไว้" ไม่ใช่สถานะเดิน/หยุด)
     running: false,  // true = เวลากำลังเดิน
-    ap: 0,
+    ap: CONFIG.apStart, // กำลังเสริมชุดแรกมาถึงพร้อมกับผู้เล่น (ดู systems/actionPoints.js)
 
     zones: generateZones(),
 

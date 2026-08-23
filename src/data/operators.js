@@ -9,6 +9,29 @@
 //
 // key ของ OPERATORS (human/cat/elf/spirit) คือ "สายพันธุ์" ใช้อ้างอิงใน logic ทั้งหมด
 // (state.units, CONFIG ฯลฯ) — `name` คือชื่อตัวละครที่โชว์ผู้เล่น
+//
+// ⚠ ไฟล์นี้เก็บได้แต่ "ชื่อ/รูป/ชนิดสกิล" เท่านั้น — ตัวเลขบาลานซ์ทั้งหมดอ่านจาก config.js
+// เคยพิมพ์ราคา AP ซ้ำไว้ที่นี่ด้วย ผลคือแก้เลขใน config.js แล้วเกมไม่เปลี่ยนเลย เพราะโค้ดจริงอ่านจากที่นี่
+
+import { CONFIG } from '../config.js';
+
+// แปลงตาราง CONFIG.fieldSkills เป็นรูป zones ที่ระบบสกิลใช้ — ระดับที่ ap เป็น null คือเข้าไม่ได้
+function fieldZones(opKey) {
+  const { ap, workHours } = CONFIG.fieldSkills[opKey];
+  const zones = {};
+  for (const tier of ['gray', 'yellow', 'red']) {
+    if (ap[tier] == null) continue;
+    zones[tier] = { ap: ap[tier], cd: workHours[tier] };
+  }
+  return zones;
+}
+
+// แปลง CONFIG.buffs เป็นฟิลด์ที่การ์ดสกิลใช้แสดงผล
+function buffSpec(id) {
+  const b = CONFIG.buffs[id];
+  return { buff: b.rate, scope: b.scope, durationHours: b.durationHours, ap: b.ap, cd: b.cooldownHours };
+}
+
 export const OPERATORS = {
   human: {
     name: 'Robertson', side: 'field',
@@ -23,16 +46,13 @@ export const OPERATORS = {
     skills: {
       sar: {
         name: 'Search & Rescue', icon: 'Icon-skills-robertson-search&rescue.PNG', type: 'field',
-        zones: {
-          gray:   { ap: 6,  cd: 1 },
-          yellow: { ap: 12, cd: 2 },
-          // แดง: เข้าไม่ได้ (ยกเว้นตอน Last Stand — GAMESCREEN_SPEC §5.2)
-        },
+        // เข้าโซนแดงได้แล้ว แต่ช้าและฐานสำเร็จต่ำ (75−40 = 35%) ไม่บัฟคือส่งไปตาย
+        zones: fieldZones('human'),
       },
       crowd: {
         name: 'Crowd Control', icon: 'Icon-skills-robertson-crowd_control.PNG', type: 'buff',
-        // ไม่จองโซน · ไม่มีความเสี่ยงบาดเจ็บ (GAMESCREEN_SPEC §3.3) — ต้นทุนจริงคือคูลดาวน์ 3 ชม.
-        buff: 25, scope: 'zone', durationHours: 3, ap: 14, cd: 3, risky: false,
+        // ไม่จองโซน · ไม่มีความเสี่ยงบาดเจ็บ (GAMESCREEN_SPEC §3.3) — ต้นทุนจริงคือคูลดาวน์
+        ...buffSpec('crowd'), risky: false,
       },
     },
   },
@@ -48,11 +68,7 @@ export const OPERATORS = {
     skills: {
       hsar: {
         name: 'Hardsearch & Extract', icon: 'Icon-skills-Lyla-hardsearch&extract.png', type: 'field',
-        zones: {
-          gray:   { ap: 10, cd: 1 },
-          yellow: { ap: 18, cd: 1 },
-          red:    { ap: 30, cd: 2 },
-        },
+        zones: fieldZones('cat'),
       },
     },
   },
@@ -69,11 +85,11 @@ export const OPERATORS = {
     skills: {
       scan: {
         name: 'Scan Area', icon: 'Icon-skills-Ria-scan_area.PNG', type: 'buff', // TODO: เปลี่ยนเป็น Lia เมื่อเจ้าของแก้ชื่อไฟล์จริง
-        buff: 15, scope: 'multi', durationHours: 3, ap: 10, cd: 0,
+        ...buffSpec('scan'), scope: 'multi',
       },
       alert: {
         name: 'Alert Allied', icon: 'Icon-skills-Ria-alert_allied.PNG', type: 'shield', // TODO: เปลี่ยนเป็น Lia เมื่อเจ้าของแก้ชื่อไฟล์จริง
-        buff: 0, immune: true, scope: 'zone', durationHours: 3, ap: 35, cd: 4,
+        ...buffSpec('alert'), immune: true,
       },
     },
   },
@@ -89,7 +105,7 @@ export const OPERATORS = {
         // หมายเหตุ: ไฟล์จริงสะกด "mudongzong" (ไม่มี c) — เจ้าของยืนยันชื่อจริงคือ mudongzock
         // ต้องเปลี่ยนไฟล์นี้ให้ตรงตอนอัปจริง ตอนนี้ path อ้างตามไฟล์ที่มีอยู่ (มี ✅ ไฟล์แล้ว)
         name: 'Air Deploy', icon: 'Icon-skills-mudongzong-air_deploy.PNG', type: 'buff', // TODO: แก้เป็น Icon-skills-mudongzock-air_deploy.PNG
-        buff: 15, scope: 'global', durationHours: 1, ap: 24, cd: 3,
+        ...buffSpec('air'),
       },
     },
   },
