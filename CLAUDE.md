@@ -166,13 +166,12 @@ Last Stand โผล่ 6–37% ของเกม · Air/Alert ถูกใช�
 | บัฟ Crowd / Scan / Alert / Air | `crowd-control.svg` · `eye-solid.svg` · `alliedalert.svg` · `airdeploy.svg` | 👥 👁 ⚠ 🚁 |
 | ประเภทสกิล ลงพื้นที่ / บัฟ | `field-deploy.svg` · `sparks-solid.svg` | 📥 ✨ |
 | สถานะ หมดสติ / Last Stand / ฟื้น | `unconscious.svg` · `finalstand.svg` · `heart-solid.svg` | 💀 ⚡ 💚 |
-| ปุ่ม Home | `home.svg` | 🏠 |
+| ปุ่ม Home / เล่นใหม่ | `home.svg` · `restart.svg` | 🏠 🔄 |
+| สถานะ บาดเจ็บ | `warning-square-solid.svg` | 🩹 |
 | ตัวละครหน้าปก | `human.png` · `beastfolk.png` · `elf.png` · `mytics.png` | 🥽 🐱 🧝 👻 |
 
 **คงเป็น emoji ตามที่เจ้าของสั่ง:** วงกลมในการ์ด Feed 🟢 🔴 ⚫ — มีไฟล์แค่ฝั่งสำเร็จ (`check-circle-solid.svg`)
 ถ้าเปลี่ยนแค่อันเดียวจะกลายเป็นสามอันคนละแบบ อ่านยากกว่าเดิม
-
-**ยังไม่มีไฟล์ (ใช้ emoji อยู่):** บาดเจ็บ 🩹 · ปุ่มเล่นใหม่ 🔄
 
 **รูปตัวละคร 4 ตัวบนหน้าปก** โชว์เต็มรูป ไม่มีวงแหวนสีทับ (รูปมีขอบมาในตัวแล้ว) เว้นระยะเท่ากันทุกช่อง
 ไฟล์ที่ไม่ได้ใช้: `check-circle.svg` `heart.svg` `flash-solid.svg` (เป็นเวอร์ชันเส้น เก็บไว้เฉย ๆ ได้)

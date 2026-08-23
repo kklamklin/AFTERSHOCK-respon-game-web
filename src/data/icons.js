@@ -31,14 +31,14 @@ export const ICONS = {
   success:   { file: null, emoji: '🟢' },
   fail:      { file: null, emoji: '🔴' },
   toolate:   { file: null, emoji: '⚫' },
-  injured:   { file: null,                     emoji: '🩹' }, // ยังไม่มีไฟล์
+  injured:   { file: 'warning-square-solid.svg', emoji: '🩹' },
   lost:      { file: 'unconscious.svg',        emoji: '💀' },
   laststand: { file: 'finalstand.svg',         emoji: '⚡' },
   recovered: { file: 'heart-solid.svg',        emoji: '💚' },
 
   // ── ปุ่มหน้า Result ───────────────────────────────────────────
   home:   { file: 'home.svg', emoji: '🏠' },
-  replay: { file: null,       emoji: '🔄' }, // ยังไม่มีไฟล์
+  replay: { file: 'restart.svg', emoji: '🔄' },
 
   // ── รูปแทนตัวละครบนหน้าปก/tutorial ────────────────────────────
   opHuman:  { file: 'human.png',     emoji: '🥽' },
