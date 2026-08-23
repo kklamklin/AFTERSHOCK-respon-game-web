@@ -19,9 +19,15 @@ const OPERATOR_CHIBI_PLACEHOLDERS = [
   { key: 'opSpirit', ring: '#5b8fd6' }, // Mudongzock
 ];
 
-function buildLogo({ size = 'lg', subtitle = 'Response' } = {}) {
+/**
+ * โลโก้ AFTERSHOCKS + แถวรูปตัวละคร 4 ตัว
+ * @param size        'lg' หน้าปก · 'sm' เล็ก
+ * @param iconsBeside true = วางรูปตัวละครไว้ "ข้าง ๆ" ชื่อเกม (หน้าเมนู)
+ *                    false = วางไว้ "ใต้" ชื่อเกม (หน้าปก)
+ */
+function buildLogo({ size = 'lg', subtitle = 'Response', iconsBeside = false } = {}) {
   const wrap = document.createElement('div');
-  wrap.className = `logo-block logo-block--${size}`;
+  wrap.className = `logo-block logo-block--${size}${iconsBeside ? ' logo-block--row' : ''}`;
 
   const title = document.createElement('div');
   title.className = 'logo-title';
@@ -44,7 +50,15 @@ function buildLogo({ size = 'lg', subtitle = 'Response' } = {}) {
     icons.appendChild(icon);
   }
 
-  wrap.append(title, sub, icons);
+  if (iconsBeside) {
+    // ชื่อเกมกับคำโปรยกองกันเป็นคอลัมน์ แล้วเอาแถวรูปไปต่อข้างขวา
+    const text = document.createElement('div');
+    text.className = 'logo-text';
+    text.append(title, sub);
+    wrap.append(text, icons);
+  } else {
+    wrap.append(title, sub, icons);
+  }
   return wrap;
 }
 
@@ -90,7 +104,7 @@ export function renderMenu(root, { onNavigate } = {}) {
 
   const top = document.createElement('div');
   top.className = 'menu-top';
-  top.appendChild(buildLogo({ size: 'sm' }));
+  top.appendChild(buildLogo({ size: 'lg', iconsBeside: true }));
   root.appendChild(top);
 
   const nav = document.createElement('nav');
