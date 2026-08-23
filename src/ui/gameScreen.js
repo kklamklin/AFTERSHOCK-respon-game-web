@@ -19,6 +19,16 @@ import { buildZoneDetail } from './panels.js';
 import { renderMap, applyZoneColors, updateAllZones, updateZone, updateZoneMarkers, floatText } from './map.js';
 import { createGameMenu } from './gameMenu.js';
 import { iconNode, iconPath, iconEmoji } from '../data/icons.js';
+import { setAlertFrame, clearFx, fireSkillIcon } from './fx.js';
+
+// เล่นอนิเมชั่นสั้น ๆ ซ้ำได้ — ถอดคลาสแล้ว reflow ก่อนใส่ใหม่ ไม่งั้นครั้งที่ 2 จะไม่เริ่ม
+function pulse(node, cls, ms) {
+  if (!node) return;
+  node.classList.remove(cls);
+  void node.offsetWidth;
+  node.classList.add(cls);
+  setTimeout(() => node.classList.remove(cls), ms);
+}
 
 const PORTRAIT_DIR = 'assets/characters/';
 const SKILL_DIR = 'assets/skills/';
@@ -106,12 +116,24 @@ function buildTopBar(data, handlers) {
   rateBtn.addEventListener('click', () => handlers.onRateToggle?.());
 
   const apValue = ap.querySelector('.game-ap-value');
+  let shownAp = null;
+  let shownHour = null;
   return {
     bar,
     paintSpeed,
     paintHud() {
-      apValue.textContent = String(Math.floor(state.ap));
-      timeBtn.textContent = `Time : ${state.hour} Hr`;
+      // เด้งตัวเลขเฉพาะตอนค่าเปลี่ยนจริง — paintHud ถูกเรียกทุกเฟรมจาก rAF
+      const apNow = Math.floor(state.ap);
+      if (apNow !== shownAp) {
+        apValue.textContent = String(apNow);
+        if (shownAp != null) pulse(apValue, 'is-bump', 340);
+        shownAp = apNow;
+      }
+      if (state.hour !== shownHour) {
+        timeBtn.textContent = `Time : ${state.hour} Hr`;
+        if (shownHour != null) pulse(timeBtn, 'is-bump', 500);
+        shownHour = state.hour;
+      }
       heli.hidden = !(data.airDeployOn || state.globalBuffs.some((b) => b.type === 'air'));
     },
   };
@@ -159,7 +181,7 @@ function buildSkillRow(speciesKey, skillId, skill) {
     icon.classList.add('is-clickable');
     icon.addEventListener('click', () => {
       const done = useGlobalSkill(state, speciesKey, skillId);
-      if (done) dragCtx.onChange?.(done, null);
+      if (done) { fireSkillIcon(icon); dragCtx.onChange?.(done, null); }
     });
   } else {
     attachDrag(icon, speciesKey, skillId, dragCtx);
@@ -375,6 +397,7 @@ export function stopGameClock() {
   cancelSmooth = null;
   activeMenu?.destroy();
   activeMenu = null;
+  clearFx(); // กรอบเตือนไม่ควรค้างตามไปโผล่ที่หน้าเมนู/หน้า Result
 }
 
 export function renderGameScreen(root, { onExit, onFinish } = {}) {
@@ -449,11 +472,26 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
 
   // ส่วนที่วาดใหม่ได้ถี่ ๆ ระหว่างลูป — แถบ จนท. กับ AP
   // (AP ต้องอยู่ในนี้ด้วย ไม่งั้นตอนหักแต้มจากการใช้สกิลในรอบที่ 5 เลขจะค้างจนกว่าจะถึงลูปถัดไป)
+  // กรอบกะพริบรอบจอตามสถานะแย่ที่สุดของ จนท. ตอนนี้ (§12 · §13)
+  // เหลือง = มีคนบาดเจ็บ · แดง = มีคนหมดสติ/Last Stand หรืออยู่ในภาวะ CRITICAL
+  function paintAlertFrame() {
+    let level = null;
+    for (const opKey of Object.keys(state.units)) {
+      const st = unitStatusLabel(state, opKey);
+      if (!st) continue;
+      if (st.kind === 'injured') level ??= 'warn';
+      else level = 'danger'; // lost / laststand ทับ warn เสมอ
+    }
+    if (state.criticalCountdownLoops != null) level = 'danger';
+    setAlertFrame(level);
+  }
+
   function paintLive() {
     const frac = loopFraction();
     top.paintHud();
     leftSide.paint(frac);
     rightSide.paint(frac);
+    paintAlertFrame();
     if (state.criticalCountdownLoops != null) paintCritical();
   }
 

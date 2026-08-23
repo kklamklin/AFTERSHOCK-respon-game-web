@@ -9,6 +9,7 @@ import { renderGameScreen } from './gameScreen.js';
 import { renderResult } from './result.js';
 import { state } from '../state.js';
 import { iconNode } from '../data/icons.js';
+import { fadeSwap, clearFx } from './fx.js';
 
 // ลำดับต้องตรงกับหน้าตาดราฟ: มนุษย์(หน้ากาก) → แมว → เอลฟ์(Lia) → ภูต(Mudongzock)
 // รูปจริงอยู่ใน assets/icons/ (จับคู่ชื่อไฟล์ที่ data/icons.js) — ยังไม่มีไฟล์ก็ใช้ emoji ไปก่อน
@@ -458,20 +459,25 @@ export function renderOperatorCard(root, { speciesKey, onBack } = {}) {
 
 // เชื่อม flow: splash → menu → (settings/intel/quit จริง / blank สำหรับที่เหลือ) → กลับ menu ได้
 export function initScreens(root) {
-  const showMenu = () => renderMenu(root, { onNavigate: onMenuNavigate });
-  const showBlank = (id, backTo = showMenu) => renderBlank(root, { label: id, onBack: backTo });
-  const showSettings = () => renderSettingsMenu(root, { onBack: showMenu });
+  // ทุกการเปลี่ยนหน้าเฟดผ่านสีดำ (ui/fx.js) — หน้าเมนูย่อยเฟดเร็ว
+  // ส่วนเมนู → บรีฟ → เกม เฟดช้ากว่า ให้รู้สึกว่าเป็นการ "เข้าฉาก" จริง ๆ
+  const quick = (fn) => fadeSwap(fn, { inMs: 170, outMs: 200, hold: 40 });
+  const scene = (fn) => fadeSwap(fn, { inMs: 520, outMs: 620, hold: 220 });
+
+  const showMenu = () => quick(() => { clearFx(); renderMenu(root, { onNavigate: onMenuNavigate }); });
+  const showBlank = (id, backTo = showMenu) => quick(() => renderBlank(root, { label: id, onBack: backTo }));
+  const showSettings = () => quick(() => renderSettingsMenu(root, { onBack: showMenu }));
   const showQuit = () => renderQuit(root);
-  const showIntel = () => renderIntelMenu(root, { onBack: showMenu, onNavigate: onIntelNavigate });
-  const showHowTo = () => renderHowToPlay(root, { onBack: showIntel });
-  const showOperatorMenu = () => renderOperatorMenu(root, { onBack: showIntel, onNavigate: onOperatorNavigate });
-  const showRoster = (side) => renderOperatorRoster(root, { side, onBack: showOperatorMenu, onSelect: (key) => showCard(key, side) });
-  const showCard = (speciesKey, side) => renderOperatorCard(root, { speciesKey, onBack: () => showRoster(side) });
+  const showIntel = () => quick(() => renderIntelMenu(root, { onBack: showMenu, onNavigate: onIntelNavigate }));
+  const showHowTo = () => quick(() => renderHowToPlay(root, { onBack: showIntel }));
+  const showOperatorMenu = () => quick(() => renderOperatorMenu(root, { onBack: showIntel, onNavigate: onOperatorNavigate }));
+  const showRoster = (side) => quick(() => renderOperatorRoster(root, { side, onBack: showOperatorMenu, onSelect: (key) => showCard(key, side) }));
+  const showCard = (speciesKey, side) => quick(() => renderOperatorCard(root, { speciesKey, onBack: () => showRoster(side) }));
   // Play -> Tutorial (visual novel) -> หน้าเกมหลัก -> หน้า Result
   // เล่นใหม่จากหน้า Result ข้าม tutorial ไปเลย (renderGameScreen รีเซ็ต state ให้เองอยู่แล้ว)
-  const showGame = () => renderGameScreen(root, { onExit: showMenu, onFinish: showResult });
-  const showResult = () => renderResult(root, { state, onHome: showMenu, onReplay: showGame });
-  const showTutorial = () => renderTutorial(root, { onFinish: showGame });
+  const showGame = () => scene(() => { clearFx(); renderGameScreen(root, { onExit: showMenu, onFinish: showResult }); });
+  const showResult = () => quick(() => { clearFx(); renderResult(root, { state, onHome: showMenu, onReplay: showGame }); });
+  const showTutorial = () => scene(() => renderTutorial(root, { onFinish: showGame }));
 
   function onMenuNavigate(id) {
     if (id === 'settings') showSettings();
@@ -491,5 +497,6 @@ export function initScreens(root) {
     showRoster(id); // 'field' หรือ 'baseplate'
   }
 
+  // หน้าปกเป็นหน้าแรกสุด ไม่ต้องเฟด (ยังไม่มีหน้าก่อนหน้าให้เฟดออกจาก)
   renderSplash(root, { onContinue: showMenu });
 }

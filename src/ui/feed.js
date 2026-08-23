@@ -6,6 +6,7 @@
 import { OPERATORS } from '../data/operators.js';
 import { zoneLabel } from '../systems/zones.js';
 import { iconNode } from '../data/icons.js';
+import { screenFlash } from './fx.js';
 
 // ผลของการทอยอันตรายหลังภารกิจล้มเหลว (§4.3 · §5)
 // คู่กับคีย์ไอคอนใน data/icons.js — ไม่มีไฟล์ก็ใช้ emoji เดิม
@@ -64,6 +65,7 @@ export function createFeed() {
     bodyLine.appendChild(el('span', null, body));
     card.append(headLine, bodyLine);
     box.prepend(card);
+    screenFlash(cls); // จอกระพริบสีเดียวกับขอบการ์ด — เขียวสำเร็จ / แดงไม่สำเร็จ / เทาไปไม่ทัน
 
     while (box.childElementCount > MAX_CARDS) box.lastElementChild.remove();
 
@@ -84,6 +86,7 @@ export function createFeed() {
     line.appendChild(el('span', null, text));
     card.appendChild(line);
     box.prepend(card);
+    screenFlash(cls);
     while (box.childElementCount > MAX_CARDS) box.lastElementChild.remove();
     const t = setTimeout(() => {
       card.classList.add('is-out');

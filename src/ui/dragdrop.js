@@ -9,6 +9,7 @@
 
 import { dropCheck, applyDrop, skillStatus } from '../systems/skills.js';
 import { setDragMarks } from './map.js';
+import { fireSkillIcon } from './fx.js';
 
 let active = null; // ลากได้ทีละอันเท่านั้น
 
@@ -93,7 +94,7 @@ function onMove(e) {
 
 function onUp(e) {
   if (!active || e.pointerId !== active.pointerId) return;
-  const { ctx, opKey, skillId, invalidIds } = active;
+  const { ctx, opKey, skillId, invalidIds, iconEl } = active;
   const zoneId = zoneIdAt(e.clientX, e.clientY);
   // ปล่อยนอกโซนที่ลงได้ = ยกเลิกเงียบ ๆ ไม่มีปุ่มยกเลิก (§10 ข้อ 4)
   const dropped = zoneId && !invalidIds.has(zoneId)
@@ -101,6 +102,7 @@ function onUp(e) {
     : null;
 
   endDrag();
+  if (dropped) fireSkillIcon(iconEl); // สั่งงานติดแล้ว — ไอคอนวูบสว่างให้รู้ว่ากดติด
   ctx.onChange?.(dropped, zoneId);
 }
 
