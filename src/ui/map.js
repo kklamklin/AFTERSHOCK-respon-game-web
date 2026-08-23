@@ -171,39 +171,51 @@ function svgEl(tag, attrs = {}) {
   return node;
 }
 
+// ขนาดไอคอนบนโซน คิดเป็น "พิกเซลที่เห็นบนจอจริง" ไม่ใช่หน่วยใน SVG
+// เพราะบนมือถือแผนที่ถูกย่อลงเหลือไม่ถึงครึ่ง ถ้าตั้งเป็นหน่วย SVG ตายตัว
+// เครื่องจอเล็กจะได้ไอคอนจิ๋วจนมองไม่เห็น (เจ้าของเจอปัญหานี้)
+const MARK_WANT_PX = 30; // ขนาดที่อยากได้
+const MARK_MIN_PX = 19;  // เล็กกว่านี้มองไม่เห็น — ยอมให้ล้นขอบโซนแทน
+
 function buildOverlay(handle, zones) {
   const layer = svgEl('g', { class: 'map-overlay' });
   handle.marks = new Map();
+
+  // กี่พิกเซลบนจอ ต่อ 1 หน่วยใน viewBox (วัดตอนแผนที่วางเสร็จแล้ว)
+  const scale = handle.svg.getScreenCTM()?.a;
+  const unitsFor = (px) => (scale > 0 ? px / scale : px);
 
   for (const zone of Object.values(zones)) {
     const box = handle.boxes.get(zone.id);
     const center = handle.centers.get(zone.id);
     if (!box || !center) continue;
     const { x: cx, y: cy } = center;
-    // ขนาดไอคอนย่อตามขนาดโซน โซนเล็กจะได้ไม่ล้นออกนอกกรอบมากนัก
-    const size = Math.max(13, Math.min(28, box.width * 0.42, box.height * 0.5));
+    // พอดีโซนไว้ก่อน แต่ห้ามเล็กกว่าขั้นต่ำ ต่อให้ต้องล้นออกนอกโซน
+    const fit = Math.min(box.width * 0.72, box.height * 0.8);
+    const size = Math.max(unitsFor(MARK_MIN_PX), Math.min(unitsFor(MARK_WANT_PX), fit));
 
-    // เรียงแนวตั้งรอบจุดกลาง: ไอคอน จนท. อยู่บน · เลขคนอยู่กลาง · ไอคอนบัฟอยู่ล่าง
-    // (เคยวางกองไว้จุดเดียวกันหมด อ่านไม่ออกในโซนเล็ก)
+    // ไอคอน จนท. อยู่ "กลางโซน" พอดี — เลขคนถูกดันขึ้นไปอยู่เหนือไอคอนตอนมีคนลงพื้นที่
+    // (ดู liftCount ใน updateZoneMarkers) · ไอคอนบัฟอยู่ใต้ไอคอน จนท.
     const g = svgEl('g', { class: 'zone-mark' });
-    const halo = svgEl('circle', { class: 'zone-op-halo', cx, cy: cy - size * 0.9, r: size * 0.56 });
+    const halo = svgEl('circle', { class: 'zone-op-halo', cx, cy, r: size * 0.62 });
     const icon = svgEl('image', {
-      class: 'zone-op', x: cx - size / 2, y: cy - size * 1.4, width: size, height: size,
+      class: 'zone-op', x: cx - size / 2, y: cy - size / 2, width: size, height: size,
       preserveAspectRatio: 'xMidYMid meet',
     });
+    // เลขนับถอยหลังเกาะขอบขวาของไอคอน
     const timer = svgEl('text', {
-      class: 'zone-timer', x: cx + size * 0.62, y: cy - size * 0.9,
-      'font-size': (size * 0.55).toFixed(1),
+      class: 'zone-timer', x: cx + size * 0.62, y: cy,
+      'font-size': (size * 0.58).toFixed(1),
     });
     const buffs = svgEl('text', {
-      class: 'zone-buffs', x: cx, y: cy + size * 0.85, 'font-size': (size * 0.6).toFixed(1),
+      class: 'zone-buffs', x: cx, y: cy + size * 0.86, 'font-size': (size * 0.8).toFixed(1),
     });
     const cross = svgEl('text', { class: 'zone-cross', x: cx, y: cy, 'font-size': (size * 1.1).toFixed(1) });
     cross.textContent = '✕';
 
     g.append(halo, icon, timer, buffs, cross);
     layer.appendChild(g);
-    handle.marks.set(zone.id, { g, halo, icon, timer, buffs, cross });
+    handle.marks.set(zone.id, { g, halo, icon, timer, buffs, cross, cx, cy, size });
   }
 
   handle.svg.appendChild(layer);
@@ -214,6 +226,14 @@ export function updateZoneMarkers(handle, state) {
   for (const zone of Object.values(state.zones)) {
     const m = handle.marks?.get(zone.id);
     if (!m) continue;
+
+    // ไอคอน จนท. อยู่กลางโซน จึงต้องดันเลขคนขึ้นไปข้างบน ไม่งั้นทับกันจนอ่านไม่ออก
+    // ไม่มีใครลงพื้นที่ก็คืนเลขกลับมาอยู่กลางเหมือนเดิม
+    const count = handle.countEls?.get(zone.id);
+    if (count) {
+      const lifted = zone.unit ? m.cy - m.size * 0.78 : m.cy;
+      if (count.getAttribute('y') !== String(lifted)) count.setAttribute('y', lifted);
+    }
 
     const unit = zone.unit;
     m.icon.classList.toggle('is-on', !!unit);
