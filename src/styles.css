@@ -799,35 +799,90 @@ html, body {
 }
 .res-reason--critical { color: #e8484a; font-weight: 700; }
 
-.res-table {
-  display: flex; flex-direction: column;
-  gap: calc(var(--u) * 0.35);
-  border: 2px solid var(--line, var(--ink));
-  border-radius: calc(var(--u) * 0.6);
-  padding: calc(var(--u) * 1.3) calc(var(--u) * 1.6);
+/* ── แรงก์ ─────────────────────────────────────────────────── */
+.res-rank {
+  display: flex; align-items: center; gap: calc(var(--u) * 1.4);
+  justify-content: center;
 }
-.res-row {
-  display: grid; grid-template-columns: 1fr auto auto;
-  align-items: baseline;
-  gap: calc(var(--u) * 1.4);
-  font-size: calc(var(--u) * 1.6);
-  font-variant-numeric: tabular-nums;
+.res-rank-badge {
+  flex: none;
+  width: calc(var(--u) * 6.4); height: calc(var(--u) * 6.4);
+  display: flex; align-items: center; justify-content: center;
+  font-family: Impact, 'Arial Narrow Bold', sans-serif;
+  font-size: calc(var(--u) * 4.4); line-height: 1;
+  color: #fff; background: var(--rank); border-radius: calc(var(--u) * 0.9);
+  box-shadow: 0 calc(var(--u) * 0.4) calc(var(--u) * 1.2) rgba(0,0,0,0.22);
+  /* กระแทกลงมาจากข้างบนแล้วยุบตัวนิดหนึ่ง — JS ติด .is-in ให้ตามไทม์ไลน์ */
+  opacity: 0; transform: scale(2.4) translateY(calc(var(--u) * -2));
 }
-.res-label { white-space: nowrap; }
-.res-value { text-align: right; white-space: nowrap; }
-.res-points { text-align: right; min-width: calc(var(--u) * 5.5); font-weight: 700; }
-
-.res-row--total { font-weight: 700; }
-.res-row--saved { color: #1f9d55; }
-.res-row--lost { color: #e8484a; }
-
-.res-rule {
-  height: 2px; background: var(--ink);
-  margin: calc(var(--u) * 0.6) 0;
+.res-rank-badge.is-in { animation: res-stamp 0.55s cubic-bezier(.2,1.5,.4,1) forwards; }
+@keyframes res-stamp {
+  0%   { opacity: 0; transform: scale(2.4) translateY(calc(var(--u) * -2)); }
+  60%  { opacity: 1; transform: scale(0.92) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
 }
-.res-row--score { font-size: calc(var(--u) * 2.3); font-weight: 900; }
+/* ภาษาไทยมีสระบน/ล่าง ต้องเผื่อระยะบรรทัด ไม่งั้นวรรณยุกต์โดนตัด */
+.res-rank-title { font-size: calc(var(--u) * 2.2); font-weight: 800; color: var(--rank); line-height: 1.45; }
+.res-rank-note { font-size: calc(var(--u) * 1.3); color: var(--muted); line-height: 1.5; }
 
-.res-stats { display: flex; gap: calc(var(--u) * 1.2); }
+/* สีประจำแรงก์ — ตัวแปรเดียวคุมทั้งป้ายและตัวหนังสือ */
+.res-rank--S { --rank: #d4a017; }
+.res-rank--A { --rank: #1f9d55; }
+.res-rank--B { --rank: #2f7fd1; }
+.res-rank--C { --rank: #d98324; }
+.res-rank--D { --rank: #b06a3b; }
+.res-rank--E { --rank: #8a8f96; }
+
+/* ── คะแนนรวม + แถบ ────────────────────────────────────────── */
+.res-score { display: flex; flex-direction: column; gap: calc(var(--u) * 0.5); }
+.res-score-head { display: flex; align-items: baseline; gap: calc(var(--u) * 0.6); }
+.res-score-label { font-size: calc(var(--u) * 1.5); color: var(--muted); }
+.res-score-value {
+  margin-left: auto;
+  font-family: Impact, 'Arial Narrow Bold', sans-serif;
+  font-size: calc(var(--u) * 3.6); line-height: 1;
+  color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.res-score-max { font-size: calc(var(--u) * 1.5); color: var(--muted); }
+.res-penalty {
+  font-size: calc(var(--u) * 1.25); color: #e8484a; font-weight: 700; text-align: right;
+}
+
+/* แถบเติม — JS ตั้งแค่ width ที่เหลือ transition ทำงานเอง */
+.res-bar {
+  height: calc(var(--u) * 0.9); border-radius: 999px;
+  background: #ecedf0; overflow: hidden;
+}
+.res-bar--score { height: calc(var(--u) * 1.3); }
+.res-bar-fill {
+  display: block; width: 0; height: 100%; border-radius: inherit;
+  background: linear-gradient(90deg, #f2a33c, #e8484a);
+  transition: width 1.1s cubic-bezier(.2,.8,.3,1);
+}
+.res-bar--score .res-bar-fill { background: linear-gradient(90deg, #3DD68C, #2f7fd1, #d4a017); }
+
+/* ── คะแนนแยกส่วน ──────────────────────────────────────────── */
+.res-parts { display: flex; flex-direction: column; gap: calc(var(--u) * 0.7); }
+.res-part {
+  display: flex; flex-direction: column; gap: calc(var(--u) * 0.3);
+  opacity: 0; transform: translateX(calc(var(--u) * -1.4));
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.res-part.is-in { opacity: 1; transform: none; }
+.res-part-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: calc(var(--u) * 1.35);
+}
+.res-part-label { color: var(--muted); }
+.res-part-value { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* ── ตัวเลขคน ──────────────────────────────────────────────── */
+.res-stats {
+  display: flex; gap: calc(var(--u) * 1.2);
+  opacity: 0; transform: translateY(calc(var(--u) * 0.8));
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.res-stats.is-in { opacity: 1; transform: none; }
 .res-stat {
   flex: 1;
   border: 2px solid var(--ink); border-radius: calc(var(--u) * 0.6);
@@ -840,8 +895,17 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 .res-stat-label { font-size: calc(var(--u) * 1.2); color: var(--muted); }
+.res-stat:nth-child(1) .res-stat-value { color: #1f9d55; }
+.res-stat:nth-child(2) .res-stat-value { color: #e8484a; }
 
-.res-actions { display: flex; gap: calc(var(--u) * 0.9); justify-content: center; }
+.res-actions {
+  display: flex; gap: calc(var(--u) * 0.9); justify-content: center;
+  opacity: 0; transform: translateY(calc(var(--u) * 0.8));
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.res-actions.is-in { opacity: 1; transform: none; }
+/* ระหว่างอนิเมชั่นยังเล่นอยู่ กดปุ่มไม่ได้ กันกดข้ามก่อนเห็นผล */
+.res-actions:not(.is-in) .res-btn { pointer-events: none; }
 .res-btn {
   flex: 1;
   padding: calc(var(--u) * 0.85) calc(var(--u) * 1);

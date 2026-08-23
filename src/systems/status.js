@@ -30,11 +30,13 @@ export function rollDanger(state, opKey, zone) {
     unit.status = 'laststand';
     unit.recoverRemainLoops = hours(CONFIG.lastStand.durationHours);
     state.lastStandUsed = true;
+    state.stats.injuries += 1;
     return { hit: true, chance, to: 'laststand' };
   }
 
   const to = unit.status === 'injured' ? 'lost' : 'injured';
   unit.status = to;
+  if (to === 'lost') state.stats.blackouts += 1; else state.stats.injuries += 1;
   unit.recoverRemainLoops = hours(to === 'lost' ? CONFIG.lostConsciousHours : CONFIG.injuredRecoverHours);
   return { hit: true, chance, to };
 }
@@ -61,6 +63,7 @@ export function tickRecovery(state) {
       // หมดเวลา Last Stand → ล้มทันที (§5.4)
       unit.status = 'lost';
       unit.recoverRemainLoops = hours(CONFIG.lostConsciousHours);
+      state.stats.blackouts += 1;
     } else {
       unit.status = 'normal';
       unit.recoverRemainLoops = 0;

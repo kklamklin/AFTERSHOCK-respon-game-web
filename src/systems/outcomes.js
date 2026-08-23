@@ -45,6 +45,8 @@ export function resolveMission(state, opKey) {
   const rate = br.total;
 
   const roll = roll100();
+  state.stats.missions += 1; // นับเฉพาะภารกิจที่ได้ทอยจริง — 'toolate' ไม่นับ (ข้างบน return ไปแล้ว)
+
   if (roll > rate) {
     // ล้มเหลว — โซนคงสีเดิม คนที่เหลือตายต่อไปตามเวลา แล้วทอยอันตราย (§4.3)
     releaseUnit(state, opKey);
@@ -64,6 +66,7 @@ export function resolveMission(state, opKey) {
 
   state.totalRescued += saved;
   state.totalCasualty += died;
+  state.stats.missionsSucceeded += 1;
 
   releaseUnit(state, opKey);
   return { ...base, kind: 'success', rate, roll, tier, pct, saved, died: Math.round(died) };

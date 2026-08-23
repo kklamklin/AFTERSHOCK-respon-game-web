@@ -28,6 +28,14 @@ export function createInitialState() {
     totalRescued: 0,
     totalCasualty: 0,
 
+    // ตัวนับสำหรับคิดคะแนนตอนจบ (systems/score.js) — systems/ เป็นคนบวก ui/ อ่านอย่างเดียว
+    stats: {
+      missions: 0,           // ส่ง จนท. ลงพื้นที่ไปกี่ครั้ง (นับตอนงานจบ ไม่ใช่ตอนสั่ง)
+      missionsSucceeded: 0,  // ในนั้นสำเร็จกี่ครั้ง
+      injuries: 0,           // โดนบาดเจ็บกี่ครั้ง (รวม Last Stand)
+      blackouts: 0,          // หมดสติกี่ครั้ง
+    },
+
     feed: [],   // [{ hour, zoneId, success, rescued, injuredUnit }]
     ended: false,
     endReason: null, // 'timeup' | 'empty' | 'critical' — ตั้งค่าตอนปิดเกมใน systems/time.js
