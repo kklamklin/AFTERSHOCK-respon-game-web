@@ -390,8 +390,10 @@ export function renderGameScreen(root, { onExit } = {}) {
     // รอบที่ 9 จะเปลี่ยนเป็นแผงเมนูในเกมจริง (Continue / Setting / How to play / Operator / Return to menu)
     onMenu: () => { stopGameClock(); onExit?.(); },
     onTime: () => {}, // รอบที่ 9 — หน้าเวลาที่เหลือ
-    onRunToggle: () => { clock.setRunning(!state.running); top.paintSpeed(); },
-    onRateToggle: () => { clock.setRate(state.speed === 2 ? 1 : 2); top.paintSpeed(); },
+    // วาดซ้ำ 1 ครั้งตอนกด เพราะลูปวาดสด ๆ ทำงานเฉพาะตอนเวลาเดิน
+    // ถ้าไม่วาด เลขนับถอยหลังจะค้างที่เฟรมก่อนกดหยุด
+    onRunToggle: () => { clock.setRunning(!state.running); top.paintSpeed(); paintLive(); },
+    onRateToggle: () => { clock.setRate(state.speed === 2 ? 1 : 2); top.paintSpeed(); paintLive(); },
   });
   root.appendChild(top.bar);
 
@@ -435,13 +437,11 @@ export function renderGameScreen(root, { onExit } = {}) {
   // ── เดินเวลา (§2 · AFTERSHOCKMASTER §17) ────────────────────────
   let mapHandle = null;
 
-  // เวลาเริ่มของลูปล่าสุด — ใช้คำนวณ "เศษของลูป" ให้ตัวเลขนับถอยหลังไหลลื่น (§12 แสดงทศนิยม 2 ตำแหน่ง)
-  let loopStartedAt = performance.now();
-
+  // "เศษของลูป" ให้ตัวเลขนับถอยหลังไหลลื่น (§12 แสดงทศนิยม 2 ตำแหน่ง)
+  // เจ้าของค่านี้คือนาฬิกาใน systems/time.js — ตอนหยุดเวลามันจะแช่ค่าไว้ที่เดิม
+  // ไม่ให้เลขเด้งขึ้นตอนหยุดหรือกระโดดลงตอนกดเดินต่อ
   function loopFraction() {
-    if (!state.running) return 0;
-    const ms = CONFIG.loopDurationMsBySpeed[state.speed] ?? CONFIG.loopDurationMsBySpeed[1];
-    return Math.min(1, (performance.now() - loopStartedAt) / ms);
+    return activeClock?.fraction() ?? 0;
   }
 
   // ส่วนที่วาดใหม่ได้ถี่ ๆ ระหว่างลูป — แถบ จนท. กับ AP
@@ -465,7 +465,6 @@ export function renderGameScreen(root, { onExit } = {}) {
   }
 
   function tick() {
-    loopStartedAt = performance.now();
     tickLoop(state, {
       onZoneCleared: (zone) => { if (mapHandle) updateZone(mapHandle, zone); },
       onMissionComplete: (opKey) => {

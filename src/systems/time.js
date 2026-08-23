@@ -11,7 +11,7 @@ export function tickLoop(state, { onHourTick, onZoneCleared, onMissionComplete, 
   state.loop += 1;
 
   for (const zone of Object.values(state.zones)) {
-    const dead = tickZoneDeath(zone);
+    const dead = tickZoneDeath(zone, state.globalBuffs);
     state.totalCasualty += dead;
     // คนในโซนหมด (ตายหมด) → ปิดโซนเป็นเขียวเหมือนกรณีช่วยสำเร็จ (§5.4)
     if (!zone.cleared && isZoneEmpty(zone)) {
@@ -103,32 +103,63 @@ export function loopDurationMs(state) {
 //   state.speed   = "ความเร็วที่เลือกไว้" มีแค่ 1 หรือ 2 เท่านั้น ไม่เคยเป็น 0
 //   state.running = "ตอนนี้เวลาเดินอยู่ไหม"
 // ถ้าเอา 0 ไปยัดใส่ speed ตอนหยุด พอจะเดินต่อจะไม่รู้ว่าต้องกลับไปที่ความเร็วเท่าไหร่
+//
+// นาฬิกาเป็นเจ้าของ "เศษของลูปปัจจุบัน" (fraction) เอง เพราะตัวเลขนับถอยหลัง
+// ข้างรูป จนท. อ่านค่านี้ไปแสดง — เคยให้ ui/ เดาเองแล้วเลขเด้งตอนหยุด/เดินต่อ:
+//   หยุด  → เศษถูกรีเซ็ตเป็น 0 เลขจึง "เด้งกลับขึ้น" ครึ่งชั่วโมง
+//   เดินต่อ → เวลาที่หยุดไปถูกนับรวม เลขจึงกระโดดลงสุดลูปทันที
+// ตอนนี้เก็บเศษไว้ที่ carried แล้วเดินต่อจากจุดเดิม เวลาที่หยุดอยู่ไม่ถูกนับ
 export function createClock(state, onTick) {
   let timer = null;
+  let startedAt = 0; // performance.now() ตอนเริ่มเดิน/เดินต่อครั้งล่าสุด
+  let carried = 0;   // เศษของลูปที่เดินไปแล้วก่อนหยุดครั้งล่าสุด (0..1)
 
-  function stop() {
-    if (timer) clearInterval(timer);
+  function clear() {
+    if (timer) clearTimeout(timer);
     timer = null;
   }
 
-  function restart() {
-    stop();
+  // เศษของลูปปัจจุบัน 0..1 — ตอนหยุดจะค้างอยู่ที่เดิม
+  function fraction() {
+    if (!timer) return Math.min(1, carried);
+    return Math.min(1, carried + (performance.now() - startedAt) / loopDurationMs(state));
+  }
+
+  // ตั้งเวลาลูปถัดไป โดยหักเวลาที่เดินไปแล้วออก (ลูปไม่เริ่มนับใหม่ตอนกดเดินต่อ)
+  function schedule() {
+    clear();
     if (!state.running || state.ended) return;
-    timer = setInterval(() => onTick(), loopDurationMs(state));
+    startedAt = performance.now();
+    timer = setTimeout(() => {
+      carried = 0;
+      timer = null;
+      onTick();
+      schedule();
+    }, Math.max(0, loopDurationMs(state) * (1 - carried)));
+  }
+
+  function freeze() {
+    carried = fraction();
+    clear();
   }
 
   return {
+    fraction,
     setRunning(run) {
-      state.running = !!run && !state.ended;
-      restart();
+      const next = !!run && !state.ended;
+      if (next === state.running && (next === !!timer)) return; // กดซ้ำไม่ทำให้ลูปเริ่มใหม่
+      state.running = next;
+      if (next) schedule();
+      else freeze();
     },
     setRate(rate) {
+      freeze(); // เก็บเศษของลูปไว้ก่อน แล้วค่อยเดินต่อด้วยความเร็วใหม่
       state.speed = rate;
-      restart(); // เปลี่ยนความเร็วตอนหยุดอยู่ก็ได้ ไว้กดเดินต่อค่อยใช้ค่าใหม่
+      schedule(); // เปลี่ยนความเร็วตอนหยุดอยู่ก็ได้ ไว้กดเดินต่อค่อยใช้ค่าใหม่
     },
     stop() {
       state.running = false;
-      stop();
+      freeze();
     },
   };
 }

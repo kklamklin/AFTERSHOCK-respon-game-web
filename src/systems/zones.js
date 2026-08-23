@@ -65,16 +65,23 @@ export function generateZones() {
 }
 
 // อัตราตายต่อลูป — เชิงเส้น: ถ้าไม่มีใครไปช่วย คนจะตายหมดพอดีเมื่อครบอายุโซน (§4.4)
-// Scan Area ที่ลงในโซนนั้นชะลอการตายลงครึ่งหนึ่งตลอดอายุบัฟ (GAMESCREEN_SPEC §3.2)
-export function deathPerLoop(zone) {
+//
+// บัฟตัวไหนที่มี deathSlowFactor ใน CONFIG.buffs จะชะลอการตายลงตามตัวคูณนั้น
+// (ตอนนี้คือ Scan Area ที่ลงในโซน — GAMESCREEN_SPEC §3.2)
+// รับบัฟทั้งแมพเข้ามาด้วย เพื่อให้สกิลระดับแมพชะลอการตายได้โดยไม่ต้องแก้สูตรอีก
+// บัฟชนิดเดียวกันซ้อนโซนเดียวไม่ได้ (dropCheck กัน 'buff-exists') ตัวคูณจึงไม่ทบกันเอง
+export function deathPerLoop(zone, globalBuffs = []) {
   const lifespan = CONFIG.zoneLifespanLoops[zone.level];
-  const base = zone.initial / lifespan;
-  const slowed = zone.buffs?.some((b) => b.type === 'scan');
-  return slowed ? base * CONFIG.buffs.scan.deathSlowFactor : base;
+  let rate = zone.initial / lifespan;
+  for (const b of [...(zone.buffs ?? []), ...globalBuffs]) {
+    const factor = CONFIG.buffs[b.type]?.deathSlowFactor;
+    if (factor != null) rate *= factor;
+  }
+  return rate;
 }
 
-export function deathPerHour(zone) {
-  return deathPerLoop(zone) * CONFIG.loopsPerHour;
+export function deathPerHour(zone, globalBuffs = []) {
+  return deathPerLoop(zone, globalBuffs) * CONFIG.loopsPerHour;
 }
 
 // การลบทศนิยม 144 ครั้งทำให้ trapped ลงเอยที่ ~1e-14 แทนที่จะเป็น 0 พอดี
@@ -86,9 +93,9 @@ export function isZoneEmpty(zone) {
 }
 
 // เรียกทุก 1 ลูป — ลด trapped ตามอัตราตายเชิงเส้น (§5) · คืนจำนวนคนที่ตายรอบนี้
-export function tickZoneDeath(zone) {
+export function tickZoneDeath(zone, globalBuffs = []) {
   if (zone.cleared || isZoneEmpty(zone)) return 0;
-  const dead = Math.min(zone.trapped, deathPerLoop(zone));
+  const dead = Math.min(zone.trapped, deathPerLoop(zone, globalBuffs));
   zone.trapped -= dead;
   zone.casualty += dead;
   if (isZoneEmpty(zone)) zone.trapped = 0;

@@ -76,7 +76,7 @@ export function buildZoneDetail() {
       const info = el('div', 'zd-col');
       info.append(
         row('คนติดอยู่', `${d.trapped} คน`),
-        row('อัตราตาย', `−${deathPerHour(zone).toFixed(1)} คน/ชม.`, 'is-bad'),
+        row('อัตราตาย', `−${deathPerHour(zone, state.globalBuffs).toFixed(1)} คน/ชม.`, 'is-bad'),
         row('บัฟที่มี', buffs.length
           ? buffs.map((b) => `${BUFF_GLYPH[b.type] ?? ''}${BUFF_NAME[b.type] ?? b.type}`).join(' ')
           : '—'),
