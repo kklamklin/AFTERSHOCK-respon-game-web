@@ -4,7 +4,7 @@ function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// สร้าง 48 โซนตาม §3.1/§4 ของ docs/gamesystemfinal.md
+// สร้างโซนทั้งหมดตามจำนวนใน CONFIG.zoneCounts ตาม §3.1/§4 ของ docs/gamesystemfinal.md
 // หมายเหตุ: id ที่นี่เป็นชุดชั่วคราว (placeholder grid) — ตอนได้ map.svg จริง
 // ให้เปลี่ยนแค่ src/ui/map.js (การ render) โดยไม่ต้องแตะระบบคำนวณในไฟล์นี้
 export function generateZones() {

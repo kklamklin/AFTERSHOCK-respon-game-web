@@ -13,7 +13,8 @@ export const CONFIG = {
   },
 
   // จำนวนโซนต่อระดับ (จาก map.svg §3.1)
-  zoneCounts: { gray: 27, yellow: 13, red: 8 },
+  // โซนเทา 26 (เดิมนับ 27 แต่ map.svg เขียน zone-gray-03 ซ้ำกับ zone-gray-12 — ลบตัวซ้ำแล้ว)
+  zoneCounts: { gray: 26, yellow: 13, red: 8 },
 
   // อายุโซน (ลูปที่คนตายหมดถ้าไม่มีใครช่วย)
   zoneLifespanLoops: { gray: 144, yellow: 96, red: 48 },

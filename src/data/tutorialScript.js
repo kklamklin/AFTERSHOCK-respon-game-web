@@ -16,7 +16,7 @@ export const TUTORIAL_SCRIPT = [
   { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'ผู้บัญชาการ... เมืองเจอแผ่นดินไหวเมื่อ 6 ชั่วโมงก่อน' },
   { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'ก่อนเริ่ม ขอพาดูระบบก่อนนิดนึง' },
 
-  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'เมืองแบ่งเป็น 48 โซน', insert: { type: 'map', mode: 'full' } },
+  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'เมืองแบ่งเป็น 47 โซน', insert: { type: 'map', mode: 'full' } },
   { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'เทา — ปกติ เหลือง — อันตราย แดง —', insert: { type: 'map', mode: 'full', level: 'cycle' } },
   { speaker: 'lyla', sprite: 'Field-op-Lyla-talking2.png', text: '—วิกฤต เดี๋ยวก็รู้เองว่าทำไมสีมันน่ากลัว', interrupt: true, insert: { type: 'map', mode: 'full', level: 'red' } },
   { speaker: 'ria', sprite: 'Base-op-Lia-talking1.png', text: '...แย่งพูดอีกแล้ว', insert: { type: 'map', mode: 'full', level: 'red' } },
@@ -63,7 +63,7 @@ export const TUTORIAL_SCRIPT = [
   { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'เพราะงั้น... ไม่ใช่แค่ตัวเลขบนหน้าจอนะ' },
 
   { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'ระบบมีเท่านี้', insert: { type: 'map', mode: 'full' } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla-talking1.png', text: '1,200 คน 48 โซน 72 ชั่วโมง', insert: { type: 'map', mode: 'full' } },
+  { speaker: 'lyla', sprite: 'Field-op-Lyla-talking1.png', text: '1,200 คน 47 โซน 72 ชั่วโมง', insert: { type: 'map', mode: 'full' } },
   { speaker: 'lyla', sprite: 'Field-op-Lyla.png', text: '...โหดอยู่นะเนี่ย', insert: { type: 'map', mode: 'full' } },
   { speaker: 'robertson', sprite: 'Field-op-robertson.png', text: 'พร้อมเสมอ' },
   { speaker: 'lyla', sprite: 'Field-op-Lyla-talking2.png', text: 'พาพวกเรารอดด้วยล่ะ ผู้บัญชาการ', final: true },
@@ -78,7 +78,7 @@ export const SPEAKER_META = {
 
 // สรุปเนื้อเรื่องแบบย่อ — โชว์ตอนกด Skip all แล้วยืนยัน
 export const TUTORIAL_SYNOPSIS =
-  'Lia บรีฟผู้บัญชาการหลังแผ่นดินไหว 6 ชม.: เมืองมี 48 โซน แบ่งเป็นเทา/เหลือง/แดงตามความอันตราย ' +
+  'Lia บรีฟผู้บัญชาการหลังแผ่นดินไหว 6 ชม.: เมืองมี 47 โซน แบ่งเป็นเทา/เหลือง/แดงตามความอันตราย ' +
   'Lyla สอนวิธีส่งทีม — ลากไอคอนไปวางบนโซน ระบบจะโชว์ % สำเร็จก่อนปล่อยมือ ปล่อยแล้วคือยืนยันทันที ยกเลิกไม่ได้ ' +
   'Robertson รับทราบสั้นๆ ตามสไตล์ · เวลาเดินตลอด คนในโซน (โดยเฉพาะโซนแดง) ตายไปเรื่อยๆ ระหว่างรอผล ' +
   'ทุกการส่งทีม/ใช้สกิลต้องใช้ AP ซึ่งได้เพิ่มตามเวลาแต่ไม่พอเสมอไป ต้องบริหารให้ดี ' +
