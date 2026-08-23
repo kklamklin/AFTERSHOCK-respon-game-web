@@ -752,16 +752,91 @@ html, body {
 
 .feed-card--hurt { border-color: #E5484D; }
 
-/* ── ป้ายจบเกมชั่วคราว (รอบที่ 10 จะเปลี่ยนเป็นหน้า Result) ────── */
-.game-over {
-  position: absolute; inset: 0; z-index: 40;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: calc(var(--u) * 0.8);
-  background: rgba(255, 255, 255, 0.94);
+/* ════════════════════════════════════════════════════════════════
+   หน้า Result (รอบที่ 10)
+   อ้างอิง docs/AFTERSHOCKMASTER.md §15.3
+   ════════════════════════════════════════════════════════════════ */
+.screen--result {
+  --u: clamp(7px, 1.5vh, 15px);
+  --ink: #1b1f24;
+  --muted: #7c848e;
+  background: #fff; color: var(--ink);
+  align-items: center; justify-content: center;
+  padding: calc(var(--u) * 1.5);
+  overflow: auto;
 }
-.go-title { font-size: calc(var(--u) * 3); font-weight: 800; color: #e8484a; text-align: center; }
-.go-score { font-size: calc(var(--u) * 2.2); font-weight: 700; }
-.go-note { font-size: calc(var(--u) * 1.3); color: var(--muted); }
+
+.res-card {
+  width: min(calc(var(--u) * 46), 94vw);
+  display: flex; flex-direction: column;
+  gap: calc(var(--u) * 1.1);
+}
+
+.res-title {
+  font-family: Impact, 'Arial Narrow Bold', sans-serif;
+  font-size: calc(var(--u) * 3.4); letter-spacing: 1px;
+  color: #e8484a; text-align: center;
+}
+.res-reason {
+  font-size: calc(var(--u) * 1.5); color: var(--muted);
+  text-align: center; margin-top: calc(var(--u) * -0.6);
+}
+.res-reason--critical { color: #e8484a; font-weight: 700; }
+
+.res-table {
+  display: flex; flex-direction: column;
+  gap: calc(var(--u) * 0.35);
+  border: 2px solid var(--line, var(--ink));
+  border-radius: calc(var(--u) * 0.6);
+  padding: calc(var(--u) * 1.3) calc(var(--u) * 1.6);
+}
+.res-row {
+  display: grid; grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: calc(var(--u) * 1.4);
+  font-size: calc(var(--u) * 1.6);
+  font-variant-numeric: tabular-nums;
+}
+.res-label { white-space: nowrap; }
+.res-value { text-align: right; white-space: nowrap; }
+.res-points { text-align: right; min-width: calc(var(--u) * 5.5); font-weight: 700; }
+
+.res-row--total { font-weight: 700; }
+.res-row--saved { color: #1f9d55; }
+.res-row--lost { color: #e8484a; }
+
+.res-rule {
+  height: 2px; background: var(--ink);
+  margin: calc(var(--u) * 0.6) 0;
+}
+.res-row--score { font-size: calc(var(--u) * 2.3); font-weight: 900; }
+
+.res-stats { display: flex; gap: calc(var(--u) * 1.2); }
+.res-stat {
+  flex: 1;
+  border: 2px solid var(--ink); border-radius: calc(var(--u) * 0.6);
+  padding: calc(var(--u) * 0.9);
+  display: flex; flex-direction: column; align-items: center;
+  gap: calc(var(--u) * 0.15);
+}
+.res-stat-value {
+  font-size: calc(var(--u) * 2.2); font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.res-stat-label { font-size: calc(var(--u) * 1.2); color: var(--muted); }
+
+.res-actions { display: flex; gap: calc(var(--u) * 0.9); justify-content: center; }
+.res-btn {
+  flex: 1;
+  padding: calc(var(--u) * 0.85) calc(var(--u) * 1);
+  border: 2px solid var(--ink); border-radius: calc(var(--u) * 0.5);
+  background: #fff; color: var(--ink);
+  font-size: calc(var(--u) * 1.4); font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+}
+.res-btn:hover { background: #f2f4f6; }
+.res-btn--main { border-color: #e8484a; background: #e8484a; color: #fff; }
+.res-btn--main:hover { background: #d13b40; }
 
 /* ════════════════════════════════════════════════════════════════
    เมนู ☰ ในเกม · หน้าเวลาที่เหลือ · ป๊อปอัพหยุดเวลา (รอบที่ 9)
