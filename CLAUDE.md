@@ -111,7 +111,7 @@
 | 4 | ป้ายสถานะ จนท. + คูลดาวน์บนไอคอนสกิล | ✅ |
 | 5 | Drag & Drop ลงโซน (หยุดเวลาตอนลาก · กากบาทโซนที่ลงไม่ได้ · หัก AP) | ✅ |
 | 6 | แผงข้อมูลตอนลาก — อัตราสำเร็จแยกส่วน + ความเสี่ยงบาดเจ็บ | ✅ |
-| 7 | ครบเวลา → ทอย 2 ชั้น → rescued/casualty → โซนเขียว + Detail Feed | ⬜ |
+| 7 | ครบเวลา → ทอย 2 ชั้น → rescued/casualty → โซนเขียว + Detail Feed | ✅ |
 | 8 | Injured / Unconscious / CRITICAL / Last Stand | ⬜ |
 | 9 | เมนู ☰ ในเกม + หน้าเวลาที่เหลือ + ป๊อปอัพหยุดเวลาอัตโนมัติ | ⬜ |
 | 10 | หน้า Result + asset จริง + build รวมไฟล์เดียว | ⬜ |
@@ -131,16 +131,18 @@ src/
     survivors.js death.js                  ⬜ stub
     skills.js                              ✅ สถานะ/เงื่อนไขใช้สกิล
     successRate.js danger.js               ✅ สูตรอัตราสำเร็จ/อันตราย
-    outcomes.js score.js                   ⬜ stub
+    outcomes.js                            ✅ ทอยผลภารกิจ 2 ชั้น
+    score.js                               ⬜ stub
   ui/                 แสดงผล/อินพุต — ห้ามคำนวณกฎเกม
     map.js                                 ✅ map.svg จริง + ซูม/ปัด
     gameScreen.js                          ✅ หน้าเกมหลัก
     tutorial.js                            ✅ VN สอนเล่น
     dragdrop.js                            ✅ ลากไอคอนสกิลลงโซน
     panels.js                              ✅ แผงข้อมูลโซนตอนลาก
-    feed.js hud.js                         ⬜ stub
+    feed.js                                ✅ Detail Feed ผลภารกิจ
+    hud.js                                 ⬜ stub
     screens.js                             ✅ หน้าจอนอกเกม
-  utils/rng.js        ⬜ stub
+  utils/rng.js        ✅ ตัวสุ่มกลาง ตั้งซีดได้ตอนเทส
 assets/               รูปตัวละคร/ไอคอนสกิล/พื้นหลัง (มาแล้วส่วนใหญ่)
 map.svg               แผนที่ 47 โซนจริง
 build/build.js        ⬜ stub — รวมเป็นไฟล์เดียว + Base64

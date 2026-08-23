@@ -235,6 +235,22 @@ export function updateZoneMarkers(handle, state) {
   }
 }
 
+// ข้อความลอยขึ้นเหนือโซนตอนรู้ผล (§11) — โผล่แล้วลอยขึ้นจางหายเอง
+export function floatText(handle, zoneId, text, kind = 'ok') {
+  const center = handle.centers?.get(zoneId);
+  const box = handle.boxes?.get(zoneId);
+  if (!center || !box) return;
+
+  const size = Math.max(16, Math.min(34, box.width * 0.5, box.height * 0.6));
+  const node = svgEl('text', {
+    class: `zone-float zone-float--${kind}`,
+    x: center.x, y: center.y, 'font-size': size.toFixed(1),
+  });
+  node.textContent = text;
+  handle.svg.appendChild(node);
+  setTimeout(() => node.remove(), 1400);
+}
+
 // ระบายสถานะตอนลากไอคอน (§10) — valid = โซนที่ลงได้, invalid = ขึ้นกากบาท
 export function setDragMarks(handle, { active, invalidIds = null, hoverId = null } = {}) {
   handle.container.classList.toggle('is-dragging', !!active);

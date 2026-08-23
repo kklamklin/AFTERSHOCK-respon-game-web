@@ -2,7 +2,7 @@
 // อ้างอิง docs/GAMESCREEN_SPEC.md §1 ผังหน้าจอ · §2 ปุ่มเวลา · §3 สกิล · §9 กล่องล่าง · §12 สถานะ
 //
 // ต่อกับ state จริงแล้ว: เวลา · AP · เลขคนบนโซน · กล่องสรุป Ⓐ/Ⓑ/Ⓒ
-// ยังเป็นค่าหลอก: Detail Feed · สถานะบาดเจ็บ · ไอคอน Air Deploy (รอรอบ 5-8)
+// ยังเป็นค่าหลอก: สถานะบาดเจ็บของ จนท. (รอรอบที่ 8)
 // ไฟล์นี้อยู่ใน ui/ จึงห้ามคำนวณกฎเกม — เรียก systems/ มาคำนวณแล้วเอาผลมาแสดงเท่านั้น
 
 import { OPERATORS } from '../data/operators.js';
@@ -10,10 +10,12 @@ import { state, resetState } from '../state.js';
 import { CONFIG } from '../config.js';
 import { createClock, tickLoop } from '../systems/time.js';
 import { summarizeByTier } from '../systems/zones.js';
-import { skillStatus, unitStatusLabel, useGlobalSkill, clearMission } from '../systems/skills.js';
+import { skillStatus, unitStatusLabel, useGlobalSkill } from '../systems/skills.js';
+import { resolveMission } from '../systems/outcomes.js';
+import { createFeed } from './feed.js';
 import { attachDrag, cancelDrag } from './dragdrop.js';
 import { buildZoneDetail } from './panels.js';
-import { renderMap, applyZoneColors, updateAllZones, updateZone, updateZoneMarkers } from './map.js';
+import { renderMap, applyZoneColors, updateAllZones, updateZone, updateZoneMarkers, floatText } from './map.js';
 
 const PORTRAIT_DIR = 'assets/characters/';
 const SKILL_DIR = 'assets/skills/';
@@ -21,9 +23,7 @@ const SKILL_DIR = 'assets/skills/';
 const TIER_LETTER = { gray: 'A', yellow: 'B', red: 'C' };
 
 const PLACEHOLDER = {
-  // ยังเป็นค่าหลอกจนกว่าจะถึงรอบที่ 7 (Detail Feed)
-  airDeployOn: false,
-  feed: [],
+  airDeployOn: false, // 🚁 บนแถบบนอ่านจาก state.globalBuffs จริงแล้ว ค่านี้เป็นตัวบังคับเปิดตอน dev
 };
 
 // สไปรต์ที่ใช้ตามสถานะ (§12) — ชื่อไฟล์ทั้งหมดมาจาก operators.js ที่เดียว
@@ -312,20 +312,6 @@ function buildBottom() {
   };
 }
 
-// ── Detail Feed มุมขวาบน (§8) ───────────────────────────────────
-function buildFeed(entries) {
-  const feed = el('div', 'game-feed');
-  for (const e of entries) {
-    const card = el('div', `feed-card feed-card--${e.ok ? 'ok' : 'fail'}`);
-    card.append(
-      el('div', 'feed-head', `${e.ok ? '🟢' : '🔴'} ${e.zone} ${e.ok ? 'สำเร็จ' : 'ไม่สำเร็จ'}`),
-      el('div', 'feed-body', e.text),
-    );
-    feed.appendChild(card);
-  }
-  return feed;
-}
-
 // สะพานระหว่างไอคอนสกิลกับหน้าเกม — renderGameScreen เติมค่าจริงให้ตอนสร้างหน้า
 // ประกาศไว้ตรงนี้เพราะ buildSkillRow ถูกเรียกก่อนที่นาฬิกาจะถูกสร้าง
 const dragCtx = {
@@ -400,7 +386,8 @@ export function renderGameScreen(root, { onExit } = {}) {
   mapBox.appendChild(mapViewport);
   mapBox.appendChild(buildZoomButtons());
   // Feed ลอยอยู่มุมขวาบนของแผนที่ (§8) — วางไว้ในกรอบแผนที่เพื่อไม่ให้บังแถบ จนท. ฝั่งขวา
-  mapBox.appendChild(buildFeed(data.feed));
+  const feed = createFeed();
+  mapBox.appendChild(feed.box);
   mapWrap.appendChild(mapBox);
   body.appendChild(mapWrap);
 
@@ -445,7 +432,19 @@ export function renderGameScreen(root, { onExit } = {}) {
     loopStartedAt = performance.now();
     tickLoop(state, {
       onZoneCleared: (zone) => { if (mapHandle) updateZone(mapHandle, zone); },
-      onMissionComplete: (opKey) => clearMission(state, opKey), // รอบที่ 7 จะทอยผลก่อนตรงนี้
+      onMissionComplete: (opKey) => {
+        // §4.2 ทอย 2 ชั้น → อัปเดตโซน/คะแนน → โชว์ผลบนแมพและใน Feed
+        const outcome = resolveMission(state, opKey);
+        if (!outcome) return;
+        feed.push(outcome);
+        if (mapHandle) {
+          const zone = state.zones[outcome.zoneId];
+          if (zone) updateZone(mapHandle, zone);
+          if (outcome.kind === 'success') floatText(mapHandle, outcome.zoneId, `+${outcome.saved}`, 'ok');
+          else if (outcome.kind === 'fail') floatText(mapHandle, outcome.zoneId, '✕', 'fail');
+          else floatText(mapHandle, outcome.zoneId, '—', 'late');
+        }
+      },
       onGameEnd: () => {
         stopGameClock();
         top.paintSpeed();

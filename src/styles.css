@@ -710,3 +710,26 @@ html, body {
   .game-body { padding: 0 calc(var(--u) * 1.6); }
   .game-bottom { padding: calc(var(--u) * 0.8) calc(var(--u) * 1.6) calc(var(--u) * 0.9); }
 }
+
+/* ── Detail Feed: ผลภารกิจ (GAMESCREEN_SPEC §8) ────────────────── */
+.feed-card--late { border-color: #8a8f96; }
+.feed-card { transition: opacity 0.35s, transform 0.35s; }
+.feed-card.is-out { opacity: 0; transform: translateX(calc(var(--u) * 1.5)); }
+
+/* ── ข้อความผลลอยขึ้นเหนือโซน (§11) ────────────────────────────── */
+.zone-float {
+  text-anchor: middle; dominant-baseline: central;
+  font-family: system-ui, sans-serif; font-weight: 800;
+  paint-order: stroke; stroke: #fff; stroke-width: 4px; stroke-linejoin: round;
+  animation: zoneFloat 1.4s ease-out forwards;
+}
+.zone-float--ok { fill: #2f9e44; }
+.zone-float--fail { fill: #E5484D; }
+.zone-float--late { fill: #6b7178; }
+
+@keyframes zoneFloat {
+  0%   { opacity: 0; transform: translateY(6px); }
+  15%  { opacity: 1; transform: translateY(0); }
+  70%  { opacity: 1; transform: translateY(-14px); }
+  100% { opacity: 0; transform: translateY(-26px); }
+}

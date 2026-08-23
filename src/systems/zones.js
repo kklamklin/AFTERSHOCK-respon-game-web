@@ -1,8 +1,5 @@
 import { CONFIG } from '../config.js';
-
-function randInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+import { randInt } from '../utils/rng.js';
 
 // สร้างโซนทั้งหมดตามจำนวนใน CONFIG.zoneCounts ตาม §3.1/§4 ของ docs/gamesystemfinal.md
 // หมายเหตุ: id ที่นี่เป็นชุดชั่วคราว (placeholder grid) — ตอนได้ map.svg จริง
@@ -136,4 +133,9 @@ export function summarizeByTier(zones) {
     };
   }
   return out;
+}
+
+// ชื่อโซนที่โชว์ผู้เล่น — zone-gray-12 → GRAY-12
+export function zoneLabel(zoneId) {
+  return zoneId.replace('zone-', '').toUpperCase();
 }

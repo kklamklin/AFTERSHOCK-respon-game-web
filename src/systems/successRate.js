@@ -20,7 +20,7 @@ export function buffsOn(state, zone) {
   return [...zone.buffs, ...state.globalBuffs];
 }
 
-export function successBreakdown(state, opKey, zone) {
+export function successBreakdown(state, opKey, zone, { ignoreInjured = false } = {}) {
   const parts = [];
 
   parts.push({ key: 'base', label: OPERATORS[opKey].name, value: CONFIG.fieldSkills[opKey].base });
@@ -29,7 +29,7 @@ export function successBreakdown(state, opKey, zone) {
     if (b.rate) parts.push({ key: b.type, label: BUFF_NAME[b.type] ?? b.type, value: b.rate });
   }
 
-  if (state.units[opKey].status === 'injured') {
+  if (!ignoreInjured && state.units[opKey].status === 'injured') {
     parts.push({ key: 'injured', label: 'บาดเจ็บ', value: CONFIG.injuredPenalty });
   }
 

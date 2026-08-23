@@ -174,13 +174,3 @@ export function useGlobalSkill(state, opKey, skillId) {
   state.units[opKey].skillCooldowns[skillId] = cfg.cooldownHours * CONFIG.loopsPerHour;
   return { kind: 'global', cost: cfg.ap };
 }
-
-// จนท. กลับจากภารกิจ — ปลดโซนและล้างภารกิจ
-// รอบที่ 7 จะแทรก "ทอยผล" ไว้ก่อนบรรทัดนี้
-export function clearMission(state, opKey) {
-  const unit = state.units[opKey];
-  if (!unit.mission) return;
-  const zone = state.zones[unit.mission.zoneId];
-  if (zone && zone.unit === opKey) zone.unit = null;
-  unit.mission = null;
-}
