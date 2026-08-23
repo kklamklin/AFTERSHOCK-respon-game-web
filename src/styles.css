@@ -46,7 +46,7 @@ html, body {
 .logo-block--lg .logo-subtitle { font-size: 28px; }
 .logo-block--sm .logo-subtitle { font-size: 20px; }
 
-.logo-icons { display: flex; gap: 12px; margin-top: 8px; }
+.logo-icons { display: flex; gap: 10px; margin-top: 8px; align-items: center; }
 .chibi-slot {
   width: 48px; height: 48px; border-radius: 50%;
   border: 2px solid var(--ring, #999);
@@ -54,6 +54,10 @@ html, body {
   font-size: 22px; background: #fafafa;
 }
 .logo-block--sm .chibi-slot { width: 36px; height: 36px; font-size: 16px; }
+
+/* รูปตัวละครจริง — โชว์เต็มรูป ไม่มีวงแหวนทับ ไม่ตัดขอบ ระยะห่างเท่ากันทุกช่อง */
+.chibi-slot--img { border: none; background: none; width: 56px; height: 56px; }
+.logo-block--sm .chibi-slot--img { width: 42px; height: 42px; }
 
 .version-tag {
   position: absolute; right: 24px; bottom: 16px;
@@ -995,9 +999,7 @@ img.game-icon {
 .res-glyph { flex: none; }
 
 /* รูปแทนตัวละครบนหน้าปก — เต็มวงกลม */
-.chibi-slot img.game-icon {
-  width: 78%; height: 78%; vertical-align: 0;
-}
+.chibi-slot img.game-icon { width: 100%; height: 100%; vertical-align: 0; }
 
 /* ไอคอนบัฟบนแผนที่ (อยู่ใน SVG) */
 .zone-buff-glyph {

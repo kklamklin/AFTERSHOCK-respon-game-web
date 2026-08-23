@@ -26,9 +26,11 @@ export const ICONS = {
   skillBuff:  { file: 'sparks-solid.svg', emoji: '✨' },
 
   // ── การ์ด Feed + สถานะ จนท. (§8 · §12) ────────────────────────
-  success:   { file: 'check-circle-solid.svg', emoji: '🟢' },
-  fail:      { file: null,                     emoji: '🔴' }, // ยังไม่มีไฟล์
-  toolate:   { file: null,                     emoji: '⚫' }, // ยังไม่มีไฟล์
+  // ⚫🔴🟢 คงเป็น emoji ตามที่เจ้าของสั่ง — มีไฟล์แค่ฝั่งสำเร็จ (check-circle)
+  // ถ้าเปลี่ยนแค่อันเดียวจะกลายเป็นสามอันคนละแบบ อ่านยากกว่าเดิม
+  success:   { file: null, emoji: '🟢' },
+  fail:      { file: null, emoji: '🔴' },
+  toolate:   { file: null, emoji: '⚫' },
   injured:   { file: null,                     emoji: '🩹' }, // ยังไม่มีไฟล์
   lost:      { file: 'unconscious.svg',        emoji: '💀' },
   laststand: { file: 'finalstand.svg',         emoji: '⚡' },

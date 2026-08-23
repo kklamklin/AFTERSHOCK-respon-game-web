@@ -34,10 +34,13 @@ function buildLogo({ size = 'lg', subtitle = 'Response' } = {}) {
   const icons = document.createElement('div');
   icons.className = 'logo-icons';
   for (const { key, ring } of OPERATOR_CHIBI_PLACEHOLDERS) {
+    const glyph = iconNode(key, 'chibi-glyph');
     const icon = document.createElement('div');
-    icon.className = 'chibi-slot';
+    // รูปจริงมีขอบวงกลมมาในตัวแล้ว ถ้าใส่วงแหวนสีทับอีกชั้นจะกลายเป็นวงซ้อนวง
+    // วงแหวนจึงเหลือไว้ใช้เฉพาะตอนที่ยังไม่มีไฟล์ (แสดง emoji)
+    icon.className = glyph.tagName === 'IMG' ? 'chibi-slot chibi-slot--img' : 'chibi-slot';
     icon.style.setProperty('--ring', ring);
-    icon.appendChild(iconNode(key, 'chibi-glyph'));
+    icon.appendChild(glyph);
     icons.appendChild(icon);
   }
 
