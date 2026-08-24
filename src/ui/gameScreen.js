@@ -8,7 +8,7 @@
 import { OPERATORS } from '../data/operators.js';
 import { state, resetState } from '../state.js';
 import { CONFIG } from '../config.js';
-import { createClock, tickLoop } from '../systems/time.js';
+import { createClock, tickLoop, loopDurationMs } from '../systems/time.js';
 import { summarizeByTier } from '../systems/zones.js';
 import { skillStatus, unitStatusLabel, useGlobalSkill } from '../systems/skills.js';
 import { resolveMission } from '../systems/outcomes.js';
@@ -20,6 +20,7 @@ import { renderMap, applyZoneColors, updateAllZones, updateZone, updateZoneMarke
 import { createGameMenu } from './gameMenu.js';
 import { iconNode, iconPath, iconEmoji } from '../data/icons.js';
 import { setAlertFrame, clearFx, fireSkillIcon } from './fx.js';
+import { startLoop, stopLoop, pauseLoop, resumeLoop } from './audio.js';
 
 // เล่นอนิเมชั่นสั้น ๆ ซ้ำได้ — ถอดคลาสแล้ว reflow ก่อนใส่ใหม่ ไม่งั้นครั้งที่ 2 จะไม่เริ่ม
 function pulse(node, cls, ms) {
@@ -397,7 +398,8 @@ export function stopGameClock() {
   cancelSmooth = null;
   activeMenu?.destroy();
   activeMenu = null;
-  clearFx(); // กรอบเตือนไม่ควรค้างตามไปโผล่ที่หน้าเมนู/หน้า Result
+  clearFx();               // กรอบเตือนไม่ควรค้างตามไปโผล่ที่หน้าเมนู/หน้า Result
+  stopLoop('lastMinute');  // ออกจากเกมเมื่อไหร่ เสียงเตือนต้องเงียบทันที
 }
 
 export function renderGameScreen(root, { onExit, onFinish } = {}) {
@@ -418,8 +420,9 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
     onTime: () => menu.openTime(state),
     // วาดซ้ำ 1 ครั้งตอนกด เพราะลูปวาดสด ๆ ทำงานเฉพาะตอนเวลาเดิน
     // ถ้าไม่วาด เลขนับถอยหลังจะค้างที่เฟรมก่อนกดหยุด
-    onRunToggle: () => { clock.setRunning(!state.running); top.paintSpeed(); paintLive(); },
-    onRateToggle: () => { clock.setRate(state.speed === 2 ? 1 : 2); top.paintSpeed(); paintLive(); },
+    onRunToggle: () => { clock.setRunning(!state.running); top.paintSpeed(); paintLive(); syncLastMinute(); },
+    // เปลี่ยนความเร็วแล้วเวลาจริงที่เหลือเปลี่ยนตาม ต้องเช็คเกณฑ์ใหม่ทันที
+    onRateToggle: () => { clock.setRate(state.speed === 2 ? 1 : 2); top.paintSpeed(); paintLive(); syncLastMinute(); },
   });
   root.appendChild(top.bar);
 
@@ -486,6 +489,25 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
     setAlertFrame(level);
   }
 
+  // ── เสียงเตือน "เหลือเวลาจริงอีก 1 นาที" ─────────────────────
+  // นับจากลูปที่เหลือคูณความยาวลูปตามความเร็ว ณ ตอนนั้น (เปลี่ยนความเร็วแล้วเกณฑ์ขยับตาม)
+  // เริ่มแล้วเริ่มเลย ไม่เริ่มซ้ำ — หยุด/เล่นต่อตามปุ่มเวลา และเงียบทันทีตอนออกจากเกม
+  let lastMinuteStarted = false;
+
+  function syncLastMinute() {
+    if (state.ended) return; // stopGameClock() หยุดให้แล้ว
+    if (!lastMinuteStarted) {
+      const leftMs = (CONFIG.totalLoops - state.loop) * loopDurationMs(state);
+      if (state.running && leftMs <= CONFIG.lastMinuteWarnMs) {
+        lastMinuteStarted = true;
+        startLoop('lastMinute');
+      }
+      return;
+    }
+    if (state.running) resumeLoop('lastMinute');
+    else pauseLoop('lastMinute');
+  }
+
   function paintLive() {
     const frac = loopFraction();
     top.paintHud();
@@ -543,6 +565,7 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
         onFinish?.();
       },
     });
+    syncLastMinute(); // เช็คทุกลูปว่าถึงนาทีสุดท้ายหรือยัง
     paintAll();
   }
 
@@ -561,8 +584,8 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
   // เมนู ☰ · หน้าเวลา · ป๊อปอัพหยุดเวลาอัตโนมัติ (§6 · §7 · §2.1)
   // มันเป็นคนคุมการหยุด/เดินเวลาของตัวเอง จำได้ว่าก่อนเปิดเวลาเดินอยู่ไหม
   menu = createGameMenu(root, {
-    pause: () => { clock.setRunning(false); top.paintSpeed(); paintLive(); },
-    resume: () => { clock.setRunning(true); top.paintSpeed(); },
+    pause: () => { clock.setRunning(false); top.paintSpeed(); paintLive(); syncLastMinute(); },
+    resume: () => { clock.setRunning(true); top.paintSpeed(); syncLastMinute(); },
     isRunning: () => state.running,
     quitToMenu: () => { stopGameClock(); onExit?.(); },
   });
@@ -570,8 +593,8 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
 
   // ต่อสายให้ตัวลากวาง: หยุด/เดินเวลา · หาแผนที่ · วาดใหม่หลังวางเสร็จ
   dragCtx.getMapHandle = () => mapHandle;
-  dragCtx.pause = () => clock.setRunning(false);
-  dragCtx.resume = () => clock.setRunning(true);
+  dragCtx.pause = () => { clock.setRunning(false); syncLastMinute(); };
+  dragCtx.resume = () => { clock.setRunning(true); syncLastMinute(); };
   dragCtx.onChange = () => { bottom.showZone(null); paintAll(); top.paintSpeed(); };
   dragCtx.onHoverZone = (zoneId, opKey, skillId) => bottom.showZone(zoneId, opKey, skillId);
 

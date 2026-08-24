@@ -16,6 +16,7 @@
 
 import { scoreBreakdown } from '../systems/score.js';
 import { iconNode } from '../data/icons.js';
+import { startLoop, stopLoop } from './audio.js';
 
 const num = (n) => Math.round(n).toLocaleString('en-US');
 
@@ -31,6 +32,9 @@ function el(tag, className, text) {
 let running = null;
 
 function stopAnim() {
+  // หยุดเสียงก่อนเสมอ แม้ไม่มีอนิเมชั่นค้างอยู่ — ผู้เล่นอาจกดออกตอนเพลงยังเล่นแต่เลขวิ่งจบแล้ว
+  stopLoop('result');
+  stopLoop('pointCounter');
   if (!running) return;
   for (const t of running.timers) clearTimeout(t);
   for (const id of running.rafs) cancelAnimationFrame(id);
@@ -158,6 +162,7 @@ export function renderResult(root, { state, onHome, onReplay } = {}) {
   // ── ไทม์ไลน์อนิเมชั่น ────────────────────────────────────────
   // ลำดับ: แรงก์กระแทกลงมา → คะแนนรวมวิ่ง → แถบรายส่วนไล่ทีละอัน → ตัวเลขคน → ปุ่ม
   running = { timers: new Set(), rafs: new Set() };
+  startLoop('result'); // เพลงหน้าสรุปผล — stopAnim() เป็นคนหยุดตอนออกจากหน้า
 
   if (reduceMotion()) {
     // ข้ามอนิเมชั่นทั้งหมด แต่ต้องเติมค่าให้ครบ ไม่งั้นหน้าจะค้างที่ 0
@@ -183,6 +188,7 @@ export function renderResult(root, { state, onHome, onReplay } = {}) {
   later(() => {
     countUp(scoreValue, r.score, 1100);
     fillBar(scoreFill, r.score / r.scoreMax);
+    startLoop('pointCounter'); // ไฟล์ยาว 10 วิ ยาวกว่าอนิเมชั่น จึงถูกสั่งหยุดก่อนจบเสมอ
   }, 700);
 
   parts.forEach((p, i) => {
@@ -203,5 +209,9 @@ export function renderResult(root, { state, onHome, onReplay } = {}) {
 
   // ปุ่มโผล่ท้ายสุด หลังเลขทุกตัววิ่งจบแล้ว (กล่องตัวเลขคนเริ่ม 2400 วิ่ง 800 → จบ 3200)
   // ถ้าโผล่ก่อน ผู้เล่นจะกดเล่นใหม่ทั้งที่เลขยังวิ่งค้างอยู่
-  later(() => { actions.classList.add('is-in'); card.classList.add('is-done'); }, 3300);
+  later(() => {
+    stopLoop('pointCounter'); // สรุปคะแนนเสร็จแล้ว — หยุดเสียงนับ (เพลง result ยังเล่นต่อ)
+    actions.classList.add('is-in');
+    card.classList.add('is-done');
+  }, 3300);
 }

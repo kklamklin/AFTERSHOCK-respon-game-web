@@ -7,6 +7,7 @@
 
 import { initScreens } from './ui/screens.js';
 import { probeIcons } from './data/icons.js';
+import { preloadSounds, attachClickSound } from './ui/audio.js';
 import { state } from './state.js';
 import { CONFIG } from './config.js';
 import * as rng from './utils/rng.js';
@@ -14,6 +15,11 @@ import * as rng from './utils/rng.js';
 // ตรวจก่อนว่าไฟล์ไอคอนใน assets/icons/ อันไหนมีจริง แล้วค่อยวาดหน้าแรก
 // อันที่ยังไม่มีไฟล์จะใช้ emoji เดิมไปก่อน — วางไฟล์ทับเมื่อไหร่ก็ขึ้นเอง ไม่ต้องแก้โค้ด
 await probeIcons();
+
+// โหลดไฟล์เสียงไว้ล่วงหน้า + ต่อเสียงคลิกเข้ากับทุกปุ่มครั้งเดียว (ดู ui/audio.js)
+// เสียงจริงจะดังได้หลังผู้เล่นแตะจอครั้งแรกเท่านั้น (autoplay policy ของเบราว์เซอร์)
+preloadSounds();
+attachClickSound();
 
 initScreens(document.getElementById('screen-root'));
 

@@ -7,6 +7,13 @@ import { OPERATORS } from '../data/operators.js';
 import { zoneLabel } from '../systems/zones.js';
 import { iconNode } from '../data/icons.js';
 import { screenFlash } from './fx.js';
+import { playSfx } from './audio.js';
+
+// เสียงประจำผลลัพธ์ — ใช้ cls เดียวกับที่ใช้เลือกสีการ์ด/สีแฟลช จะได้ไม่มีทางหลุดกัน
+//   ok   = ช่วยสำเร็จ / จนท. หายบาดเจ็บ
+//   fail = ช่วยไม่สำเร็จ · hurt = จนท. บาดเจ็บ/หมดสติ
+//   late = ไปไม่ทัน — เจ้าของไม่ได้สั่งเสียงไว้ จึงเงียบ
+const SOUND_FOR = { ok: 'success', fail: 'opDown', hurt: 'opDown' };
 
 // ผลของการทอยอันตรายหลังภารกิจล้มเหลว (§4.3 · §5)
 // คู่กับคีย์ไอคอนใน data/icons.js — ไม่มีไฟล์ก็ใช้ emoji เดิม
@@ -66,6 +73,7 @@ export function createFeed() {
     card.append(headLine, bodyLine);
     box.prepend(card);
     screenFlash(cls); // จอกระพริบสีเดียวกับขอบการ์ด — เขียวสำเร็จ / แดงไม่สำเร็จ / เทาไปไม่ทัน
+    if (SOUND_FOR[cls]) playSfx(SOUND_FOR[cls]);
 
     while (box.childElementCount > MAX_CARDS) box.lastElementChild.remove();
 
@@ -87,6 +95,7 @@ export function createFeed() {
     card.appendChild(line);
     box.prepend(card);
     screenFlash(cls);
+    if (SOUND_FOR[cls]) playSfx(SOUND_FOR[cls]);
     while (box.childElementCount > MAX_CARDS) box.lastElementChild.remove();
     const t = setTimeout(() => {
       card.classList.add('is-out');
