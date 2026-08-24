@@ -847,6 +847,9 @@ html, body {
 .res-penalty {
   font-size: calc(var(--u) * 1.25); color: #e8484a; font-weight: 700; text-align: right;
 }
+.res-floor {
+  font-size: calc(var(--u) * 1.2); color: var(--muted); text-align: right;
+}
 
 /* แถบเติม — JS ตั้งแค่ width ที่เหลือ transition ทำงานเอง */
 .res-bar {

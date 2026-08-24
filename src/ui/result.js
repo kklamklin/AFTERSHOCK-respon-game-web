@@ -130,6 +130,10 @@ export function renderResult(root, { state, onHome, onReplay } = {}) {
   if (r.multiplier !== 1) {
     scoreBox.appendChild(el('div', 'res-penalty', `ภารกิจล่มกลางคัน — คะแนน × ${r.multiplier}`));
   }
+  // คะแนนถูกดันขึ้นถึงขั้นต่ำ — บอกไว้ ไม่งั้นเลขรายส่วนข้างล่างบวกกันไม่เท่าคะแนนรวม
+  if (r.floorBonus > 0) {
+    scoreBox.appendChild(el('div', 'res-floor', `รวมแต้มขั้นต่ำ +${num(r.floorBonus)}`));
+  }
   card.appendChild(scoreBox);
 
   // ── คะแนนแยกส่วน ─────────────────────────────────────────────

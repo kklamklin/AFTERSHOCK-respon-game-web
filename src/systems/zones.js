@@ -123,8 +123,12 @@ export function displayCounts(zone) {
 
 // สรุปรายระดับสำหรับกล่องล่างสุด Ⓐ/Ⓑ/Ⓒ (GAMESCREEN_SPEC §9.1)
 //   casualty%   = คนตายในระดับนั้น ÷ คนเริ่มต้นของระดับนั้น
-//   clear%      = จำนวนโซนที่เคลียร์ ÷ จำนวนโซนในระดับนั้น   ← นับโซน ไม่ใช่นับคน
+//   clear%      = จำนวนโซนที่ "ช่วยคนออกมาได้จริง" ÷ จำนวนโซนในระดับนั้น   ← นับโซน ไม่ใช่นับคน
 //   population% = คนที่ยังติดอยู่ ÷ คนเริ่มต้นของระดับนั้น
+//
+// ⚠️ ห้ามนับจาก zone.cleared — โซนที่คนตายหมดเองก็ถูกมาร์ค cleared เหมือนกัน (§5.4)
+//    ถ้านับด้วยจะกลายเป็น "โซนเหลืองเคลียร์ 100%" ตอนชั่วโมง 48 ทั้งที่ตายเกลี้ยงไม่ได้ช่วยใครเลย
+//    ใช้เกณฑ์เดียวกับ systems/score.js — มีคนถูกช่วยออกมาอย่างน้อย 1 คน
 export function summarizeByTier(zones) {
   const acc = {};
   for (const level of ['gray', 'yellow', 'red']) {
@@ -138,7 +142,7 @@ export function summarizeByTier(zones) {
     t.trapped += d.trapped;
     t.casualty += d.casualty;
     t.zones += 1;
-    if (zone.cleared) t.clearedZones += 1;
+    if (Math.round(zone.rescued) >= 1) t.clearedZones += 1;
   }
 
   const pct = (part, whole) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
