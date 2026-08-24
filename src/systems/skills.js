@@ -83,6 +83,13 @@ const STATUS_LABEL = {
   laststand: "Last stand\nall costs free",
 };
 
+// เวลาฟื้นเต็มของแต่ละสถานะ (ลูป) — ใช้คิดว่า "ฟื้นไปแล้วกี่ %" ให้แถบบนหน้าจอ
+const STATUS_TOTAL_LOOPS = {
+  injured: () => CONFIG.injuredRecoverHours * CONFIG.loopsPerHour,
+  lost: () => CONFIG.lostConsciousHours * CONFIG.loopsPerHour,
+  laststand: () => CONFIG.lastStand.durationHours * CONFIG.loopsPerHour,
+};
+
 export function unitStatusLabel(state, opKey) {
   const unit = state.units[opKey];
   if (unit.status === 'normal') return null;
@@ -90,7 +97,39 @@ export function unitStatusLabel(state, opKey) {
     kind: unit.status,
     label: STATUS_LABEL[unit.status],
     loops: unit.recoverRemainLoops,
+    totalLoops: STATUS_TOTAL_LOOPS[unit.status]?.() ?? 0,
   };
+}
+
+/**
+ * "ความพร้อม" ของ จนท. 1 คน สำหรับแถบเปอร์เซ็นต์บนการ์ด (§12)
+ * ทั้งสามกรณีคืนค่า 0..100 เสมอ ui/ เอาไปวาดแถบได้ตรง ๆ ไม่ต้องคิดกฎเอง
+ *   กำลังลงพื้นที่ → % ความคืบหน้าของภารกิจ
+ *   บาดเจ็บ/หมดสติ/Last Stand → % ของเวลาที่ผ่านไปแล้ว
+ *   ว่างและปกติ → 100 (พร้อมออกปฏิบัติงาน)
+ * @param frac เศษของลูปปัจจุบัน 0..1 ทำให้ตัวเลขไหลลื่นระหว่างลูป
+ */
+export function unitReadiness(state, opKey, frac = 0) {
+  const unit = state.units[opKey];
+
+  if (unit.mission && unit.busyRemainLoops > 0) {
+    const total = unit.mission.totalLoops || 1;
+    const done = total - unit.busyRemainLoops + frac;
+    return { kind: 'working', pct: clampPct((done / total) * 100) };
+  }
+
+  const st = unitStatusLabel(state, opKey);
+  if (st && st.totalLoops > 0) {
+    const done = st.totalLoops - st.loops + frac;
+    return { kind: st.kind, pct: clampPct((done / st.totalLoops) * 100) };
+  }
+  if (st) return { kind: st.kind, pct: 0 };
+
+  return { kind: 'ready', pct: 100 };
+}
+
+function clampPct(n) {
+  return Math.max(0, Math.min(100, n));
 }
 
 // ── กฎการวางลงโซน (§10.1 เงื่อนไขปฏิเสธ) ────────────────────────

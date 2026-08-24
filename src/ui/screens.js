@@ -10,6 +10,7 @@ import { renderResult } from './result.js';
 import { state } from '../state.js';
 import { iconNode } from '../data/icons.js';
 import { fadeSwap, clearFx } from './fx.js';
+import { buildSkyline } from './skyline.js';
 
 // ลำดับต้องตรงกับหน้าตาดราฟ: มนุษย์(หน้ากาก) → แมว → เอลฟ์(Lia) → ภูต(Mudongzock)
 // รูปจริงอยู่ใน assets/icons/ (จับคู่ชื่อไฟล์ที่ data/icons.js) — ยังไม่มีไฟล์ก็ใช้ emoji ไปก่อน
@@ -102,6 +103,9 @@ export function renderSplash(root, { onContinue } = {}) {
 export function renderMenu(root, { onNavigate } = {}) {
   root.innerHTML = '';
   setScreenClass(root, 'screen--menu');
+
+  // ฉากเมืองเวกเตอร์อยู่ข้างขวา สั่นเป็นระยะ (ดู ui/skyline.js)
+  root.appendChild(buildSkyline());
 
   const top = document.createElement('div');
   top.className = 'menu-top';

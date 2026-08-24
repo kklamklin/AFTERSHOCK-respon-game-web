@@ -10,7 +10,7 @@ import { state, resetState } from '../state.js';
 import { CONFIG } from '../config.js';
 import { createClock, tickLoop, loopDurationMs } from '../systems/time.js';
 import { summarizeByTier } from '../systems/zones.js';
-import { skillStatus, unitStatusLabel, useGlobalSkill } from '../systems/skills.js';
+import { skillStatus, unitStatusLabel, useGlobalSkill, unitReadiness } from '../systems/skills.js';
 import { resolveMission } from '../systems/outcomes.js';
 import { OPERATORS as OPS_FOR_STATUS } from '../data/operators.js';
 import { createFeed } from './feed.js';
@@ -35,6 +35,15 @@ const PORTRAIT_DIR = 'assets/characters/';
 const SKILL_DIR = 'assets/skills/';
 
 const TIER_LETTER = { gray: 'A', yellow: 'B', red: 'C' };
+
+// ป้ายบนแถบ % ของการ์ด จนท. — ค่าตัวเลขมาจาก systems/skills.js unitReadiness()
+const READY_TEXT = {
+  ready:     'พร้อมปฏิบัติงาน',
+  working:   'กำลังปฏิบัติงาน',
+  injured:   'กำลังรักษาตัว',
+  lost:      'หมดสติ — รอฟื้น',
+  laststand: 'ยืนหยัดครั้งสุดท้าย',
+};
 
 const PLACEHOLDER = {
   airDeployOn: false, // 🚁 บนแถบบนอ่านจาก state.globalBuffs จริงแล้ว ค่านี้เป็นตัวบังคับเปิดตอน dev
@@ -254,6 +263,19 @@ function buildOperator(speciesKey) {
   head.append(card, statusEl);
   block.appendChild(head);
 
+  // แถบความพร้อม — หัวใจของลุค "หน้าจอสั่งการ" (§12)
+  // ตัวเลขคิดที่ systems/skills.js ที่นี่แค่วาด
+  const gauge = el('div', 'op-gauge');
+  const gaugeHead = el('div', 'op-gauge-head');
+  const gaugeLabel = el('span', 'op-gauge-label');
+  const gaugePct = el('span', 'op-gauge-pct');
+  gaugeHead.append(gaugeLabel, gaugePct);
+  const gaugeTrack = el('div', 'op-gauge-track');
+  const gaugeFill = el('i', 'op-gauge-fill');
+  gaugeTrack.appendChild(gaugeFill);
+  gauge.append(gaugeHead, gaugeTrack);
+  block.appendChild(gauge);
+
   const skills = el('div', 'op-skills');
   const skillRows = [];
   for (const [skillId, skill] of Object.entries(op.skills)) {
@@ -265,9 +287,20 @@ function buildOperator(speciesKey) {
 
   let shownSprite = null;
   let shownKind = null;
+  let shownReady = null;
 
   function paint(frac) {
     const st = unitStatusLabel(state, speciesKey);
+
+    // แถบความพร้อม — เปลี่ยน class เฉพาะตอนสถานะเปลี่ยนจริง ไม่งั้นสีจะกะพริบทุกเฟรม
+    const rd = unitReadiness(state, speciesKey, frac);
+    if (rd.kind !== shownReady) {
+      gauge.className = `op-gauge op-gauge--${rd.kind}`;
+      gaugeLabel.textContent = READY_TEXT[rd.kind] ?? '';
+      shownReady = rd.kind;
+    }
+    gaugePct.textContent = `${Math.round(rd.pct)}%`;
+    gaugeFill.style.width = `${rd.pct}%`;
 
     // สไปรต์เปลี่ยนตามสถานะ — ตั้ง src ใหม่เฉพาะตอนเปลี่ยนจริง ไม่งั้นรูปจะกะพริบทุกลูป
     const sprite = portraitFor(op, st?.kind);
@@ -324,10 +357,14 @@ function buildBottom() {
     const rows = el('div', 'stat-rows');
     valueEls[tier] = {};
     for (const { key, label } of STAT_ROWS) {
-      const row = el('div', 'stat-row');
+      const row = el('div', `stat-row stat-row--${key}`);
       const value = el('span', 'stat-value', '0%');
-      row.append(el('span', 'stat-label', label), value);
-      valueEls[tier][key] = value;
+      // แถบเล็ก ๆ ให้เห็นค่าคร่าว ๆ โดยไม่ต้องอ่านเลข (§9.1)
+      const meter = el('div', 'stat-meter');
+      const meterFill = el('i');
+      meter.appendChild(meterFill);
+      row.append(el('span', 'stat-label', label), meter, value);
+      valueEls[tier][key] = { value, meterFill };
       rows.appendChild(row);
     }
     col.appendChild(rows);
@@ -347,7 +384,11 @@ function buildBottom() {
     paint() {
       const tiers = summarizeByTier(state.zones); // คำนวณใน systems/ ที่นี่แค่เอามาแสดง
       for (const tier of TIER_ORDER) {
-        for (const { key } of STAT_ROWS) valueEls[tier][key].textContent = `${tiers[tier][key]}%`;
+        for (const { key } of STAT_ROWS) {
+          const pct = tiers[tier][key];
+          valueEls[tier][key].value.textContent = `${pct}%`;
+          valueEls[tier][key].meterFill.style.width = `${pct}%`;
+        }
       }
     },
   };
