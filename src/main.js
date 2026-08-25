@@ -9,6 +9,7 @@ import { initScreens } from './ui/screens.js';
 import { probeIcons } from './data/icons.js';
 import { preloadSounds, attachClickSound } from './ui/audio.js';
 import { loadPrefs } from './data/prefs.js';
+import { initStage } from './ui/stage.js';
 import { state } from './state.js';
 import { CONFIG } from './config.js';
 import * as rng from './utils/rng.js';
@@ -16,6 +17,10 @@ import * as rng from './utils/rng.js';
 // ตรวจก่อนว่าไฟล์ไอคอนใน assets/icons/ อันไหนมีจริง แล้วค่อยวาดหน้าแรก
 // อันที่ยังไม่มีไฟล์จะใช้ emoji เดิมไปก่อน — วางไฟล์ทับเมื่อไหร่ก็ขึ้นเอง ไม่ต้องแก้โค้ด
 await probeIcons();
+
+// ล็อกอัตราส่วนหน้าจอก่อนวาดอะไรทั้งนั้น — เกมวาดลงเวทีขนาดคงที่แล้วย่อให้พอดีจอ
+// ต้องมาก่อน เพราะถ้าวาดก่อนแล้วค่อยย่อ ผู้เล่นจะเห็นหน้าจอกระตุกตอนเปิดครั้งแรก
+initStage();
 
 // อ่านค่าเสียง/ความสว่างที่ผู้เล่นตั้งไว้ครั้งก่อนก่อนทุกอย่าง
 // ต้องมาก่อน preloadSounds() เพราะระบบเสียงอ่านค่าระดับเสียงตอนถูกสร้าง

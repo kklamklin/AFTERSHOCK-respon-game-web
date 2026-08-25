@@ -245,23 +245,27 @@ function buildOperator(speciesKey) {
   const block = el('div', 'op-block');
   block.dataset.op = speciesKey;
 
-  const head = el('div', 'op-head');
-
+  // การ์ดวางเป็นแนวนอน: [รูป+ชื่อ] | [แถบ% + สกิล]
+  // จงใจไม่วางซ้อนกันเป็นแนวตั้ง เพราะการ์ดจะสูงจนคอลัมน์ล้นบนมือถือจอยาว
+  // (ดูหมายเหตุ "ขนาดนิ้วกด" ที่ .screen--game ใน styles.css)
   const card = el('div', 'op-card');
   const frame = el('div', 'op-portrait');
   const img = el('img');
   img.alt = op.name;
   frame.appendChild(img);
-  card.append(frame, el('div', 'op-name', op.name));
 
-  // ป้ายสถานะข้างรูป (§12)
+  // ป้ายสถานะ — วางทับบนรูป ไม่ให้กินความสูงเพิ่มตอนโผล่ (§12)
   const statusEl = el('div', 'op-status');
   const statusLabel = el('div', 'op-status-label');
   const statusTime = el('div', 'op-status-time');
   statusEl.append(statusLabel, statusTime);
+  frame.appendChild(statusEl);
 
-  head.append(card, statusEl);
-  block.appendChild(head);
+  card.append(frame, el('div', 'op-name', op.name));
+  block.appendChild(card);
+
+  const main = el('div', 'op-main');
+  block.appendChild(main);
 
   // แถบความพร้อม — หัวใจของลุค "หน้าจอสั่งการ" (§12)
   // ตัวเลขคิดที่ systems/skills.js ที่นี่แค่วาด
@@ -274,7 +278,7 @@ function buildOperator(speciesKey) {
   const gaugeFill = el('i', 'op-gauge-fill');
   gaugeTrack.appendChild(gaugeFill);
   gauge.append(gaugeHead, gaugeTrack);
-  block.appendChild(gauge);
+  main.appendChild(gauge);
 
   const skills = el('div', 'op-skills');
   const skillRows = [];
@@ -283,7 +287,7 @@ function buildOperator(speciesKey) {
     skillRows.push(built);
     skills.appendChild(built.row);
   }
-  block.appendChild(skills);
+  main.appendChild(skills);
 
   let shownSprite = null;
   let shownKind = null;

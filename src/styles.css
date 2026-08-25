@@ -43,8 +43,24 @@
 
 * { box-sizing: border-box; }
 html, body {
-  margin: 0; height: 100%; background: var(--bg-deep); color: var(--ink);
+  margin: 0; height: 100%; background: #000; color: var(--ink);
   font-family: var(--font-ui);
+  overflow: hidden;                      /* แถบดำรอบเวที ห้ามเลื่อน */
+  overscroll-behavior: none;
+}
+
+/* ── เวทีขนาดคงที่ 1320×600 (ดู ui/stage.js) ────────────────────
+   ย่อ/ขยายทั้งก้อนให้พอดีจอ สัดส่วนข้างในจึงเท่ากันทุกเครื่อง
+   ⚠️ ห้ามใช้ vh/vw กับอะไรที่อยู่ข้างในเวที — มันอ้างอิงหน้าต่างจริง ไม่ใช่เวที */
+#screen-root {
+  position: fixed;
+  inset: auto;                           /* ล้าง inset:0 ของ .screen-overlay */
+  left: 50%; top: 50%;
+  width: 1320px; height: 600px;
+  transform: translate(-50%, -50%)
+             translate(var(--stage-shift-x, 0px), var(--stage-shift-y, 0px))
+             scale(var(--stage-scale, 1));
+  transform-origin: center center;
 }
 
 .hud {
@@ -152,24 +168,24 @@ html, body {
    ทุกขนาดยืดตามความสูงจอ เพราะเกมบังคับแนวนอนและมือถือสูงแค่ ~376px
    ถ้าตั้งเป็น px ตายตัว โลโก้ขนาดจอคอมจะดันเมนู Quit หลุดจอบนมือถือ */
 .screen--menu {
-  --menu-title: clamp(34px, 7.1vh, 64px);
+  --menu-title: 44px;
   justify-content: flex-start;
-  padding: clamp(20px, 5.2vh, 48px) 0 0 clamp(28px, 3.4vw, 64px);
+  padding: 32px 0 0 46px;
 }
-.menu-top { margin-bottom: clamp(16px, 5vh, 48px); }
+.menu-top { margin-bottom: 30px; }
 .screen--menu .logo-title { font-size: var(--menu-title); }
 /* ฟอนต์ Impact มีช่องว่างเหนือตัวอักษรราว 22% ของขนาดฟอนต์
    ถ้าจัดชิดบนตรง ๆ ไอคอนจะลอยสูงกว่าตัวอักษร — ดันลงมาให้ยอดตรงกันพอดี */
 .screen--menu .logo-block--row .logo-icons { margin-top: calc(var(--menu-title) * 0.22); }
-.screen--menu .logo-subtitle { font-size: clamp(15px, 3.1vh, 28px); }
+.screen--menu .logo-subtitle { font-size: 19px; }
 .screen--menu .chibi-slot--img {
-  width: clamp(30px, 6.2vh, 56px); height: clamp(30px, 6.2vh, 56px);
+  width: 38px; height: 38px;
 }
-.screen--menu .logo-icons { gap: clamp(5px, 1.1vh, 10px); }
-.screen--menu .logo-block--row { gap: clamp(12px, 2.4vh, 22px); }
-.menu-nav { display: flex; flex-direction: column; gap: clamp(11px, 3.1vh, 28px); align-items: flex-start; }
+.screen--menu .logo-icons { gap: 7px; }
+.screen--menu .logo-block--row { gap: 15px; }
+.menu-nav { display: flex; flex-direction: column; gap: 19px; align-items: flex-start; }
 .menu-btn {
-  font-size: clamp(18px, 3.1vh, 28px);
+  font-size: 20px;
   font-family: system-ui, sans-serif; font-weight: 500;
   background: none; border: none; color: #1b1f24; cursor: pointer; padding: 0;
 }
@@ -395,10 +411,18 @@ html, body {
    เพราะเกมบังคับแนวนอนและต้องพอดีจอเดียวไม่มีสกรอลล์ ทั้งบนมือถือและคอม
    ════════════════════════════════════════════════════════════════ */
 .screen--game {
-  --u: clamp(7px, 1.45vh, 14px);
-  /* รูป จนท. เล็กลงจาก 10u เพื่อคืนที่ให้แถบ % ที่เพิ่มเข้ามา
-     ถ้าโตกว่านี้ คอลัมน์จะสูงเกินจอแล้วไอคอนสกิลของ จนท. คนล่างจะถูกตัดจนลากไม่ได้ */
-  --portrait: calc(var(--u) * 8);
+  /* เวทีสูง 600px คงที่ → ตั้งเป็น px ตรง ๆ ได้เลย
+     ────────────────────────────────────────────────────────────
+     ⚠️ ตัวเลขนี้คือ "ขนาดนิ้วกด" บนมือถือ ห้ามลดลงโดยไม่วัด
+     ขนาดที่นิ้วเห็นจริง = (ขนาดหน่วย u ของปุ่ม ÷ ความสูงเวทีเป็นหน่วย u) × ความสูงจอจริง
+     มือถือจอยาว 20:9 รุ่นเล็ก เห็นเวทีสูงแค่ ~306px → ไอคอนสกิลต้องกินสัดส่วน
+     ~10% ของความสูงเวที ถึงจะได้ ~30px ที่กดโดนด้วยนิ้ว
+     เวทีสูง 600 ÷ 10.5 = 57 หน่วย · ไอคอน 6 หน่วย = 10.5% ✓
+     (เดิม u=8.6 → 70 หน่วย · ไอคอน 4.2 = 6% → กลายเป็น 18px กดไม่โดน)
+     เปลี่ยนอะไรในแถบ จนท. ต้องรัน scratchpad/devices.js ซ้ำเสมอ */
+  --u: 10.5px;
+  /* รูป จนท. — การ์ดวางแนวนอน รูปจึงไม่บวกความสูงให้การ์ดตราบใดที่ไม่เกินฝั่งสกิล */
+  --portrait: calc(var(--u) * 7.5);
   /* ทับ token กลางเฉพาะหน้านี้ — เส้นในหน้าเกมเข้มกว่าหน้าอื่นเพื่อให้กรอบแผงคมขึ้น */
   --line: rgba(86, 176, 236, 0.45);
   background: transparent; color: var(--ink);
@@ -486,7 +510,7 @@ html, body {
 /* ── ตัวกลาง: จนท.ซ้าย / แผนที่ / จนท.ขวา ────────────────────── */
 .game-body {
   flex: 1; min-height: 0; position: relative;
-  display: grid; grid-template-columns: minmax(0, 20fr) minmax(0, 46fr) minmax(0, 20fr);
+  display: grid; grid-template-columns: minmax(0, 22fr) minmax(0, 42fr) minmax(0, 22fr);
   gap: calc(var(--u) * 1.5);
   padding: 0 calc(var(--u) * 2);
 }
@@ -519,11 +543,13 @@ html, body {
   box-shadow: var(--glow-soft);
 }
 
-.op-block { flex: none; display: flex; flex-direction: column; gap: calc(var(--u) * 0.4); }
-.op-head { flex: none; display: flex; align-items: flex-start; gap: calc(var(--u) * 1.2); }
-.game-side--right .op-head { flex-direction: row-reverse; }
+/* การ์ดวางแนวนอน: รูปอยู่ข้าง ๆ ไม่ใช่ข้างบน — ทำให้การ์ดเตี้ยลงราว 9 หน่วย
+   ที่ประหยัดได้เอาไปคืนเป็นขนาดไอคอนสกิลให้นิ้วกดโดนบนมือถือ */
+.op-block { flex: none; display: flex; align-items: center; gap: calc(var(--u) * 1.2); }
+.game-side--right .op-block { flex-direction: row-reverse; }
 
 .op-card { flex: none; display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * 0.3); }
+.op-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: calc(var(--u) * 0.4); }
 .op-portrait {
   position: relative;
   width: var(--portrait); height: var(--portrait);
@@ -544,11 +570,17 @@ html, body {
   letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink);
 }
 
-.op-status { flex: 1; min-width: 0; padding-top: calc(var(--u) * 0.8); line-height: 1.2; }
-.game-side--right .op-status { text-align: right; }
+/* ป้ายสถานะทับอยู่บนรูป — จงใจให้ position:absolute จะได้ไม่ดันการ์ดให้สูงขึ้น
+   ตอนโผล่ (เดิมอยู่ข้างรูปแล้วการ์ดขยับ ทำให้ไอคอนสกิลคนล่างถูกตัด) */
+.op-status {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  line-height: 1.1; text-align: center;
+  background: linear-gradient(180deg, rgba(4, 8, 18, 0.15), rgba(4, 8, 18, 0.92) 45%);
+  padding: calc(var(--u) * 0.5) 0 calc(var(--u) * 0.15);
+}
 .op-status[hidden] { display: none; }
-.op-status-label { font-size: calc(var(--u) * 1.55); font-weight: 700; white-space: pre-line; }
-.op-status-time { font-size: calc(var(--u) * 1.9); font-weight: 700; font-variant-numeric: tabular-nums; }
+.op-status-label { font-size: calc(var(--u) * 1.05); font-weight: 700; white-space: pre-line; }
+.op-status-time { font-size: calc(var(--u) * 1.3); font-weight: 700; font-variant-numeric: tabular-nums; }
 .op-status-label { font-family: var(--font-display); letter-spacing: 1px; }
 .op-status-time { font-family: var(--font-mono); }
 .op-status--injured { color: var(--warn); }
@@ -607,14 +639,20 @@ html, body {
 }
 .game-side--right .skill-label { text-align: left; }
 
-.skill-icon-wrap { flex: none; position: relative; padding-top: calc(var(--u) * 1.1); }
-/* ไอคอนบอกประเภทสกิล (📥 ลงพื้นที่ / ✨ บัฟ) — ชิดขอบนอกของแต่ละฝั่ง */
-.skill-badge { position: absolute; top: 0; font-size: calc(var(--u) * 1.4); line-height: 1; }
-.game-side--left .skill-badge { left: calc(var(--u) * -0.9); }
-.game-side--right .skill-badge { right: calc(var(--u) * -0.9); }
+/* ไม่มี padding-top เผื่อป้ายประเภทแล้ว — ป้ายไปวางทับมุมไอคอนแทน
+   เพราะ padding นั้นบวกความสูงให้ทุกแถวสกิล (4 แถวต่อคอลัมน์) จนไอคอนต้องเล็กลง */
+.skill-icon-wrap { flex: none; position: relative; }
+/* ไอคอนบอกประเภทสกิล (📥 ลงพื้นที่ / ✨ บัฟ) — เกาะมุมบนด้านนอกของแต่ละฝั่ง */
+.skill-badge {
+  position: absolute; top: calc(var(--u) * -0.5); z-index: 2;
+  font-size: calc(var(--u) * 1.4); line-height: 1;
+  text-shadow: 0 0 calc(var(--u) * 0.5) #04070f, 0 0 calc(var(--u) * 0.5) #04070f;
+}
+.game-side--left .skill-badge { left: calc(var(--u) * -0.7); }
+.game-side--right .skill-badge { right: calc(var(--u) * -0.7); }
 .skill-icon {
   position: relative; overflow: hidden;
-  width: calc(var(--u) * 4.2); height: calc(var(--u) * 4.2);
+  width: calc(var(--u) * 6); height: calc(var(--u) * 6);
   border: 1px solid var(--line-hot); border-radius: 50%;
   background: radial-gradient(circle at 50% 35%, #1d3f74, #0b1730);
   display: flex; align-items: center; justify-content: center;
@@ -836,18 +874,8 @@ html, body {
   font-variant-numeric: tabular-nums; color: var(--ink);
 }
 
-/* จอเตี้ย (มือถือแนวนอน ~360-500px) — ย่อรูป จนท. ลงเพื่อให้ 2 คนต่อฝั่งพอดีจอ ไม่ล้น */
-@media (max-height: 520px) {
-  /* กล่องล่างสูงคงที่ พื้นที่ที่เหลือให้แถบ จนท. จึงน้อยลง ต้องย่อรูปลงอีก */
-  .screen--game { --portrait: calc(var(--u) * 6.2); }
-  .game-side { gap: calc(var(--u) * 0.7); }
-  .game-body { gap: calc(var(--u) * 1); }
-  .op-block { gap: calc(var(--u) * 0.35); }
-  .op-skills { gap: calc(var(--u) * 0.45); }
-  .side-title { font-size: calc(var(--u) * 1.9); }
-  .game-top { padding: calc(var(--u) * 0.8) calc(var(--u) * 2); }
-  .game-bottom { padding: calc(var(--u) * 0.8) calc(var(--u) * 2) calc(var(--u) * 1); }
-}
+/* หมายเหตุ: เดิมมี @media (max-height: ...) ย่อของตามความสูงจอ — ลบออกแล้ว
+   เพราะเวทีสูง 600px คงที่ ไม่ว่าจอจริงจะสูงเท่าไหร่ ทุกเครื่องจึงใช้เลย์เอาต์เดียวกัน */
 
 /* ── ลากไอคอนสกิลไปวางบนโซน (GAMESCREEN_SPEC §10) ──────────────── */
 .skill-icon { touch-action: none; }             /* กันหน้าจอเลื่อนตามนิ้วตอนลาก */
@@ -855,12 +883,14 @@ html, body {
 .skill-row:not(.is-blocked):not(.is-noap):not(.is-cooldown) .skill-icon:hover { box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.35); }
 .skill-icon.is-source { opacity: 0.35; }
 
+/* ไอคอนผีตอนลาก อยู่บน <body> (นอกเวที) จึงไม่ถูกย่อไปกับเวที
+   ต้องย่อเองด้วยตัวคูณเดียวกัน ไม่งั้นบนมือถือมันจะตัวใหญ่กว่าไอคอนจริงจนดูแปลก */
 .drag-ghost {
   position: fixed; z-index: 2000;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) scale(var(--stage-scale, 1));
   pointer-events: none;
-  border: 2px solid var(--line, #1b1f24); border-radius: 50%;
-  background: #fff; overflow: hidden;
+  border: 2px solid var(--line-hot); border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #eaf4ff, #b9d4ee); overflow: hidden;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
 }
@@ -955,27 +985,7 @@ html, body {
 }
 
 /* จอเตี้ยมาก (iPhone SE แนวนอน ~375px) — ลดหน่วยฐานลงอีกขั้นให้ทุกอย่างพอดีจอเดียว */
-@media (max-height: 430px) {
-  .screen--game { --u: clamp(5.6px, 1.45vh, 14px); --portrait: calc(var(--u) * 5); }
-  /* แถบ % ยังอยู่ครบ แต่บีบให้เตี้ยที่สุดเท่าที่ยังอ่านออก
-     ถ้าไม่บีบ คอลัมน์จะล้นแล้วไอคอนสกิลใบล่างจะถูกตัดจนลากไม่ได้ */
-  .op-gauge { margin-top: calc(var(--u) * 0.2); }
-  .op-gauge-head { margin-bottom: 0; }
-  .op-gauge-label { font-size: calc(var(--u) * 1); }
-  .op-gauge-pct { font-size: calc(var(--u) * 1.1); }
-  .op-gauge-track { height: calc(var(--u) * 0.45); }
-  .op-block { padding: calc(var(--u) * 0.25) calc(var(--u) * 0.5); }
-  .op-status { padding-top: calc(var(--u) * 0.4); }
-  .side-title { font-size: calc(var(--u) * 1.6); padding-bottom: calc(var(--u) * 0.2); }
-  .skill-icon-wrap { padding-top: calc(var(--u) * 0.95); }
-  .op-name { font-size: calc(var(--u) * 1.25); }
-  .skill-icon { width: calc(var(--u) * 3.7); height: calc(var(--u) * 3.7); }
-  .game-side { gap: calc(var(--u) * 0.55); }
-  .op-skills { gap: calc(var(--u) * 0.35); }
-  .game-top { padding: calc(var(--u) * 0.6) calc(var(--u) * 1.6); }
-  .game-body { padding: 0 calc(var(--u) * 1.6); }
-  .game-bottom { padding: calc(var(--u) * 0.8) calc(var(--u) * 1.6) calc(var(--u) * 0.9); }
-}
+
 
 /* ── Detail Feed: ผลภารกิจ (GAMESCREEN_SPEC §8) ────────────────── */
 .feed-card--late { border-color: #8a8f96; }
@@ -1023,7 +1033,7 @@ html, body {
    อ้างอิง docs/AFTERSHOCKMASTER.md §15.3
    ════════════════════════════════════════════════════════════════ */
 .screen--result {
-  --u: clamp(7px, 1.5vh, 15px);
+  --u: 9px;
   --ink: #1b1f24;
   --muted: #7c848e;
   background: #fff; color: var(--ink);
@@ -1033,7 +1043,7 @@ html, body {
 }
 
 .res-card {
-  width: min(calc(var(--u) * 46), 94vw);
+  width: calc(var(--u) * 46);
   display: flex; flex-direction: column;
   gap: calc(var(--u) * 1.1);
 }
@@ -1187,7 +1197,7 @@ html, body {
 /* ── §6 แผงเมนูเลื่อนออกมาจากซ้าย ─────────────────────────────── */
 .gm-panel {
   position: relative;
-  width: min(calc(var(--u) * 22), 62vw);
+  width: calc(var(--u) * 22);
   height: 100%;
   background: #fff;
   border-right: 2px solid var(--line);
@@ -1226,7 +1236,7 @@ html, body {
   padding: calc(var(--u) * 1.8) calc(var(--u) * 2.2);
   display: flex; flex-direction: column; align-items: center;
   gap: calc(var(--u) * 0.9);
-  max-width: 86vw;
+  max-width: 1100px;
 }
 .gm-card-title { font-size: calc(var(--u) * 2); font-weight: 800; text-align: center; }
 .gm-card-text {
@@ -1248,7 +1258,7 @@ html, body {
 .gm-card--notice { border-color: #e8484a; }
 
 /* ── §7 หน้าเวลาที่เหลือ ───────────────────────────────────────── */
-.gm-card--time { min-width: min(calc(var(--u) * 42), 88vw); }
+.gm-card--time { min-width: calc(var(--u) * 42); }
 
 .gm-time-head {
   display: flex; align-items: center; gap: calc(var(--u) * 1.2);
