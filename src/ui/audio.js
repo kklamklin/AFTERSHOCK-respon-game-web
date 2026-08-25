@@ -190,6 +190,29 @@ export function currentBgm() {
   return bgmKey;
 }
 
+/**
+ * กรอเพลงประจำฉากที่กำลังเล่นอยู่ไปที่วินาทีที่กำหนด
+ * ใช้ตอน Last Stand — ต้องคำนวณให้เพลงมาถึงท่อนที่ต้องการพอดีตอน QTE เปิด (§5)
+ * ไฟล์นี้เป็นที่เดียวที่แตะ <audio> ได้ ที่อื่นจึงต้องเรียกผ่านตัวนี้เสมอ
+ */
+export function seekBgm(key, seconds) {
+  const el = singles.get(key);
+  if (!el || bgmKey !== key) return false;
+  // ⚠️ กรอได้ก็ต่อเมื่อ "ที่ฝากไฟล์รองรับ Range request" (GitHub Pages รองรับ)
+  // ถ้าไม่รองรับ เบราว์เซอร์จะถือว่าไฟล์กรอไม่ได้แล้วดีดกลับไปวินาที 0 เอง
+  // กรณีนั้นปล่อยให้เพลงเล่นไปตามปกติ ดีกว่าไปตัดเพลงกลับไปเริ่มใหม่
+  if (!el.seekable || el.seekable.length === 0) return false;
+  const dur = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null;
+  el.currentTime = Math.max(0, dur ? seconds % dur : seconds);
+  return true;
+}
+
+/** ตอนนี้เพลงประจำฉากเล่นถึงวินาทีที่เท่าไหร่ (ใช้เช็คว่าต้องกรอแก้หรือยัง) */
+export function bgmPosition() {
+  const el = bgmKey && singles.get(bgmKey);
+  return el ? el.currentTime : 0;
+}
+
 // ── เสียงยาวเฉพาะกิจ (เล่นทับเพลงได้) ──────────────────────────
 export function startCue(key) {
   const el = singles.get(key);
@@ -235,6 +258,8 @@ export function attachClickSound() {
     unlockAudio(); // การกดครั้งแรกของผู้เล่นคือจังหวะปลดล็อกเสียงพอดี
     // แถบเลื่อนในหน้า Settings ลากแล้วจะยิงรัว ๆ — ไม่ต้องมีเสียงคลิก
     if (e.target?.closest?.('input')) return;
+    // ปุ่มของมินิเกมจังหวะมีเสียงของตัวเอง (ตรง/พลาด) เสียงคลิกจะซ้อนจนฟังไม่ออก
+    if (e.target?.closest?.('.qte-key')) return;
     if (e.target?.closest?.(CLICKABLE)) playSfx('click');
   }, true); // capture — ให้ได้ยินเสียงแม้ handler ข้างในจะ stopPropagation
 }

@@ -97,7 +97,8 @@ export function unitStatusLabel(state, opKey) {
     kind: unit.status,
     label: STATUS_LABEL[unit.status],
     loops: unit.recoverRemainLoops,
-    totalLoops: STATUS_TOTAL_LOOPS[unit.status]?.() ?? 0,
+    // Last Stand ต่อเวลาได้ด้วย QTE เวลาเต็มจึงไม่คงที่ — ยึดค่าที่ systems/status.js บันทึกไว้
+    totalLoops: unit.recoverTotalLoops || STATUS_TOTAL_LOOPS[unit.status]?.() || 0,
   };
 }
 

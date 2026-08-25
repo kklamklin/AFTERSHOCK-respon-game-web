@@ -1411,6 +1411,186 @@ img.game-icon {
   animation-duration: 0.9s;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   QTE ต่อเวลา Last Stand (ui/qte.js · ตัวเลขกฎอยู่ที่ CONFIG.qte)
+   อยู่ข้างในหน้าเกม จึงถูกย่อ/ขยายไปกับเวทีเอง ไม่ต้องคูณ --stage-scale
+   ทุกอย่างที่ขยับใช้ transform/opacity เท่านั้น (ดูกฎรอบ 10.11)
+   ══════════════════════════════════════════════════════════════ */
+.qte-wrap {
+  position: absolute; inset: 0; z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(80% 120% at 50% 50%, rgba(6,12,28,0.82), rgba(3,6,16,0.96));
+  opacity: 0; transition: opacity 320ms ease;
+}
+.qte-wrap.is-in { opacity: 1; }
+
+.qte-panel {
+  width: calc(var(--u) * 92); max-width: 96%;
+  padding: calc(var(--u) * 1.8) calc(var(--u) * 2.4) calc(var(--u) * 1.6);
+  border: 1px solid var(--line-hot); border-radius: calc(var(--u) * 0.8);
+  background: linear-gradient(180deg, rgba(16,34,68,0.96), rgba(8,16,36,0.97));
+  box-shadow: 0 0 calc(var(--u) * 4) rgba(69,208,255,0.28), inset 0 0 calc(var(--u) * 3) rgba(69,208,255,0.12);
+  transform: translateY(calc(var(--u) * 2.2)) scale(0.94);
+  transition: transform 380ms cubic-bezier(.2,1.3,.35,1);
+}
+.qte-wrap.is-in .qte-panel { transform: none; }
+/* สั่นทั้งแผงตอนพลาด — บอกด้วยการเคลื่อนไหว ไม่ต้องอ่านตัวหนังสือก็รู้ */
+.qte-wrap.is-shake .qte-panel { animation: qte-shake 260ms ease-out; }
+@keyframes qte-shake {
+  0%, 100% { transform: none; }
+  25%      { transform: translateX(calc(var(--u) * -0.7)); }
+  75%      { transform: translateX(calc(var(--u) * 0.7)); }
+}
+
+.qte-head { text-align: center; }
+.qte-title {
+  font-family: var(--font-display); font-size: calc(var(--u) * 2.9); font-weight: 800;
+  letter-spacing: calc(var(--u) * 0.28); color: var(--accent);
+  text-shadow: 0 0 calc(var(--u) * 1.4) rgba(69,208,255,0.6);
+}
+.qte-title.is-win  { color: var(--ok); text-shadow: 0 0 calc(var(--u) * 1.4) rgba(61,214,140,0.6); }
+.qte-title.is-lose { color: var(--danger); text-shadow: 0 0 calc(var(--u) * 1.4) rgba(229,72,77,0.6); }
+.qte-sub {
+  font-family: var(--font-ui); font-size: calc(var(--u) * 1.25); color: var(--ink-dim);
+  margin-top: calc(var(--u) * 0.3);
+}
+
+/* เวทีที่เสี้ยวหัวใจวิ่งเข้าหากัน */
+.qte-stage {
+  position: relative; height: calc(var(--u) * 15);
+  margin: calc(var(--u) * 0.8) 0 calc(var(--u) * 0.6);
+  overflow: hidden;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  background:
+    linear-gradient(90deg, rgba(8,16,36,0.9), rgba(12,26,54,0.55) 50%, rgba(8,16,36,0.9));
+}
+/* แถบไฮไลต์ = "กรอบที่กดทัน" จริง ๆ ความกว้างมาจาก CONFIG.qte ไม่ได้ตั้งด้วยตา */
+.qte-hit {
+  position: absolute; top: 0; bottom: 0; width: var(--qte-band, 46px);
+  opacity: 0.55; transition: opacity 160ms ease;
+}
+.qte-hit--left {
+  right: 50%; border-right: 2px solid rgba(61,214,140,0.9);
+  background: linear-gradient(90deg, rgba(61,214,140,0.05), rgba(61,214,140,0.55));
+}
+.qte-hit--right {
+  left: 50%; border-left: 2px solid rgba(232,193,63,0.9);
+  background: linear-gradient(90deg, rgba(232,193,63,0.55), rgba(232,193,63,0.05));
+}
+.qte-hit.is-hit { animation: qte-zone 320ms ease-out; }
+@keyframes qte-zone { 0% { opacity: 1; } 100% { opacity: 0.55; } }
+
+/* หัวใจเป้ากลางจอ — เสี้ยวที่วิ่งมาคือหัวใจดวงเดียวกันตัดครึ่ง จึงทับกันพอดีเป๊ะ */
+.qte-target {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(var(--u) * 9); height: calc(var(--u) * 8.8);
+}
+.qte-heart, .qte-note-heart, .qte-key-icon, .qte-life { width: 100%; height: 100%; display: block; }
+.qte-heart path {
+  fill: none; stroke: var(--accent); stroke-width: 5; stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(69,208,255,0.55));
+}
+.qte-target.is-beat { animation: qte-beat 300ms ease-out; }
+@keyframes qte-beat {
+  0%   { transform: translate(-50%, -50%) scale(1); }
+  35%  { transform: translate(-50%, -50%) scale(1.22); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+.qte-lane { position: absolute; inset: 0; }
+.qte-note {
+  position: absolute; left: 50%; top: 50%;
+  width: calc(var(--u) * 9); height: calc(var(--u) * 8.8);
+  will-change: transform;
+}
+.qte-note-heart path {
+  fill: none; stroke: var(--danger); stroke-width: 5; stroke-linejoin: round;
+  filter: drop-shadow(0 0 5px rgba(229,72,77,0.5));
+}
+/* ตัดครึ่ง: ตัวที่มาจากซ้ายคือ "ครึ่งซ้าย" ของหัวใจ ตัวที่มาจากขวาคือครึ่งขวา */
+.qte-note--left  .qte-note-heart { clip-path: inset(0 50% 0 0); }
+.qte-note--right .qte-note-heart { clip-path: inset(0 0 0 50%); }
+.qte-note.is-hit    { animation: qte-note-hit 340ms ease-out forwards; }
+.qte-note.is-missed { animation: qte-note-miss 340ms ease-out forwards; }
+@keyframes qte-note-hit  { to { opacity: 0; } }
+@keyframes qte-note-miss { to { opacity: 0; } }
+.qte-note.is-hit .qte-note-heart path    { stroke: var(--ok); }
+.qte-note.is-missed .qte-note-heart path { stroke: var(--muted); }
+
+/* ป้าย PERFECT / MISS เด้งขึ้นเหนือหัวใจ */
+.qte-callout {
+  position: absolute; left: 50%; top: 14%;
+  transform: translateX(-50%);
+  font-family: var(--font-display); font-size: calc(var(--u) * 2); font-weight: 800;
+  letter-spacing: calc(var(--u) * 0.2); opacity: 0; pointer-events: none;
+}
+.qte-callout.is-on { animation: qte-callout 620ms ease-out; }
+@keyframes qte-callout {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(calc(var(--u) * 0.8)); }
+  25%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(calc(var(--u) * -1)); }
+}
+.qte-callout--hit   { color: var(--ok); }
+.qte-callout--miss  { color: var(--danger); }
+.qte-callout--clear { color: var(--warn); }
+.qte-callout--go    { color: var(--accent); }
+.qte-callout--fail  { color: var(--danger); }
+
+/* ปุ่มซ้าย/ขวา — ในดราฟมีปุ่มเดียว แต่เกมจริงต้องแยกฝั่งให้ตรงกับเสี้ยวที่วิ่งมา
+   ขนาดตั้งไว้ให้กดด้วยนิ้วโป้งทั้งสองข้างบนมือถือได้จริง (ดูกฎ "ขนาดนิ้วกด" รอบ 10.10) */
+/* วางไว้คนละฝั่งของแผง ไม่ใช่ชิดกันตรงกลาง — ถือมือถือแนวนอนแล้วนิ้วโป้งสองข้าง
+   ถึงพอดี และตำแหน่งปุ่มยังบอกในตัวว่า "ปุ่มซ้ายรับเสี้ยวที่มาจากซ้าย" */
+.qte-keys { display: flex; justify-content: space-around; align-items: center; }
+.qte-key {
+  width: calc(var(--u) * 7.6); height: calc(var(--u) * 7.6); padding: calc(var(--u) * 1);
+  border: 2px solid var(--line-hot); border-radius: 50%;
+  background: radial-gradient(circle at 50% 32%, #12294f, #081428);
+  box-shadow: var(--glow); cursor: pointer; touch-action: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.qte-key-icon path { fill: none; stroke: var(--ink); stroke-width: 6; stroke-linejoin: round; }
+.qte-key-icon--left  { clip-path: inset(0 50% 0 0); transform: translateX(25%); }
+.qte-key-icon--right { clip-path: inset(0 0 0 50%); transform: translateX(-25%); }
+.qte-key--left  { border-color: var(--ok); }
+.qte-key--right { border-color: var(--warn); }
+.qte-key--left .qte-key-icon path  { stroke: var(--ok); }
+.qte-key--right .qte-key-icon path { stroke: var(--warn); }
+.qte-key.is-press { animation: qte-press 200ms ease-out; }
+@keyframes qte-press {
+  0% { transform: scale(1); } 40% { transform: scale(0.88); } 100% { transform: scale(1); }
+}
+
+.qte-foot {
+  display: flex; align-items: center; gap: calc(var(--u) * 1.4);
+  margin-top: calc(var(--u) * 1);
+}
+.qte-lives { display: flex; gap: calc(var(--u) * 0.5); flex: none; }
+.qte-life { width: calc(var(--u) * 2); height: calc(var(--u) * 2); }
+.qte-life path { fill: var(--danger); stroke: none; transition: fill 200ms ease, opacity 200ms ease; }
+.qte-life.is-gone path { fill: #2b3a52; }
+.qte-progress {
+  flex: 1; height: calc(var(--u) * 0.7); border-radius: 999px; overflow: hidden;
+  background: rgba(6,14,32,0.9); box-shadow: inset 0 0 0 1px var(--line);
+}
+.qte-progress-fill {
+  display: block; height: 100%; width: 100%;
+  transform-origin: left center; transform: scaleX(0);
+  background: linear-gradient(90deg, var(--accent), #fff);
+  transition: transform 180ms ease-out;
+}
+.qte-bonus {
+  flex: none; font-family: var(--font-mono); font-weight: 700;
+  font-size: calc(var(--u) * 1.5); color: var(--ok);
+}
+.qte-bonus.is-bump { animation: fx-bump 0.34s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .qte-wrap, .qte-panel { transition: none; }
+  .qte-callout.is-on, .qte-target.is-beat, .qte-key.is-press,
+  .qte-wrap.is-shake .qte-panel { animation: none; }
+}
+
 /* ── ป้ายประกาศ LAST STAND กลางจอ (ui/fx.js) ────────────────────
    อยู่บนชั้น .fx-layer ซึ่งอยู่นอกเวที จึงต้องย่อเองด้วยตัวคูณเดียวกับเวที
    (เหมือน .drag-ghost) ไม่งั้นบนมือถือจะตัวใหญ่เกินจอ

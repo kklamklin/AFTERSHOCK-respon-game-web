@@ -8,10 +8,12 @@
 import { OPERATORS } from '../data/operators.js';
 import { state, resetState } from '../state.js';
 import { CONFIG } from '../config.js';
-import { createClock, tickLoop } from '../systems/time.js';
+import { createClock, tickLoop, loopDurationMs } from '../systems/time.js';
 import { summarizeByTier } from '../systems/zones.js';
 import { skillStatus, unitStatusLabel, useGlobalSkill, unitReadiness, isLastStand } from '../systems/skills.js';
 import { resolveMission } from '../systems/outcomes.js';
+import { resolveLastStandQte } from '../systems/status.js';
+import { runLastStandQte } from './qte.js';
 import { OPERATORS as OPS_FOR_STATUS } from '../data/operators.js';
 import { createFeed } from './feed.js';
 import { attachDrag, cancelDrag } from './dragdrop.js';
@@ -20,7 +22,7 @@ import { renderMap, applyZoneColors, updateAllZones, updateZone, updateZoneMarke
 import { createGameMenu } from './gameMenu.js';
 import { iconNode, iconPath, iconEmoji } from '../data/icons.js';
 import { setAlertFrame, clearFx, fireSkillIcon, showLastStand } from './fx.js';
-import { setBgm, setBgmPaused } from './audio.js';
+import { setBgm, setBgmPaused, seekBgm, bgmPosition } from './audio.js';
 
 // เล่นอนิเมชั่นสั้น ๆ ซ้ำได้ — ถอดคลาสแล้ว reflow ก่อนใส่ใหม่ ไม่งั้นครั้งที่ 2 จะไม่เริ่ม
 function pulse(node, cls, ms) {
@@ -466,9 +468,12 @@ function buildZoomButtons() {
 let activeClock = null;
 let cancelSmooth = null;
 let activeMenu = null;
+let activeQte = null;   // มินิเกมต่อเวลา Last Stand ที่เปิดค้างอยู่ (ถ้ามี)
 
 export function stopGameClock() {
   cancelDrag();
+  activeQte?.destroy();   // ออกจากหน้าเกมกลางคัน มินิเกมต้องไม่ค้างอยู่
+  activeQte = null;
   activeClock?.stop();
   activeClock = null;
   cancelSmooth?.();
@@ -580,11 +585,53 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
   function syncGameBgm() {
     if (state.ended) return; // stopGameClock() สั่ง setBgm(null) ให้แล้ว
     const hoursLeft = CONFIG.totalLoops / CONFIG.loopsPerHour - state.hour;
-    // ระหว่าง Last Stand ใช้เพลงประจำสถานะทับเพลงปกติ
-    // พอสถานะหมด ลูปถัดไปเรียกฟังก์ชันนี้อีกครั้งแล้วเพลงเดิมจะกลับมาเองอัตโนมัติ
-    if (Object.keys(state.units).some((k) => state.units[k].status === 'laststand')) setBgm('lastStand');
-    else setBgm(hoursLeft <= CONFIG.bgmFinalHours ? 'gameFinal' : 'gameMain');
+    // ระหว่าง Last Stand ยึดเพลงหลัก (London Bridge) ไว้เสมอ ไม่สลับเป็นเพลงเร่ง
+    // เพราะจังหวะของ QTE ถูกวางให้ตรงกับท่อนหนึ่งของเพลงนี้ (ดู cueBgmForQte)
+    const inLastStand = Object.keys(state.units).some((k) => state.units[k].status === 'laststand');
+    setBgm(!inLastStand && hoursLeft <= CONFIG.bgmFinalHours ? 'gameFinal' : 'gameMain');
     setBgmPaused(!state.running && !bgmKeepPlaying);
+  }
+
+  // ── เพลงตอน Last Stand: กะให้ถึงท่อนที่ต้องการพอดีตอน QTE เปิด (§5) ──
+  //
+  // QTE เปิดตอนเวลา Last Stand หมด = อีก durationHours ชั่วโมงในเกมข้างหน้า
+  // แปลงเป็นเวลาจริงด้วยความเร็วนาฬิกาปัจจุบัน แล้ว "กรอเพลงถอยหลัง" ไปตั้งต้น
+  // เพลงจึงไหลไปถึงวินาที CONFIG.qte.bgmCueSec เองพอดีโดยไม่ต้องตัดกลางเพลง
+  //
+  // ถ้าผู้เล่นเปลี่ยนความเร็วหรือหยุดเวลาระหว่างนั้นจะคลาดไปบ้าง — ตอน QTE เปิดจริง
+  // จึงเช็คอีกครั้ง แล้วค่อยกรอแก้เฉพาะตอนคลาดเกิน 2 วินาที (คลาดนิดหน่อยไม่ต้องแตะ)
+  function cueBgmForQte() {
+    const realMs = CONFIG.lastStand.durationHours * CONFIG.loopsPerHour * loopDurationMs(state);
+    seekBgm('gameMain', CONFIG.qte.bgmCueSec - realMs / 1000);
+  }
+
+  function alignBgmToCue() {
+    if (Math.abs(bgmPosition() - CONFIG.qte.bgmCueSec) > 2) seekBgm('gameMain', CONFIG.qte.bgmCueSec);
+  }
+
+  // ── มินิเกมต่อเวลา Last Stand ────────────────────────────────
+  // เวลาในเกมหยุด แต่เพลงเล่นต่อ (เหมือนตอนลากไอคอน) เพราะจังหวะของมินิเกมอิงเพลง
+  function openQte(opKey) {
+    if (activeQte) return;
+    const wasRunning = state.running;
+    bgmKeepPlaying = true;
+    clock.setRunning(false);
+    top.paintSpeed();
+    syncGameBgm();
+    alignBgmToCue();
+
+    activeQte = runLastStandQte(root, (hoursGained) => {
+      activeQte = null;
+      const ev = resolveLastStandQte(state, opKey, hoursGained);
+      const name = OPS_FOR_STATUS[opKey].name;
+      if (hoursGained > 0) feed.pushNote(`${name} ยืนหยัดต่อได้อีก ${hoursGained} ชม.`, 'ok', 'recovered');
+      else if (ev) feed.pushNote(`${name} หมดแรง — หมดสติ`, 'hurt', 'laststand');
+      bgmKeepPlaying = false;
+      paintAll();
+      if (wasRunning) clock.setRunning(true);
+      top.paintSpeed();
+      syncGameBgm();
+    });
   }
 
   function paintLive() {
@@ -632,11 +679,14 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
             note: 'ทุกสกิลไม่คิด AP · ลงพื้นที่ได้ทุกโซน · เร็วขึ้นเท่าตัว',
           });
           syncGameBgm();
+          cueBgmForQte();
         }
       },
       // ฟื้นตัว / หมดเวลา Last Stand — แจ้งใน Feed ให้ผู้เล่นรู้
       onStatusChange: ({ opKey, from, to }) => {
         const name = OPS_FOR_STATUS[opKey].name;
+        // เวลา Last Stand หมด → ยังไม่ล้ม เปิดมินิเกมต่อเวลาก่อน (systems/status.js เป็นคนบอก)
+        if (to === 'qte') { openQte(opKey); return; }
         if (from === 'laststand') feed.pushNote(`${name} หมดแรง — หมดสติ`, 'hurt', 'laststand');
         else if (to === 'normal') feed.pushNote(`${name} กลับมาพร้อมปฏิบัติงาน`, 'ok', 'recovered');
       },

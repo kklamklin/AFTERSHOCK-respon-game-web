@@ -29,6 +29,9 @@ export function rollDanger(state, opKey, zone) {
   if (canEnterLastStand(state, opKey)) {
     unit.status = 'laststand';
     unit.recoverRemainLoops = hours(CONFIG.lastStand.durationHours);
+    // เก็บ "เวลาเต็มของสถานะนี้" ไว้ด้วย เพราะ QTE ต่อเวลาได้ทีหลัง
+    // แถบ % บนการ์ดต้องรู้ว่าตอนนี้เต็มเท่าไหร่ ไม่งั้นต่อเวลาแล้วแถบจะเพี้ยน
+    unit.recoverTotalLoops = unit.recoverRemainLoops;
     state.lastStandUsed = true;
     state.stats.injuries += 1;
     return { hit: true, chance, to: 'laststand' };
@@ -49,6 +52,29 @@ export function canEnterLastStand(state, opKey) {
 }
 
 /**
+ * ปิดผลของมินิเกมต่อเวลา Last Stand — ui/ เรียกเมื่อผู้เล่นเล่นจบ
+ * ได้เวลามา > 0 ชม. → อยู่ในสถานะ Last Stand ต่อ · ได้ 0 → ล้มทันทีตามกฎเดิม (§5.4)
+ * @param hoursGained ชั่วโมงที่ต่อได้ (2 ต่อ 1 รอบที่ผ่าน)
+ */
+export function resolveLastStandQte(state, opKey, hoursGained) {
+  const unit = state.units[opKey];
+  state.lastStandQte = 'done';
+  if (unit.status !== 'laststand') return null;
+
+  if (hoursGained > 0) {
+    unit.recoverRemainLoops = hours(hoursGained);
+    unit.recoverTotalLoops = (unit.recoverTotalLoops ?? 0) + unit.recoverRemainLoops;
+    return { opKey, from: 'laststand', to: 'laststand', hoursGained };
+  }
+
+  unit.status = 'lost';
+  unit.recoverRemainLoops = hours(CONFIG.lostConsciousHours);
+  unit.recoverTotalLoops = unit.recoverRemainLoops;
+  state.stats.blackouts += 1;
+  return { opKey, from: 'laststand', to: 'lost', hoursGained: 0 };
+}
+
+/**
  * เดินตัวนับฟื้นตัวและเปลี่ยนสถานะเมื่อหมดเวลา — เรียกทุกลูป
  * @returns array ของเหตุการณ์ [{ opKey, from, to }]
  */
@@ -60,13 +86,30 @@ export function tickRecovery(state) {
 
     const from = unit.status;
     if (from === 'laststand') {
-      // หมดเวลา Last Stand → ล้มทันที (§5.4)
+      // หมดเวลา Last Stand — ยังไม่ล้มทันที ให้ผู้เล่นเล่น QTE ต่อเวลาก่อน 1 ครั้ง
+      // ตัวสถานะยังเป็น laststand อยู่ ตัวนับค้างที่ 0 จนกว่า resolveLastStandQte() จะถูกเรียก
+      if (state.lastStandQte == null) {
+        state.lastStandQte = 'pending';
+        state.lastStandQtePendingLoops = 0;
+        events.push({ opKey, from, to: 'qte' });
+        continue;
+      }
+      if (state.lastStandQte === 'pending') {
+        // ปกติเวลาหยุดตอนเล่นมินิเกม บรรทัดนี้จึงไม่ควรถูกเรียกเลย
+        // ถ้าถูกเรียกแปลว่าไม่มีใครเปิดมินิเกมให้ → ถือว่าอดต่อเวลา ไม่ปล่อยให้ค้าง
+        state.lastStandQtePendingLoops = (state.lastStandQtePendingLoops ?? 0) + 1;
+        if (state.lastStandQtePendingLoops <= CONFIG.qte.pendingGraceLoops) continue;
+        state.lastStandQte = 'done';
+      }
+      // เล่น QTE ไปแล้ว (หรือหมดสิทธิ์) → ล้มตามกฎเดิม (§5.4)
       unit.status = 'lost';
       unit.recoverRemainLoops = hours(CONFIG.lostConsciousHours);
+      unit.recoverTotalLoops = unit.recoverRemainLoops;
       state.stats.blackouts += 1;
     } else {
       unit.status = 'normal';
       unit.recoverRemainLoops = 0;
+      unit.recoverTotalLoops = 0;
     }
     events.push({ opKey, from, to: unit.status });
   }
