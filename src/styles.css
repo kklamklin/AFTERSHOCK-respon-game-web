@@ -1764,3 +1764,56 @@ img.game-icon {
   accent-color: var(--accent);
   height: 22px; cursor: pointer;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   หน้าบอกให้หมุนจอ — เกมบังคับแนวนอน (markup อยู่ใน index.html)
+   ใช้ media query อย่างเดียว ไม่พึ่ง JS จะได้ขึ้นทันทีแม้โค้ดยังโหลดไม่เสร็จ
+   ══════════════════════════════════════════════════════════════ */
+.rotate-gate { display: none; }
+
+@media (orientation: portrait) {
+  .rotate-gate {
+    position: fixed; inset: 0; z-index: 9000;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 18px; padding: 24px; text-align: center;
+    background:
+      radial-gradient(120% 90% at 50% 10%, #14315e 0%, rgba(10,18,38,0) 60%),
+      linear-gradient(180deg, #0a1226 0%, #060b18 100%);
+    color: var(--ink);
+    font-family: var(--font-ui);
+  }
+  /* กันเกมเดินอยู่ข้างหลังโดยที่ผู้เล่นมองไม่เห็น — ซ่อนหน้าจอเกมไปเลยตอนจอตั้ง */
+  #screen-root { visibility: hidden; }
+}
+
+.rotate-phone {
+  width: min(46vw, 190px); height: auto;
+  animation: rotate-tilt 2.6s ease-in-out infinite;
+}
+.rotate-body {
+  fill: none; stroke: var(--accent); stroke-width: 3.5;
+  filter: drop-shadow(0 0 6px rgba(69, 208, 255, 0.55));
+}
+.rotate-speaker { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; }
+.rotate-arrow { fill: none; stroke: var(--ink-dim); stroke-width: 3; stroke-linecap: round; }
+.rotate-head { fill: var(--ink-dim); }
+
+/* เอียงไปมาให้เห็นว่าต้องหมุน — ไม่หมุน 90° เต็มเพราะจะดูเหมือนภาพค้าง */
+@keyframes rotate-tilt {
+  0%, 45%   { transform: rotate(0deg); }
+  70%, 88%  { transform: rotate(-82deg); }
+  100%      { transform: rotate(0deg); }
+}
+
+.rotate-title {
+  font-family: var(--font-display);
+  font-size: clamp(20px, 5.5vw, 30px); font-weight: 700; letter-spacing: 2px;
+  color: #fff; text-shadow: 0 0 16px rgba(69, 208, 255, 0.6);
+  line-height: 1.5;
+}
+.rotate-note { font-size: clamp(13px, 3.6vw, 17px); color: var(--muted); line-height: 1.5; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rotate-phone { animation: none; transform: rotate(-82deg); }
+}
