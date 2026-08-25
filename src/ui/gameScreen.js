@@ -215,6 +215,7 @@ function buildSkillRow(speciesKey, skillId, skill) {
   row.appendChild(costs);
 
   // ทาสีใหม่ตามสถานะปัจจุบัน — เรียกทุกลูป
+  let shownCd = null;
   function paint() {
     const st = skillStatus(state, speciesKey, skillId);
     row.classList.toggle('is-using', st.using);
@@ -223,9 +224,11 @@ function buildSkillRow(speciesKey, skillId, skill) {
     row.classList.toggle('is-blocked', !st.usable && !st.using && st.reason !== 'cooldown');
     row.classList.toggle('is-noap', st.reason === 'no-ap');
     // คูลดาวน์นับเป็นครึ่งชั่วโมง ทศนิยมตำแหน่งเดียวจึงพอดีและไม่ล้นวงกลม
-    cd.textContent = st.cooldownLoops > 0
+    // เขียนเฉพาะตอนเลขเปลี่ยนจริง (เหตุผลเดียวกับแถบ% ด้านล่าง — เรียกถี่มาก)
+    const cdText = st.cooldownLoops > 0
       ? (st.cooldownLoops / CONFIG.loopsPerHour).toFixed(1)
       : '';
+    if (cdText !== shownCd) { cd.textContent = cdText; shownCd = cdText; }
 
     if (st.maxStacks != null) {
       if (dots.childElementCount !== st.maxStacks) {
@@ -292,6 +295,8 @@ function buildOperator(speciesKey) {
   let shownSprite = null;
   let shownKind = null;
   let shownReady = null;
+  let shownPct = null;
+  let shownTime = null;
 
   function paint(frac) {
     const st = unitStatusLabel(state, speciesKey);
@@ -303,8 +308,16 @@ function buildOperator(speciesKey) {
       gaugeLabel.textContent = READY_TEXT[rd.kind] ?? '';
       shownReady = rd.kind;
     }
-    gaugePct.textContent = `${Math.round(rd.pct)}%`;
-    gaugeFill.style.width = `${rd.pct}%`;
+    // ⚠️ เขียนลงหน้าเว็บเฉพาะตอนเลข "เปลี่ยนจริง" เท่านั้น
+    // ฟังก์ชันนี้ถูกเรียกถี่มาก การสั่งเขียนค่าเดิมซ้ำก็ยังทำให้เบราว์เซอร์
+    // ต้องคำนวณผังหน้าใหม่ทั้งหน้า — เดิมจึงคำนวณผังใหม่ทุกเฟรมโดยไม่จำเป็น
+    // (%ปัดเป็นจำนวนเต็มอยู่แล้ว ปัดความกว้างแถบตามให้ตรงกัน ตาเปล่าไม่เห็นต่าง)
+    const pct = Math.round(rd.pct);
+    if (pct !== shownPct) {
+      gaugePct.textContent = `${pct}%`;
+      gaugeFill.style.width = `${pct}%`;
+      shownPct = pct;
+    }
 
     // สไปรต์เปลี่ยนตามสถานะ — ตั้ง src ใหม่เฉพาะตอนเปลี่ยนจริง ไม่งั้นรูปจะกะพริบทุกลูป
     const sprite = portraitFor(op, st?.kind);
@@ -320,9 +333,11 @@ function buildOperator(speciesKey) {
         statusLabel.textContent = st.label;
         shownKind = st.kind;
       }
-      statusTime.textContent = loopsToHours(st.loops, frac);
+      const t = loopsToHours(st.loops, frac);
+      if (t !== shownTime) { statusTime.textContent = t; shownTime = t; }
     } else {
       shownKind = null;
+      shownTime = null;
     }
 
     for (const r of skillRows) r.paint();
@@ -609,10 +624,19 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
   }
 
   // ตัวเลขนับถอยหลังข้างรูป จนท. เดินระหว่างลูปด้วย ไม่กระตุกทีละครึ่งชั่วโมง
+  //
+  // ⚠️ วาดสูงสุด 30 ครั้ง/วินาที พอ — ไม่ต้อง 60
+  // ตัวเลขที่ไหลจริง ๆ มีแค่ทศนิยม 2 ตำแหน่งของชั่วโมง ซึ่งเปลี่ยนราว 20 ครั้ง/วินาที
+  // วาดถี่กว่านั้นคือทำงานทิ้งเปล่า ๆ และบนมือถือคือส่วนที่ทำให้เกมหนืดที่สุด
+  const LIVE_MS = 33;
   let rafId = null;
-  function smoothLoop() {
+  let lastLive = 0;
+  function smoothLoop(now = 0) {
     rafId = requestAnimationFrame(smoothLoop);
-    if (state.running && !state.ended) paintLive();
+    if (!state.running || state.ended) return;
+    if (now && now - lastLive < LIVE_MS) return; // รอบแรก now = 0 → วาดเลย
+    lastLive = now;
+    paintLive();
   }
   smoothLoop();
   cancelSmooth = () => { if (rafId) cancelAnimationFrame(rafId); rafId = null; };

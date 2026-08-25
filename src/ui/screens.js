@@ -16,8 +16,13 @@ import { getPrefs, setPref, onPrefsChange, brightnessFactor } from '../data/pref
 
 // ความสว่างหน้าจอ — ผูกครั้งเดียวตอนโหลด แล้วอัปเดตเองทุกครั้งที่ค่าเปลี่ยน
 // ใส่ที่ <html> เพื่อให้ครอบทั้งหน้าจอเกมและชั้นเอฟเฟกต์ (ui/fx.js) ที่อยู่นอก #screen-root
+// ⚠️ ติด class `is-dimmed` เฉพาะตอนความสว่างไม่ใช่ค่าปกติ — filter ที่เปิดค้างไว้
+// (แม้จะเป็น brightness(1) ที่ไม่เปลี่ยนอะไรเลย) บังคับให้เบราว์เซอร์วาดทั้งเวทีใหม่ทุกเฟรม
+// บน iOS อาการคือเกมหนืดตลอดเวลา ทั้งที่ภาพเหมือนเดิมเป๊ะ
 onPrefsChange((prefs) => {
-  document.documentElement.style.setProperty('--ui-brightness', brightnessFactor(prefs.brightness));
+  const f = brightnessFactor(prefs.brightness);
+  document.documentElement.style.setProperty('--ui-brightness', f);
+  document.documentElement.classList.toggle('is-dimmed', Math.abs(f - 1) > 0.001);
 });
 
 // ลำดับต้องตรงกับหน้าตาดราฟ: มนุษย์(หน้ากาก) → แมว → เอลฟ์(Lia) → ภูต(Mudongzock)

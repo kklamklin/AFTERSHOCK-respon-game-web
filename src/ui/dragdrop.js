@@ -66,8 +66,10 @@ function startDrag(e, iconEl, opKey, skillId, ctx) {
 }
 
 function moveGhost(x, y) {
-  active.ghost.style.left = `${x}px`;
-  active.ghost.style.top = `${y}px`;
+  // ขยับด้วย transform (ผ่านตัวแปร --gx/--gy ที่ styles.css เอาไปใช้)
+  // ไม่ใช้ left/top เพราะสองอันนั้นทำให้เบราว์เซอร์ต้องคำนวณผังหน้าใหม่ทุกครั้ง
+  active.ghost.style.setProperty('--gx', `${x}px`);
+  active.ghost.style.setProperty('--gy', `${y}px`);
 }
 
 // หาโซนที่อยู่ใต้ปลายนิ้ว — ghost กับเลเยอร์ทับต่าง ๆ ตั้ง pointer-events:none ไว้แล้ว
@@ -86,10 +88,25 @@ function updateHover(x, y) {
   active.ctx.onHoverZone?.(id, active.opKey, active.skillId);
 }
 
+// นิ้วขยับยิงเหตุการณ์ถี่กว่าจอวาดจริง (มือถือบางรุ่น 120 ครั้ง/วินาที)
+// จึงเก็บตำแหน่งล่าสุดไว้แล้วทำงานจริงแค่รอบละ 1 ครั้งต่อการวาดจอ 1 เฟรม
+// สำคัญเพราะ updateHover() ต้องถาม "ใต้นิ้วคือโซนไหน" ซึ่งบังคับให้เบราว์เซอร์
+// คำนวณผังหน้าใหม่ทันที — ทำถี่เกินจำเป็นคือสาเหตุที่ลากแล้วรู้สึกหนืด
+let pending = null;
+let pendingRaf = 0;
+
+function flushMove() {
+  pendingRaf = 0;
+  if (!active || !pending) return;
+  moveGhost(pending.x, pending.y);
+  updateHover(pending.x, pending.y);
+  pending = null;
+}
+
 function onMove(e) {
   if (!active || e.pointerId !== active.pointerId) return;
-  moveGhost(e.clientX, e.clientY);
-  updateHover(e.clientX, e.clientY);
+  pending = { x: e.clientX, y: e.clientY };
+  if (!pendingRaf) pendingRaf = requestAnimationFrame(flushMove);
 }
 
 function onUp(e) {
@@ -114,6 +131,10 @@ function onKey(e) {
 
 function endDrag() {
   if (!active) return;
+  // ทิ้งตำแหน่งที่ยังค้างอยู่ ไม่ให้ไปขยับไอคอนผีของการลากครั้งถัดไป
+  if (pendingRaf) cancelAnimationFrame(pendingRaf);
+  pendingRaf = 0;
+  pending = null;
   const { iconEl, ghost, handle, ctx, wasRunning, pointerId } = active;
   active = null; // เคลียร์ก่อน เผื่อ handler ด้านล่างวนกลับเข้ามา
 

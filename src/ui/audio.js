@@ -33,7 +33,9 @@ let bgmPaused = false;
 function makeNode(key) {
   const spec = SOUNDS[key];
   const el = new Audio(soundPath(key));
-  el.preload = 'auto';
+  // ไฟล์ที่ตั้ง lazy ไว้ (เพลงในเกม 11 MB + 1.6 MB) ยังไม่ต้องโหลดตอนเปิดเกม
+  // ไม่งั้นเน็ตมือถือจะถูกดูดไปกับเพลงจนหน้าแรกกับรูปตัวละครมาช้า = "แล็ค" ตั้งแต่เริ่ม
+  el.preload = spec.lazy ? 'none' : 'auto';
   el.crossOrigin = 'anonymous';
   el.dataset.sound = key;
   if (spec.kind === 'bgm') el.loop = true; // เพลงประจำฉากวนซ้ำเสมอ จนกว่าจะถูกสั่งเปลี่ยน
@@ -117,6 +119,25 @@ export function unlockAudio() {
   unlocked = true;
   ctx?.resume?.().catch(() => {});
   if (bgmKey && !bgmPaused) singles.get(bgmKey)?.play?.().catch(() => {});
+  warmLazySounds();
+}
+
+// เริ่มโหลดไฟล์เสียงก้อนใหญ่ "หลังจาก" หน้าแรกขึ้นครบแล้ว
+// 2 วินาทีหลังผู้เล่นแตะหน้าปก — ตอนนั้นอยู่หน้าเมนู/หน้าสอนเล่น ยังเหลือเวลาอีกเป็นนาที
+// กว่าจะถึงหน้าเกมจริง เพลงจึงโหลดทันแน่นอน โดยไม่ไปแย่งเน็ตตอนเปิดเกม
+function warmLazySounds() {
+  setTimeout(() => {
+    for (const [key, spec] of Object.entries(SOUNDS)) {
+      if (!spec.lazy) continue;
+      const nodes = pools.get(key)?.nodes ?? [singles.get(key)];
+      for (const el of nodes) {
+        // ถ้ากำลังเล่นอยู่แล้วห้ามสั่ง load() ซ้ำ — มันจะดีดกลับไปเริ่มใหม่
+        if (!el || !el.paused || el.preload === 'auto') continue;
+        el.preload = 'auto';
+        el.load();
+      }
+    }
+  }, 2000);
 }
 
 /** เสียงสั้น — เล่นซ้อนกันได้ ไม่ตัดตัวเอง */

@@ -29,6 +29,11 @@ const gainFor = (target, measured) => +(target / measured).toFixed(2);
  *   'sfx' = เสียงสั้น เล่นซ้อนกันได้ (ต้องมีหลายก๊อปปี้ ไม่งั้นกดรัว ๆ แล้วเสียงตัดกันเอง)
  *   'bgm' = เพลงประจำฉาก เล่นทีละเพลง วนซ้ำ สลับด้วย setBgm()
  *   'cue' = เสียงยาวเฉพาะกิจ เล่นทับเพลงได้ (ตอนนี้มีแค่เสียงนับคะแนน)
+ *
+ * lazy: true = "ยังไม่ต้องรีบโหลด" — ไฟล์ใหญ่ที่ยังไม่ได้ใช้ในไม่กี่วินาทีแรก
+ *   ไฟล์เสียงรวมกัน 13 MB ถ้าโหลดพร้อมกันหมดตอนเปิดเกม เน็ตมือถือจะตันจนหน้าแรกหนืด
+ *   ตัวที่ lazy จะเริ่มโหลดหลังผู้เล่นแตะหน้าปกไปแล้ว 2 วินาที (ดู ui/audio.js)
+ *   ตอนนั้นยังอยู่หน้าเมนู/หน้าสอนเล่น เหลือเวลาโหลดอีกเป็นนาทีก่อนจะได้ใช้จริง
  */
 export const SOUNDS = {
   // ── เสียงสั้น ──────────────────────────────────────────────────
@@ -40,13 +45,13 @@ export const SOUNDS = {
   // หน้าเมนูและหน้าสรุปผล — เล่นต่อเนื่องข้ามหน้า Settings/Intel ไม่เริ่มใหม่
   menu:         { file: 'result.mp3',        kind: 'bgm', gain: gainFor(BGM_TARGET, 0.6412) },
   // หน้าเกมช่วงปกติ (7:45 — ยาวกว่าเกมหนึ่งรอบ แต่ตั้งวนซ้ำไว้เผื่อเล่นช้า)
-  gameMain:     { file: 'London Bridge.mp3', kind: 'bgm', gain: gainFor(BGM_TARGET, 0.4047) },
+  gameMain:     { file: 'London Bridge.mp3', kind: 'bgm', lazy: true, gain: gainFor(BGM_TARGET, 0.4047) },
   // หน้าเกมช่วง 12 ชั่วโมงท้าย — ไฟล์ยาว 51 วิ วนซ้ำจนหมดเกม
-  gameFinal:    { file: '1minuteleft!.mp3',  kind: 'bgm', gain: gainFor(BGM_TARGET, 0.5819) },
+  gameFinal:    { file: '1minuteleft!.mp3',  kind: 'bgm', lazy: true, gain: gainFor(BGM_TARGET, 0.5819) },
 
   // ── เสียงยาวเฉพาะกิจ ─────────────────────────────────────────
   // ตอนตัวเลขคะแนนวิ่งในหน้า Result — เล่นทับเพลงหน้าสรุปผล
-  pointCounter: { file: 'point-counter.mp3', kind: 'cue', gain: gainFor(SFX_TARGET, 0.2144) },
+  pointCounter: { file: 'point-counter.mp3', kind: 'cue', lazy: true, gain: gainFor(SFX_TARGET, 0.2144) },
 };
 
 export function soundPath(key) {
