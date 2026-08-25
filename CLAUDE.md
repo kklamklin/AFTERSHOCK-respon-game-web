@@ -100,9 +100,26 @@
 
 deploy ผ่าน **GitHub Pages** แล้วทำ QR code ให้เพื่อนสแกนเล่นบนมือถือ
 
+**ขึ้นเว็บแล้ว → https://kklamklin.github.io/AFTERSHOCK-respon-game-web/**
+
+⚠️ **repo ถูกเปลี่ยนชื่อจาก `game-web` เป็น `AFTERSHOCK-respon-game-web`**
+แต่ `git remote` ยังต้องชี้ชื่อเดิม `github.com/kklamklin/game-web` — GitHub redirect ให้เอง
+(ลองเปลี่ยนไปชื่อใหม่แล้ว push ไม่ผ่าน เพราะ proxy ของ session อนุญาตแค่ชื่อเดิม)
+
 repo นี้มี branch เดียว (`claude/folder-structure-planning-0003vf`) ซึ่งเป็น default branch อยู่แล้ว
-**Pages เสิร์ฟจาก branch นี้ได้ตรง ๆ ไม่ต้อง merge ไปไหน**
-เปิดที่ Settings → Pages → Source: Deploy from a branch → เลือก branch นี้ + `/ (root)`
+**Pages เสิร์ฟจาก branch นี้ตรง ๆ ไม่ต้อง merge ไปไหน**
+Settings → Pages → Source: Deploy from a branch → branch นี้ + `/ (root)`
+
+**push ขึ้น branch นี้เมื่อไหร่ เว็บอัปเดตเองใน 1-2 นาที**
+
+### QR code — อยู่ที่ `qr/`
+
+- `qr/AFTERSHOCKS-QR.png` — การ์ดพร้อมใช้ (ฉายขึ้นจอ / ปรินต์)
+- `qr/qr-plain.svg` — เฉพาะตัว QR ขยายเท่าไหร่ก็คมเพราะเป็นเวกเตอร์
+
+**สร้างด้วยโค้ดที่เขียนเอง** (`scratchpad/qr.py`) เพราะเครื่องนี้ไม่มีไลบรารี QR
+ตรวจย้อนกลับด้วยการถอดรหัสจากตารางที่วาดเสร็จ + เช็ค Reed-Solomon syndrome ว่าเป็นศูนย์
+**ถ้าเปลี่ยน URL ต้องสร้าง QR ใหม่** — QR ฝัง URL ไว้ข้างใน แก้ชื่อ repo แล้วอันเก่าจะพาไปหน้า 404
 
 มี `.nojekyll` ที่ราก — กัน Jekyll ของ GitHub ไปยุ่งกับไฟล์ ต้องมีเสมอ ห้ามลบ
 
@@ -155,6 +172,7 @@ markup อยู่ใน `index.html` (HTML นิ่ง ๆ ไม่ผ่า
 | 10.6 | **ธีมหน้าจอสั่งการ** — น้ำเงินไฮเทค · ตึกเวกเตอร์ · แถบ % · ฟอนต์ | ✅ |
 | 10.7 | **เพลงประจำฉาก + Settings ใช้ได้จริง** | ✅ |
 | 10.8 | เตรียมขึ้น GitHub Pages (หน้าหมุนจอ · meta · favicon) | ✅ |
+| 10.9 | **ขึ้นเว็บจริงแล้ว + QR code** | ✅ |
 
 ## การปรับบาลานซ์รอบ 8.5 — เคาะกับเจ้าของแล้ว
 
