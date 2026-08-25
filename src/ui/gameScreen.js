@@ -555,11 +555,16 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
   // setBgm() ไม่เริ่มเพลงใหม่ถ้าเป็นเพลงเดิม เรียกทุกลูปได้ไม่มีปัญหา
   // และเพลงต้อง "หยุดตามเวลา" ด้วย — จุดนี้เคยพลาดมาแล้ว เพลงเล่นต่อทั้งที่กดหยุดเกม
   // ตอนนี้จึงเรียกจากที่เดียวกับที่เดินเวลา และเจ้าของสถานะเพลงมีคนเดียวคือ ui/audio.js
+  // ตอนลากไอคอน เวลาหยุดก็จริง แต่ "เพลงต้องเล่นต่อ" (เจ้าของสั่ง)
+  // เพราะการลากคือช่วงที่ผู้เล่นกำลังคิดอยู่ในเกม ไม่ใช่ช่วงที่พักจากเกม
+  // ต่างจากการกดปุ่มหยุด/เปิดเมนู ☰/เข้า Settings ซึ่งต้องหยุดเพลงด้วย
+  let bgmKeepPlaying = false;
+
   function syncGameBgm() {
     if (state.ended) return; // stopGameClock() สั่ง setBgm(null) ให้แล้ว
     const hoursLeft = CONFIG.totalLoops / CONFIG.loopsPerHour - state.hour;
     setBgm(hoursLeft <= CONFIG.bgmFinalHours ? 'gameFinal' : 'gameMain');
-    setBgmPaused(!state.running);
+    setBgmPaused(!state.running && !bgmKeepPlaying);
   }
 
   function paintLive() {
@@ -656,8 +661,19 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
 
   // ต่อสายให้ตัวลากวาง: หยุด/เดินเวลา · หาแผนที่ · วาดใหม่หลังวางเสร็จ
   dragCtx.getMapHandle = () => mapHandle;
-  dragCtx.pause = () => { clock.setRunning(false); syncGameBgm(); };
-  dragCtx.resume = () => { clock.setRunning(true); syncGameBgm(); };
+  // ⚠️ ให้เพลงเล่นต่อเฉพาะกรณีที่ "ก่อนลาก เวลาเดินอยู่" เท่านั้น
+  // ถ้าผู้เล่นกดหยุดเกมไว้ก่อนแล้วค่อยลาก เพลงต้องเงียบอยู่เหมือนเดิม
+  // (ตอนนั้น dragdrop.js จะไม่เรียก resume ตอนปล่อยด้วย ธงจึงต้องไม่ถูกยกขึ้นตั้งแต่แรก)
+  dragCtx.pause = () => {
+    bgmKeepPlaying = state.running;
+    clock.setRunning(false);
+    syncGameBgm();
+  };
+  dragCtx.resume = () => {
+    bgmKeepPlaying = false;
+    clock.setRunning(true);
+    syncGameBgm();
+  };
   dragCtx.onChange = () => { bottom.showZone(null); paintAll(); top.paintSpeed(); };
   dragCtx.onHoverZone = (zoneId, opKey, skillId) => bottom.showZone(zoneId, opKey, skillId);
 
