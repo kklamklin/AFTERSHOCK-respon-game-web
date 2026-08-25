@@ -41,7 +41,10 @@ export function resolveMission(state, opKey) {
 
   // อัตราสำเร็จคิดจากบัฟ ณ ตอนงานจบ (บัฟที่ลงทีหลังจึงมีผลจริง)
   // ยกเว้นโทษบาดเจ็บ — ถ้าออกเดินทางตอน Last Stand ให้ถือว่าไม่บาดเจ็บตลอดภารกิจ (§5.3)
-  const br = successBreakdown(state, opKey, zone, { ignoreInjured: mission.lastStand });
+  const br = successBreakdown(state, opKey, zone, {
+    ignoreInjured: mission.lastStand,
+    lastStand: mission.lastStand,
+  });
   const rate = br.total;
 
   const roll = roll100();
@@ -54,7 +57,12 @@ export function resolveMission(state, opKey) {
     return { ...base, kind: 'fail', rate, roll, danger };
   }
 
-  const { tier, pct } = rollRescuePct(opKey);
+  const roll2 = rollRescuePct(opKey);
+  const tier = roll2.tier;
+  // Last Stand ดึงคนออกได้มากขึ้นอีก 10% ของโซน (§5.2) — เพดานยังเป็น 100%
+  const pct = mission.lastStand
+    ? Math.min(100, roll2.pct + CONFIG.lastStand.rescuePctBonus)
+    : roll2.pct;
   const trapped = zone.trapped;
   const saved = Math.floor((trapped * pct) / 100);
   const died = trapped - saved;

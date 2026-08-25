@@ -20,10 +20,16 @@ export function buffsOn(state, zone) {
   return [...zone.buffs, ...state.globalBuffs];
 }
 
-export function successBreakdown(state, opKey, zone, { ignoreInjured = false } = {}) {
+export function successBreakdown(state, opKey, zone, { ignoreInjured = false, lastStand = null } = {}) {
   const parts = [];
 
   parts.push({ key: 'base', label: OPERATORS[opKey].name, value: CONFIG.fieldSkills[opKey].base });
+
+  // Last Stand ดันโอกาสสำเร็จขึ้นอีก 10 (§5.2)
+  // ตอนคิดผลจริงส่ง lastStand มาจากภารกิจ เพราะต้องยึดเงื่อนไข "ตอนออกเดินทาง"
+  // ตอนโชว์แผงระหว่างลาก ไม่ส่งมา จึงดูจากสถานะปัจจุบันแทน
+  const inLastStand = lastStand ?? state.units[opKey].status === 'laststand';
+  if (inLastStand) parts.push({ key: 'laststand', label: 'Last Stand', value: CONFIG.lastStand.rateBonus });
 
   for (const b of buffsOn(state, zone)) {
     if (b.rate) parts.push({ key: b.type, label: BUFF_NAME[b.type] ?? b.type, value: b.rate });

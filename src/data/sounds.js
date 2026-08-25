@@ -48,6 +48,8 @@ export const SOUNDS = {
   gameMain:     { file: 'London Bridge.mp3', kind: 'bgm', lazy: true, gain: gainFor(BGM_TARGET, 0.4047) },
   // หน้าเกมช่วง 12 ชั่วโมงท้าย — ไฟล์ยาว 51 วิ วนซ้ำจนหมดเกม
   gameFinal:    { file: '1minuteleft!.mp3',  kind: 'bgm', lazy: true, gain: gainFor(BGM_TARGET, 0.5819) },
+  // ช่วง Last Stand ของ Robertson (ไฟล์ยาว 2:08) — ทับเพลงปกติจนกว่าสถานะจะหมด
+  lastStand:    { file: 'Stand Alone.mp3',   kind: 'bgm', lazy: true, gain: gainFor(BGM_TARGET, 0.7246) },
 
   // ── เสียงยาวเฉพาะกิจ ─────────────────────────────────────────
   // ตอนตัวเลขคะแนนวิ่งในหน้า Result — เล่นทับเพลงหน้าสรุปผล

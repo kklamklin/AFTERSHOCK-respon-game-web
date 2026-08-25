@@ -134,7 +134,7 @@ function clampPct(n) {
 
 // ── กฎการวางลงโซน (§10.1 เงื่อนไขปฏิเสธ) ────────────────────────
 // เหตุผลที่ปฏิเสธได้: lost · working · cooldown · no-stack · laststand-blocked
-//                    cleared · occupied · zone-blocked · buff-exists · no-ap
+//                    cleared · occupied · zone-blocked · buff-exists · no-unit · no-ap
 export function dropCheck(state, opKey, skillId, zone) {
   const st = skillStatus(state, opKey, skillId);
   // 'no-ap' ของ skillStatus ดูจากโซนที่ถูกที่สุด ตรงนี้ต้องเช็คราคาของโซนนี้จริง ๆ อีกที
@@ -152,6 +152,8 @@ export function dropCheck(state, opKey, skillId, zone) {
     if (cost == null) return { ok: false, reason: 'zone-blocked' }; // เช่น Robertson → โซนแดง
   } else {
     if (zone.buffs.some((b) => b.type === skillId)) return { ok: false, reason: 'buff-exists' };
+    // บัฟบางตัว (Crowd Control) ลงได้เฉพาะโซนที่มี จนท. ทำงานอยู่จริง ๆ เท่านั้น
+    if (CONFIG.buffs[skillId]?.needsUnit && !zone.unit) return { ok: false, reason: 'no-unit' };
     cost = skill.ap;
   }
 

@@ -10,7 +10,7 @@ import { state, resetState } from '../state.js';
 import { CONFIG } from '../config.js';
 import { createClock, tickLoop } from '../systems/time.js';
 import { summarizeByTier } from '../systems/zones.js';
-import { skillStatus, unitStatusLabel, useGlobalSkill, unitReadiness } from '../systems/skills.js';
+import { skillStatus, unitStatusLabel, useGlobalSkill, unitReadiness, isLastStand } from '../systems/skills.js';
 import { resolveMission } from '../systems/outcomes.js';
 import { OPERATORS as OPS_FOR_STATUS } from '../data/operators.js';
 import { createFeed } from './feed.js';
@@ -19,7 +19,7 @@ import { buildZoneDetail } from './panels.js';
 import { renderMap, applyZoneColors, updateAllZones, updateZone, updateZoneMarkers, floatText } from './map.js';
 import { createGameMenu } from './gameMenu.js';
 import { iconNode, iconPath, iconEmoji } from '../data/icons.js';
-import { setAlertFrame, clearFx, fireSkillIcon } from './fx.js';
+import { setAlertFrame, clearFx, fireSkillIcon, showLastStand } from './fx.js';
 import { setBgm, setBgmPaused } from './audio.js';
 
 // เล่นอนิเมชั่นสั้น ๆ ซ้ำได้ — ถอดคลาสแล้ว reflow ก่อนใส่ใหม่ ไม่งั้นครั้งที่ 2 จะไม่เริ่ม
@@ -204,20 +204,37 @@ function buildSkillRow(speciesKey, skillId, skill) {
   row.appendChild(iconWrap);
 
   const costs = el('div', 'skill-costs');
+  const costChips = [];
   if (skill.type === 'field') {
     for (const tier of TIER_ORDER) {
       const z = skill.zones[tier];
-      if (z) costs.appendChild(buildCost(`−${z.ap}`, tier));
+      if (z) costChips.push(buildCost(`−${z.ap}`, tier));
     }
   } else {
-    costs.appendChild(buildCost(`−${skill.ap}`, null));
+    costChips.push(buildCost(`−${skill.ap}`, null));
   }
+  costs.append(...costChips);
   row.appendChild(costs);
+
+  // ตอน Last Stand สกิลลงพื้นที่ฟรีทุกโซน — ป้ายราคาต้องบอกว่า FREE ไม่ใช่โชว์เลขเดิม
+  // (เกมหักแต้ม 0 อยู่แล้วตั้งแต่แรก ที่ผิดคือหน้าจอโชว์ราคาเก่าค้างไว้)
+  const freeTag = el('span', 'skill-cost skill-cost--free');
+  freeTag.appendChild(el('b', null, 'FREE'));
+  freeTag.appendChild(el('small', null, 'all'));
 
   // ทาสีใหม่ตามสถานะปัจจุบัน — เรียกทุกลูป
   let shownCd = null;
+  let shownFree = null;
   function paint() {
     const st = skillStatus(state, speciesKey, skillId);
+
+    if (skill.type === 'field') {
+      const free = isLastStand(state, speciesKey);
+      if (free !== shownFree) {
+        costs.replaceChildren(...(free ? [freeTag] : costChips));
+        shownFree = free;
+      }
+    }
     row.classList.toggle('is-using', st.using);
     // ติดคูลดาวน์ให้โชว์ "ตัวเลขที่เหลือ" แทนกากบาท เพราะตัวเลขบอกเหตุผลได้ในตัวอยู่แล้ว
     row.classList.toggle('is-cooldown', st.reason === 'cooldown');
@@ -563,7 +580,10 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
   function syncGameBgm() {
     if (state.ended) return; // stopGameClock() สั่ง setBgm(null) ให้แล้ว
     const hoursLeft = CONFIG.totalLoops / CONFIG.loopsPerHour - state.hour;
-    setBgm(hoursLeft <= CONFIG.bgmFinalHours ? 'gameFinal' : 'gameMain');
+    // ระหว่าง Last Stand ใช้เพลงประจำสถานะทับเพลงปกติ
+    // พอสถานะหมด ลูปถัดไปเรียกฟังก์ชันนี้อีกครั้งแล้วเพลงเดิมจะกลับมาเองอัตโนมัติ
+    if (Object.keys(state.units).some((k) => state.units[k].status === 'laststand')) setBgm('lastStand');
+    else setBgm(hoursLeft <= CONFIG.bgmFinalHours ? 'gameFinal' : 'gameMain');
     setBgmPaused(!state.running && !bgmKeepPlaying);
   }
 
@@ -602,6 +622,16 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
           if (outcome.kind === 'success') floatText(mapHandle, outcome.zoneId, `+${outcome.saved}`, 'ok');
           else if (outcome.kind === 'fail') floatText(mapHandle, outcome.zoneId, '✕', 'fail');
           else floatText(mapHandle, outcome.zoneId, '—', 'late');
+        }
+        // Robertson ลุกขึ้นสู้ครั้งสุดท้าย — ประกาศกลางจอ + สลับเป็นเพลงประจำสถานะทันที
+        // ไม่รอลูปถัดไป เพราะช่วงเวลานี้สั้นและเป็นจุดพีคของเกม (§5)
+        if (outcome.danger?.to === 'laststand') {
+          showLastStand({
+            title: 'LAST STAND',
+            sub: `${OPS_FOR_STATUS[opKey].name.toUpperCase()} · ${CONFIG.lastStand.durationHours} HOURS`,
+            note: 'ทุกสกิลไม่คิด AP · ลงพื้นที่ได้ทุกโซน · เร็วขึ้นเท่าตัว',
+          });
+          syncGameBgm();
         }
       },
       // ฟื้นตัว / หมดเวลา Last Stand — แจ้งใน Feed ให้ผู้เล่นรู้

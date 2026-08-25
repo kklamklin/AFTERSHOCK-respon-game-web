@@ -102,10 +102,39 @@ export function fireSkillIcon(iconEl) {
   }
 }
 
+/**
+ * ป้ายประกาศกลางจอตอน Robertson เข้าสถานะ Last Stand (§5)
+ * ลอยขึ้นมากลางจอแล้วจางหายไปเอง ไม่มีปุ่มปิด ไม่หยุดเวลา ไม่กินคลิก
+ * (ผู้เล่นที่ตั้งเครื่องให้ลดการเคลื่อนไหวก็ยังต้องเห็นข้อความ แค่ไม่ต้องมีอนิเมชั่น)
+ */
+const LAST_STAND_MS = 3600;
+
+export function showLastStand({ title = 'LAST STAND', sub = '', note = '' } = {}) {
+  ensureLayer();
+  const box = document.createElement('div');
+  box.className = 'fx-laststand';
+  if (reduceMotion()) box.classList.add('is-still');
+
+  const mk = (cls, text) => {
+    const n = document.createElement('div');
+    n.className = cls;
+    n.textContent = text;
+    return n;
+  };
+  box.append(mk('fx-ls-title', title));
+  if (sub) box.appendChild(mk('fx-ls-sub', sub));
+  if (note) box.appendChild(mk('fx-ls-note', note));
+
+  layer.appendChild(box);
+  setTimeout(() => box.remove(), LAST_STAND_MS);
+  return box;
+}
+
 // ล้างเอฟเฟกต์ค้างตอนออกจากหน้าเกม (กรอบเตือนไม่ควรตามไปโผล่ที่หน้าเมนู)
 export function clearFx() {
   if (!layer) return;
   shownFrame = null;
   frameEl.className = 'fx-frame';
   flashEl.className = 'fx-flash';
+  for (const n of layer.querySelectorAll('.fx-laststand')) n.remove();
 }

@@ -82,7 +82,9 @@ export const CONFIG = {
 
   // ค่าบัฟ (GAMESCREEN_SPEC §3.2)
   buffs: {
-    crowd: { rate: 25, durationHours: 3, ap: 14, cooldownHours: 3, scope: 'zone' },
+    // Crowd Control ถูกลงเหลือ 10 และลงได้เฉพาะโซนที่มี จนท. ทำงานอยู่ (เจ้าของเคาะ)
+    // มันคือบัฟ "ช่วยคนที่กำลังลงพื้นที่" ไม่ใช่บัฟดักไว้ล่วงหน้า จึงต้องมีคนอยู่ในโซนก่อน
+    crowd: { rate: 25, durationHours: 3, ap: 10, cooldownHours: 3, scope: 'zone', needsUnit: true },
     scan:  { rate: 15, durationHours: 3, ap: 10, cooldownHours: 0, scope: 'zone',
              deathSlowFactor: 0.5, maxStacks: 5 },
     // Alert เดิม 35 AP แพงเกินกว่าจะคุ้ม เพราะบาดเจ็บแทบไม่เกิด — ตอนนี้อันตรายแรงขึ้นแล้ว
@@ -107,7 +109,11 @@ export const CONFIG = {
   lastStand: {
     durationHours: 10,
     apCost: 0,                                        // ฟรีทุกสกิล
-    workHours: { gray: 1, yellow: 2, red: 3 },        // เข้าโซนแดงได้ด้วย
+    // เวลาทำงานในโซนเหลือครึ่งเดียวของปกติ (ปกติ 1/2/3 ชม.) — คนที่ช่วยได้เท่าเดิม
+    // แต่วิ่งจบงานเร็วขึ้นเท่าตัว จึงลงพื้นที่ได้หลายรอบกว่าในเวลา 10 ชม. ที่มี
+    workHours: { gray: 0.5, yellow: 1, red: 1.5 },    // เข้าโซนแดงได้ด้วย
+    rateBonus: 10,                                    // โอกาสสำเร็จ +10 (ชั้น 1)
+    rescuePctBonus: 10,                               // %ช่วยชีวิต +10 (ชั้น 2)
     blockedSkills: ['crowd'],                         // Crowd Control ใช้ไม่ได้
     oncePerGame: true,
   },
