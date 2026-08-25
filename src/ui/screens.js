@@ -11,6 +11,14 @@ import { state } from '../state.js';
 import { iconNode } from '../data/icons.js';
 import { fadeSwap, clearFx } from './fx.js';
 import { buildSkyline } from './skyline.js';
+import { setBgm } from './audio.js';
+import { getPrefs, setPref, onPrefsChange, brightnessFactor } from '../data/prefs.js';
+
+// ความสว่างหน้าจอ — ผูกครั้งเดียวตอนโหลด แล้วอัปเดตเองทุกครั้งที่ค่าเปลี่ยน
+// ใส่ที่ <html> เพื่อให้ครอบทั้งหน้าจอเกมและชั้นเอฟเฟกต์ (ui/fx.js) ที่อยู่นอก #screen-root
+onPrefsChange((prefs) => {
+  document.documentElement.style.setProperty('--ui-brightness', brightnessFactor(prefs.brightness));
+});
 
 // ลำดับต้องตรงกับหน้าตาดราฟ: มนุษย์(หน้ากาก) → แมว → เอลฟ์(Lia) → ภูต(Mudongzock)
 // รูปจริงอยู่ใน assets/icons/ (จับคู่ชื่อไฟล์ที่ data/icons.js) — ยังไม่มีไฟล์ก็ใช้ emoji ไปก่อน
@@ -133,7 +141,8 @@ export function renderMenu(root, { onNavigate } = {}) {
 
 // หน้า Settings — เวอร์ชันเข้าจากเมนูหลัก (§ setting draft รูป "ขวาสุด")
 // ไม่มี popup ยืนยัน เพราะไม่มีเกมที่กำลังเล่นอยู่ให้เสีย — ต่างจากเวอร์ชันในเกม (ยังไม่ทำ รอหน้าเกมก่อน)
-function buildSlider(label, value) {
+// แถบเลื่อน 1 แถว — ผูกกับค่าจริงใน data/prefs.js เลื่อนแล้วมีผลทันทีและถูกจำไว้
+function buildSlider(label, prefKey) {
   const row = document.createElement('div');
   row.className = 'settings-row';
 
@@ -145,10 +154,20 @@ function buildSlider(label, value) {
   input.type = 'range';
   input.min = '0';
   input.max = '100';
-  input.value = String(value);
+  input.value = String(getPrefs()[prefKey]);
   input.className = 'settings-slider';
 
-  row.append(name, input);
+  const out = document.createElement('span');
+  out.className = 'settings-value';
+  out.textContent = `${input.value}%`;
+
+  // input = ระหว่างลาก (ได้ยิน/เห็นผลทันที) · change = ปล่อยนิ้ว
+  input.addEventListener('input', () => {
+    setPref(prefKey, input.value);
+    out.textContent = `${input.value}%`;
+  });
+
+  row.append(name, input, out);
   return row;
 }
 
@@ -170,7 +189,7 @@ export function renderSettingsMenu(root, { onBack } = {}) {
 
   const body = document.createElement('div');
   body.className = 'settings-body';
-  body.append(buildSlider('Volume', 90), buildSlider('Brightness', 40));
+  body.append(buildSlider('Volume', 'volume'), buildSlider('Brightness', 'brightness'));
   root.appendChild(body);
 
   const backToMenu = document.createElement('button');
@@ -468,20 +487,25 @@ export function initScreens(root) {
   const quick = (fn) => fadeSwap(fn, { inMs: 170, outMs: 200, hold: 40 });
   const scene = (fn) => fadeSwap(fn, { inMs: 520, outMs: 620, hold: 220 });
 
-  const showMenu = () => quick(() => { clearFx(); renderMenu(root, { onNavigate: onMenuNavigate }); });
-  const showBlank = (id, backTo = showMenu) => quick(() => renderBlank(root, { label: id, onBack: backTo }));
-  const showSettings = () => quick(() => renderSettingsMenu(root, { onBack: showMenu }));
+  // เพลงหน้าเมนู — เล่นวนซ้ำ และ "ไม่เริ่มใหม่" เมื่อเดินไป Settings/Intel แล้วกลับมา
+  // (setBgm ข้ามการเริ่มใหม่ให้เองถ้าเป็นเพลงเดิม — ดู ui/audio.js)
+  const menuBgm = () => setBgm('menu');
+
+  const showMenu = () => quick(() => { clearFx(); menuBgm(); renderMenu(root, { onNavigate: onMenuNavigate }); });
+  const showBlank = (id, backTo = showMenu) => quick(() => { menuBgm(); renderBlank(root, { label: id, onBack: backTo }); });
+  const showSettings = () => quick(() => { menuBgm(); renderSettingsMenu(root, { onBack: showMenu }); });
   const showQuit = () => renderQuit(root);
-  const showIntel = () => quick(() => renderIntelMenu(root, { onBack: showMenu, onNavigate: onIntelNavigate }));
-  const showHowTo = () => quick(() => renderHowToPlay(root, { onBack: showIntel }));
-  const showOperatorMenu = () => quick(() => renderOperatorMenu(root, { onBack: showIntel, onNavigate: onOperatorNavigate }));
-  const showRoster = (side) => quick(() => renderOperatorRoster(root, { side, onBack: showOperatorMenu, onSelect: (key) => showCard(key, side) }));
-  const showCard = (speciesKey, side) => quick(() => renderOperatorCard(root, { speciesKey, onBack: () => showRoster(side) }));
+  const showIntel = () => quick(() => { menuBgm(); renderIntelMenu(root, { onBack: showMenu, onNavigate: onIntelNavigate }); });
+  const showHowTo = () => quick(() => { menuBgm(); renderHowToPlay(root, { onBack: showIntel }); });
+  const showOperatorMenu = () => quick(() => { menuBgm(); renderOperatorMenu(root, { onBack: showIntel, onNavigate: onOperatorNavigate }); });
+  const showRoster = (side) => quick(() => { menuBgm(); renderOperatorRoster(root, { side, onBack: showOperatorMenu, onSelect: (key) => showCard(key, side) }); });
+  const showCard = (speciesKey, side) => quick(() => { menuBgm(); renderOperatorCard(root, { speciesKey, onBack: () => showRoster(side) }); });
   // Play -> Tutorial (visual novel) -> หน้าเกมหลัก -> หน้า Result
   // เล่นใหม่จากหน้า Result ข้าม tutorial ไปเลย (renderGameScreen รีเซ็ต state ให้เองอยู่แล้ว)
   const showGame = () => scene(() => { clearFx(); renderGameScreen(root, { onExit: showMenu, onFinish: showResult }); });
   const showResult = () => quick(() => { clearFx(); renderResult(root, { state, onHome: showMenu, onReplay: showGame }); });
-  const showTutorial = () => scene(() => renderTutorial(root, { onFinish: showGame }));
+  // กด Play = เพลงเมนูหยุดทันที (เจ้าของสั่งไว้) หน้าบรีฟจึงเงียบ
+  const showTutorial = () => { setBgm(null); scene(() => renderTutorial(root, { onFinish: showGame })); };
 
   function onMenuNavigate(id) {
     if (id === 'settings') showSettings();

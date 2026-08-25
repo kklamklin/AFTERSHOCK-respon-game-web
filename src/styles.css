@@ -1743,3 +1743,24 @@ img.game-icon {
   border: 1px solid var(--line-hot); color: var(--ink);
 }
 .vn-confirm-no { background: var(--bg-raise) !important; color: var(--ink) !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   ความสว่างหน้าจอ (หน้า Settings → data/prefs.js)
+   ใส่ที่ #screen-root และชั้นเอฟเฟกต์ เพราะสองอันนี้อยู่คนละที่ในหน้า
+   ไม่ใส่ที่ body เพราะ filter จะทำให้ position:fixed ข้างในเปลี่ยนจุดอ้างอิง
+   ══════════════════════════════════════════════════════════════ */
+#screen-root, .fx-layer, .drag-ghost {
+  filter: brightness(var(--ui-brightness, 1));
+}
+
+/* ── แถบเลื่อนในหน้า Settings ────────────────────────────────── */
+.settings-row { align-items: center; }
+.settings-value {
+  flex: none; min-width: 3.4em; text-align: right;
+  font-family: var(--font-mono); font-size: 17px; color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.settings-slider {
+  accent-color: var(--accent);
+  height: 22px; cursor: pointer;
+}
