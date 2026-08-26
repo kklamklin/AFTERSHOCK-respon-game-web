@@ -258,10 +258,15 @@ export function runLastStandQte(root, roundIndex, hoursSoFar, onFinish) {
   keyR.addEventListener('pointerdown', onKeyR);
 
   // คีย์บอร์ดสำหรับเล่นบนคอม — มือถือใช้ปุ่มบนจอ
+  // Q/E คือคู่หลักที่เจ้าของสั่ง · ที่เหลือเป็นทางเลือกให้มือวางตรงไหนก็เล่นได้
+  const LEFT_KEYS  = ['arrowleft', 'q', 'a', 'z'];
+  const RIGHT_KEYS = ['arrowright', 'e', 'd', 'm'];
+
   function onKey(e) {
-    if (e.repeat) return;
-    if (['ArrowLeft', 'a', 'A', 'z', 'Z'].includes(e.key)) { e.preventDefault(); press('left'); }
-    else if (['ArrowRight', 'd', 'D', 'm', 'M'].includes(e.key)) { e.preventDefault(); press('right'); }
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key.toLowerCase();
+    if (LEFT_KEYS.includes(k)) { e.preventDefault(); press('left'); }
+    else if (RIGHT_KEYS.includes(k)) { e.preventDefault(); press('right'); }
   }
   window.addEventListener('keydown', onKey);
 
