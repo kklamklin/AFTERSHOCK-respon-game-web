@@ -609,7 +609,8 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
   }
 
   function alignBgmToCue() {
-    if (Math.abs(bgmPosition() - CONFIG.qte.bgmCueSec) > 2) seekBgm('gameMain', CONFIG.qte.bgmCueSec);
+    const off = Math.abs(bgmPosition() - CONFIG.qte.bgmCueSec);
+    if (off > CONFIG.qte.bgmCueWindowSec) seekBgm('gameMain', CONFIG.qte.bgmCueSec);
   }
 
   // ── มินิเกมต่อเวลา Last Stand ────────────────────────────────
