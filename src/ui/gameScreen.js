@@ -662,8 +662,7 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
 
   function tick() {
     tickLoop(state, {
-      // ครบชั่วโมงสำคัญ → เด้งป๊อปอัพและหยุดเวลาให้ผู้เล่นทบทวนแผน (§2.1)
-      onHourTick: (hour) => menu?.checkHour(hour, state),
+      // ป๊อปอัพหยุดเวลาอัตโนมัติถูกเอาออกแล้ว (เจ้าของสั่ง) — เวลาเดินยาวไม่สะดุด
       onZoneCleared: (zone) => { if (mapHandle) updateZone(mapHandle, zone); },
       onMissionComplete: (opKey) => {
         // §4.2 ทอย 2 ชั้น → อัปเดตโซน/คะแนน → โชว์ผลบนแมพและใน Feed

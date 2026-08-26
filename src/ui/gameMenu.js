@@ -19,7 +19,6 @@ import {
 const TOTAL_HOURS = CONFIG.totalLoops / CONFIG.loopsPerHour;
 const TIER_ORDER = ['gray', 'yellow', 'red'];
 const TIER_LETTER = { gray: 'A', yellow: 'B', red: 'C' };
-const TIER_NAME = { gray: 'โซนเทา', yellow: 'โซนเหลือง', red: 'โซนแดง' };
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -30,41 +29,8 @@ function el(tag, className, text) {
 
 const tierHours = (tier) => CONFIG.zoneLifespanLoops[tier] / CONFIG.loopsPerHour;
 
-// จุดหยุดเวลาอัตโนมัติ — ผูกกับอายุโซนจริง ถ้าแก้ config อายุโซน ป๊อปอัพจะตามไปเอง (§2.1)
-function buildStops() {
-  const stops = CONFIG.autoPauseAtHour.map((hour) => ({
-    hour,
-    tier: TIER_ORDER.find((t) => tierHours(t) === hour) ?? null,
-  }));
-  stops.push({ hour: TOTAL_HOURS - CONFIG.autoPauseHoursLeft, tier: null, lastCall: true });
-  return stops.sort((a, b) => a.hour - b.hour);
-}
-
-// ข้อความของป๊อปอัพ — อ่านจากสถานะจริงตอนเด้ง ไม่ได้เขียนตายไว้
-// เพราะบัฟชะลอการตาย (Scan / Air Deploy) ทำให้โซนอยู่เกินอายุปกติได้
-// ถ้ายังมีคนเหลือแล้วไปบอกว่า "เสียชีวิตครบแล้ว" คือโกหกผู้เล่น
-function noticeFor(stop, state) {
-  if (stop.lastCall) {
-    return {
-      title: `เหลือเวลาอีก ${CONFIG.autoPauseHoursLeft} ชั่วโมง`,
-      text: 'ช่วงสุดท้ายแล้ว — เลือกโซนที่ยังช่วยทันให้ดี',
-    };
-  }
-  if (!stop.tier) {
-    return { title: `ผ่านไป ${stop.hour} ชั่วโมง`, text: 'ทบทวนแผนอีกครั้งก่อนเดินเวลาต่อ' };
-  }
-
-  const name = TIER_NAME[stop.tier];
-  const left = Object.values(state.zones)
-    .filter((z) => z.level === stop.tier)
-    .reduce((n, z) => n + Math.floor(z.trapped), 0);
-
-  return left > 0
-    ? { title: `${name}เลยเวลาปกติแล้ว`,
-        text: `ยังมีผู้รอดชีวิตใน${name}เหลืออยู่ ${left} คน เพราะบัฟชะลอการตายซื้อเวลาไว้ได้ — รีบช่วยก่อนหมด` }
-    : { title: `${name}หมดเวลาแล้ว`,
-        text: `ผู้รอดชีวิตที่ยังติดอยู่ใน${name}เสียชีวิตครบแล้ว` };
-}
+// ป๊อปอัพหยุดเวลาอัตโนมัติ (แจ้ง 24 ชม.สุดท้าย · 12 ชม. · โซนแดง) ถูกเอาออกทั้งหมดแล้ว
+// (เจ้าของสั่ง) — หน้าเวลาที่เหลือยังเปิดดูเองได้จากเมนู ☰ หรือปุ่ม Time เหมือนเดิม
 
 /**
  * สร้างชั้นเมนู/หน้าเวลา/ป๊อปอัพ ทับบนหน้าเกม
@@ -76,8 +42,6 @@ function noticeFor(stop, state) {
  *   quitToMenu()   ออกไปเมนูหลัก (ผู้เรียกเป็นคนหยุดนาฬิกา/รีเซ็ตเอง)
  */
 export function createGameMenu(root, { pause, resume, isRunning, quitToMenu } = {}) {
-  const stops = buildStops();
-  const fired = new Set();      // ชั่วโมงที่เด้งป๊อปอัพไปแล้ว กันเด้งซ้ำ
   let wasRunning = false;       // ก่อนเปิดชั้นนี้ เวลาเดินอยู่ไหม — ปิดแล้วค่อยคืนสถานะเดิม
   let openCount = 0;            // ชั้นที่ซ้อนกันอยู่ (เมนู → Setting ฯลฯ)
 
@@ -241,33 +205,9 @@ export function createGameMenu(root, { pause, resume, isRunning, quitToMenu } = 
     });
   }
 
-  // ── §2.1 ป๊อปอัพหยุดเวลาอัตโนมัติ ─────────────────────────────────
-  // เรียกทุกครั้งที่ครบชั่วโมง — เด้งครั้งเดียวต่อจุด
-  function checkHour(hour, state) {
-    const stop = stops.find((s) => s.hour === hour && !fired.has(s.hour));
-    if (!stop) return false;
-    fired.add(stop.hour);
-    const { title, text } = noticeFor(stop, state);
-    showNotice(title, text);
-    return true;
-  }
-
-  function showNotice(title, text) {
-    show('card', (box) => {
-      box.appendChild(el('div', 'gm-backdrop'));  // กดพื้นหลังไม่ปิด ต้องกดปุ่ม
-      const card = el('div', 'gm-card gm-card--notice');
-      card.append(el('div', 'gm-card-title', title), el('div', 'gm-card-text', text));
-      const btn = el('button', 'gm-btn gm-btn--go', 'เดินเวลาต่อ');
-      btn.addEventListener('click', close);
-      card.appendChild(btn);
-      box.appendChild(card);
-    });
-  }
-
   return {
     openMenu,
     openTime,
-    checkHour,
     close,
     isOpen: () => !host.hidden,
     destroy: () => { close(); host.remove(); },

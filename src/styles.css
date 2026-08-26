@@ -1271,8 +1271,7 @@ html, body {
 .gm-btn:hover { background: #f2f4f6; }
 .gm-btn--danger { border-color: #e8484a; background: #e8484a; color: #fff; }
 .gm-btn--danger:hover { background: #d13b40; }
-.gm-btn--go { border-color: #3DD68C; background: #3DD68C; color: #10381f; }
-.gm-card--notice { border-color: #e8484a; }
+/* .gm-btn--go / .gm-card--notice ถูกลบพร้อมป๊อปอัพหยุดเวลาอัตโนมัติ (เจ้าของสั่ง) */
 
 /* ── §7 หน้าเวลาที่เหลือ ───────────────────────────────────────── */
 .gm-card--time { min-width: calc(var(--u) * 42); }
