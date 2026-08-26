@@ -13,7 +13,7 @@ const DIR = 'assets/';
 // วัด "RMS ของช่วงที่ดังที่สุด (หน้าต่าง 150 มิลลิวินาที)" ของทุกไฟล์ แล้วตั้ง gain
 // ให้ทุกไฟล์ดังเท่ากันที่ระดับเป้าหมาย ค่าที่วัดได้ต่างกันมากถึง 24 dB:
 //
-//   result 0.641 · 1minuteleft 0.582 · op-down 0.588 · London Bridge 0.405
+//   result 0.641 · op-down 0.588 · London Bridge 0.405 · wrong-rhythm 0.299
 //   success 0.271 · point-counter 0.214 · click 0.042  ← เบากว่าเพลง 24 dB
 //
 // เพราะ click เบามาก การใช้ `el.volume` (ทำได้แค่ 0..1 คือ "ลดอย่างเดียว")
@@ -40,14 +40,15 @@ export const SOUNDS = {
   click:   { file: 'click.mp3',                kind: 'sfx', pool: 4, gain: gainFor(SFX_TARGET, 0.0417) },
   opDown:  { file: 'op-down.mp3',              kind: 'sfx', pool: 2, gain: gainFor(SFX_TARGET, 0.5878) },
   success: { file: 'success-notification.mp3', kind: 'sfx', pool: 2, gain: gainFor(SFX_TARGET, 0.2709) },
+  // เสียงกดพลาดในมินิเกมจังหวะ (ui/qte.js) — ยาว 3 วิ จึงมี 2 ก๊อปปี้ กันพลาดรัว ๆ แล้วเสียงตัดกันเอง
+  wrongRhythm: { file: 'wrong-rhythm.mp3', kind: 'sfx', pool: 2, gain: gainFor(SFX_TARGET, 0.2993) },
 
   // ── เพลงประจำฉาก (วนซ้ำทั้งหมด) ───────────────────────────────
   // หน้าเมนูและหน้าสรุปผล — เล่นต่อเนื่องข้ามหน้า Settings/Intel ไม่เริ่มใหม่
   menu:         { file: 'result.mp3',        kind: 'bgm', gain: gainFor(BGM_TARGET, 0.6412) },
-  // หน้าเกมช่วงปกติ (7:45 — ยาวกว่าเกมหนึ่งรอบ แต่ตั้งวนซ้ำไว้เผื่อเล่นช้า)
+  // หน้าเกมทั้งเกม (7:45 — ยาวกว่าเกมหนึ่งรอบ แต่ตั้งวนซ้ำไว้เผื่อเล่นช้า)
+  // เจ้าของตัดเพลงเร่งช่วงท้ายทิ้งแล้ว ใช้เพลงนี้ยาวตั้งแต่ต้นจนจบเกม
   gameMain:     { file: 'London Bridge.mp3', kind: 'bgm', lazy: true, gain: gainFor(BGM_TARGET, 0.4047) },
-  // หน้าเกมช่วง 12 ชั่วโมงท้าย — ไฟล์ยาว 51 วิ วนซ้ำจนหมดเกม
-  gameFinal:    { file: '1minuteleft!.mp3',  kind: 'bgm', lazy: true, gain: gainFor(BGM_TARGET, 0.5819) },
 
   // ── เสียงยาวเฉพาะกิจ ─────────────────────────────────────────
   // ตอนตัวเลขคะแนนวิ่งในหน้า Result — เล่นทับเพลงหน้าสรุปผล

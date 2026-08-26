@@ -212,7 +212,7 @@ export function runLastStandQte(root, roundIndex, hoursSoFar, onFinish) {
   function loseLife(text) {
     livesLeft -= 1;
     paintLives();
-    playSfx('opDown');
+    playSfx('wrongRhythm');
     flash(text, 'miss');
     wrap.classList.remove('is-shake');
     void wrap.offsetWidth;
@@ -241,7 +241,7 @@ export function runLastStandQte(root, roundIndex, hoursSoFar, onFinish) {
     removeNote(best, 'is-hit');
     hitCount += 1;
     paintProgress();
-    playSfx('success');
+    playSfx('opDown');
     const zone = side === 'left' ? hitL : hitR;
     zone.classList.remove('is-hit');
     void zone.offsetWidth;

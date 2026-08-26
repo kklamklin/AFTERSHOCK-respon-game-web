@@ -587,11 +587,9 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
 
   function syncGameBgm() {
     if (state.ended) return; // stopGameClock() สั่ง setBgm(null) ให้แล้ว
-    const hoursLeft = CONFIG.totalLoops / CONFIG.loopsPerHour - state.hour;
-    // ระหว่าง Last Stand ยึดเพลงหลัก (London Bridge) ไว้เสมอ ไม่สลับเป็นเพลงเร่ง
-    // เพราะจังหวะของ QTE ถูกวางให้ตรงกับท่อนหนึ่งของเพลงนี้ (ดู cueBgmForQte)
-    const inLastStand = Object.keys(state.units).some((k) => state.units[k].status === 'laststand');
-    setBgm(!inLastStand && hoursLeft <= CONFIG.bgmFinalHours ? 'gameFinal' : 'gameMain');
+    // หน้าเกมมีเพลงเดียวตลอดทั้งเกม (เจ้าของตัดเพลงเร่งช่วง 12 ชม.ท้ายทิ้งแล้ว)
+    // เพลงจึงไม่เคยถูกสลับกลางเกม — สำคัญกับ QTE ที่จังหวะถูกวางให้ตรงท่อนหนึ่งของเพลงนี้
+    setBgm('gameMain');
     setBgmPaused(!state.running && !bgmKeepPlaying);
   }
 
