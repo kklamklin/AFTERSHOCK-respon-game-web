@@ -30,9 +30,28 @@ export function attachDrag(iconEl, opKey, skillId, ctx) {
   });
 }
 
-function startDrag(e, iconEl, opKey, skillId, ctx) {
+/** สกิลที่ "เลือกค้างไว้" อยู่ตอนนี้ — null ถ้าไม่ได้เลือกอะไร (ใช้ตอนกดเลขซ้ำเพื่อยกเลิก) */
+export function activeSelection() {
+  return active ? { opKey: active.opKey, skillId: active.skillId, mode: active.mode } : null;
+}
+
+/**
+ * เลือกสกิลด้วยคีย์บอร์ด (เล่นบนคอม) — เลือกแล้วเอาเมาส์ไปคลิกโซนที่จะลง
+ * ต่างจากการลากตรงที่ "ปล่อยมือได้" ระหว่างเลือก ที่เหลือใช้กลไกเดียวกันทั้งหมด
+ * คืน true ถ้าเลือกติด (สกิลใช้ได้จริงและแผนที่พร้อม)
+ */
+export function selectSkillByKey(iconEl, opKey, skillId, ctx) {
+  if (active || ctx.state.ended) return false;
+  if (!skillStatus(ctx.state, opKey, skillId).usable) return false;
+  const r = iconEl.getBoundingClientRect();
+  return startDrag(null, iconEl, opKey, skillId, ctx, r.left + r.width / 2, r.top + r.height / 2);
+}
+
+// e = pointerdown ตอนลาก · null ตอนเลือกด้วยคีย์บอร์ด (แล้วส่ง x/y ของไอคอนมาแทน)
+function startDrag(e, iconEl, opKey, skillId, ctx, keyX = 0, keyY = 0) {
   const handle = ctx.getMapHandle();
-  if (!handle) return;
+  if (!handle) return false;
+  const mode = e ? 'drag' : 'key';
 
   // จำไว้ว่าก่อนลากเวลาเดินอยู่ไหม — ถ้าผู้เล่นหยุดเองไว้ก่อน ปล่อยแล้วต้องไม่เดินต่อเอง
   const wasRunning = ctx.state.running;
@@ -53,16 +72,29 @@ function startDrag(e, iconEl, opKey, skillId, ctx) {
   iconEl.classList.add('is-source');
   setDragMarks(handle, { active: true, invalidIds });
 
-  active = { iconEl, ghost, opKey, skillId, ctx, handle, invalidIds, wasRunning, hoverId: null, pointerId: e.pointerId };
+  active = {
+    iconEl, ghost, opKey, skillId, ctx, handle, invalidIds, wasRunning, mode,
+    hoverId: null, pointerId: e ? e.pointerId : null,
+  };
 
-  iconEl.setPointerCapture(e.pointerId);
-  iconEl.addEventListener('pointermove', onMove);
-  iconEl.addEventListener('pointerup', onUp);
-  iconEl.addEventListener('pointercancel', onCancel);
+  if (mode === 'drag') {
+    iconEl.setPointerCapture(e.pointerId);
+    iconEl.addEventListener('pointermove', onMove);
+    iconEl.addEventListener('pointerup', onUp);
+    iconEl.addEventListener('pointercancel', onCancel);
+  } else {
+    // โหมดคีย์บอร์ด: ไอคอนผีตามเมาส์ไปเรื่อย ๆ แล้ว "คลิก" คือการยืนยันลง
+    // ดักที่ document เพราะเมาส์ไปได้ทั้งจอ ไม่ได้ถูกจับไว้กับไอคอนเหมือนตอนลาก
+    document.addEventListener('pointermove', onDocMove);
+    document.addEventListener('click', onDocClick, true);
+  }
   window.addEventListener('keydown', onKey);
 
-  moveGhost(e.clientX, e.clientY);
-  updateHover(e.clientX, e.clientY);
+  const x = e ? e.clientX : keyX;
+  const y = e ? e.clientY : keyY;
+  moveGhost(x, y);
+  updateHover(x, y);
+  return true;
 }
 
 function moveGhost(x, y) {
@@ -109,10 +141,30 @@ function onMove(e) {
   if (!pendingRaf) pendingRaf = requestAnimationFrame(flushMove);
 }
 
+// โหมดคีย์บอร์ด — เมาส์ขยับเฉย ๆ ก็ให้ไอคอนผีตามและอัปเดตโซนใต้เคอร์เซอร์
+function onDocMove(e) {
+  if (!active || active.mode !== 'key') return;
+  pending = { x: e.clientX, y: e.clientY };
+  if (!pendingRaf) pendingRaf = requestAnimationFrame(flushMove);
+}
+
+// โหมดคีย์บอร์ด — คลิกคือการยืนยันลงโซน · คลิกที่อื่นคือยกเลิก (กติกาเดียวกับปล่อยนอกโซนตอนลาก)
+function onDocClick(e) {
+  if (!active || active.mode !== 'key') return;
+  e.preventDefault();
+  e.stopPropagation();   // กันคลิกนี้ไปโดนปุ่มอื่นที่อยู่ใต้เคอร์เซอร์
+  drop(e.clientX, e.clientY);
+}
+
 function onUp(e) {
   if (!active || e.pointerId !== active.pointerId) return;
+  drop(e.clientX, e.clientY);
+}
+
+// ลงจริงที่จุดนี้ — ใช้ร่วมกันทั้งการปล่อยนิ้วตอนลากและการคลิกตอนเลือกด้วยคีย์บอร์ด
+function drop(x, y) {
   const { ctx, opKey, skillId, invalidIds, iconEl } = active;
-  const zoneId = zoneIdAt(e.clientX, e.clientY);
+  const zoneId = zoneIdAt(x, y);
   // ปล่อยนอกโซนที่ลงได้ = ยกเลิกเงียบ ๆ ไม่มีปุ่มยกเลิก (§10 ข้อ 4)
   const dropped = zoneId && !invalidIds.has(zoneId)
     ? applyDrop(ctx.state, opKey, skillId, ctx.state.zones[zoneId])
@@ -141,8 +193,10 @@ function endDrag() {
   iconEl.removeEventListener('pointermove', onMove);
   iconEl.removeEventListener('pointerup', onUp);
   iconEl.removeEventListener('pointercancel', onCancel);
+  document.removeEventListener('pointermove', onDocMove);
+  document.removeEventListener('click', onDocClick, true);
   window.removeEventListener('keydown', onKey);
-  if (iconEl.hasPointerCapture?.(pointerId)) iconEl.releasePointerCapture(pointerId);
+  if (pointerId != null && iconEl.hasPointerCapture?.(pointerId)) iconEl.releasePointerCapture(pointerId);
 
   iconEl.classList.remove('is-source');
   ghost.remove();

@@ -261,6 +261,7 @@ export function renderTutorial(root, { onFinish } = {}) {
 
   function finishTutorial() {
     ended = true;
+    window.removeEventListener('keydown', onSpace);
     root.classList.add('vn-fadeout');
     setTimeout(() => onFinish?.(), 500);
   }
@@ -269,6 +270,20 @@ export function renderTutorial(root, { onFinish } = {}) {
     if (confirmOverlay.classList.contains('vn-confirm-overlay--on')) return;
     advance();
   });
+
+  // เว้นวรรค = กดข้ามบทพูด (เล่นบนคอม) — ยิงคลิกที่กล่องบทพูดแทน
+  // ยิงคลิกแทนที่จะเรียก advance() ตรง ๆ เพราะตอนกด "ข้ามทั้งหมด" กล่องนี้ถูกเปลี่ยน
+  // ให้ทำงานอย่างอื่นแทน (box.onclick) เว้นวรรคจึงต้องทำตามตัวที่ผูกอยู่ล่าสุดเสมอ
+  // ถอด listener ทิ้งตอนจบหน้าสอนเล่น — หลังจากนั้นปุ่มนี้ไม่ต้องทำอะไรอีก
+  function onSpace(e) {
+    if (e.code !== 'Space' && e.key !== ' ') return;
+    if (ended || e.repeat) return;
+    if (e.target?.closest?.('button')) return;   // กันเว้นวรรคซ้ำกับปุ่มที่โฟกัสอยู่
+    e.preventDefault();
+    if (confirmOverlay.classList.contains('vn-confirm-overlay--on')) return;
+    box.click();
+  }
+  window.addEventListener('keydown', onSpace);
 
   skipBtn.addEventListener('click', (e) => {
     e.stopPropagation();

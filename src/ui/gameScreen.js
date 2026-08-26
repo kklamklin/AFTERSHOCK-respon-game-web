@@ -16,7 +16,7 @@ import { resolveLastStandQte } from '../systems/status.js';
 import { runLastStandQte } from './qte.js';
 import { OPERATORS as OPS_FOR_STATUS } from '../data/operators.js';
 import { createFeed } from './feed.js';
-import { attachDrag, cancelDrag } from './dragdrop.js';
+import { attachDrag, cancelDrag, selectSkillByKey, activeSelection } from './dragdrop.js';
 import { buildZoneDetail } from './panels.js';
 import { renderMap, applyZoneColors, updateAllZones, updateZone, updateZoneMarkers, floatText } from './map.js';
 import { createGameMenu } from './gameMenu.js';
@@ -469,11 +469,14 @@ let activeClock = null;
 let cancelSmooth = null;
 let activeMenu = null;
 let activeQte = null;   // มินิเกมต่อเวลา Last Stand ที่เปิดค้างอยู่ (ถ้ามี)
+let detachKeys = null;  // ถอดคีย์ลัดตอนออกจากหน้าเกม
 
 export function stopGameClock() {
   cancelDrag();
   activeQte?.destroy();   // ออกจากหน้าเกมกลางคัน มินิเกมต้องไม่ค้างอยู่
   activeQte = null;
+  detachKeys?.();
+  detachKeys = null;
   activeClock?.stop();
   activeClock = null;
   cancelSmooth?.();
@@ -762,6 +765,70 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
   };
   dragCtx.onChange = () => { bottom.showZone(null); paintAll(); top.paintSpeed(); };
   dragCtx.onHoverZone = (zoneId, opKey, skillId) => bottom.showZone(zoneId, opKey, skillId);
+
+  // ── คีย์ลัดสำหรับเล่นบนคอม (§10.14) ──────────────────────────
+  //
+  // การลากไอคอนแบบเดิมยังใช้ได้ทุกอย่าง อันนี้เป็น "ทางที่สอง" ไม่ได้มาแทน
+  //   Esc = เมนู ☰ (หรือปิดสิ่งที่เปิดอยู่) · P = หยุด/เดินเวลา · T = หน้าเวลาที่เหลือ
+  //   1-6 = เลือกสกิล แล้วเอาเมาส์ไปคลิกโซนที่จะลง
+  //         กดเลขอื่น = เปลี่ยนสกิล · กดเลขเดิมซ้ำ = ยกเลิก
+  //
+  // ลำดับเลขไล่จากซ้ายไปขวาตามที่การ์ดเรียงบนจอ (Robertson 2 สกิล → Lyla → Lia 2 สกิล → Mudongzock)
+  const KEY_SKILLS = [];
+  for (const opKey of ['human', 'cat', 'elf', 'spirit']) {
+    for (const skillId of Object.keys(OPERATORS[opKey].skills)) KEY_SKILLS.push({ opKey, skillId });
+  }
+
+  const iconOf = (opKey, skillId) =>
+    root.querySelector(`.skill-row[data-op="${opKey}"][data-skill="${skillId}"] .skill-icon`);
+
+  function useSkillByKey(index) {
+    const item = KEY_SKILLS[index];
+    if (!item) return;
+    const sel = activeSelection();
+    const same = sel && sel.opKey === item.opKey && sel.skillId === item.skillId;
+    if (sel) cancelDrag();          // กดเลขเดิมซ้ำ = ยกเลิก · กดเลขอื่น = เปลี่ยนสกิล
+    if (same) return;
+
+    const icon = iconOf(item.opKey, item.skillId);
+    if (!icon) return;
+    // Air Deploy บัฟทั้งแมพ ไม่มีโซนให้เลือก — กดเลขแล้วใช้เลยเหมือนกดที่ไอคอน (§3.1)
+    if (CONFIG.buffs[item.skillId]?.scope === 'global') {
+      const done = useGlobalSkill(state, item.opKey, item.skillId);
+      if (done) { fireSkillIcon(icon); dragCtx.onChange?.(done, null); }
+      return;
+    }
+    selectSkillByKey(icon, item.opKey, item.skillId, dragCtx);
+  }
+
+  function onGameKey(e) {
+    if (state.ended || activeQte) return;         // มินิเกมจังหวะกินคีย์ของตัวเอง
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target?.closest?.('input, textarea')) return;  // แถบเลื่อนในหน้า Settings
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (activeSelection()) cancelDrag();        // ยกเลิกสกิลที่เลือกไว้ก่อน
+      else if (menu?.isOpen()) menu.close();
+      else menu?.openMenu();
+      return;
+    }
+    if (menu?.isOpen()) return;                   // เมนูเปิดอยู่ คีย์อื่นไม่ต้องทำงาน
+
+    const k = e.key.toLowerCase();
+    if (k === 'p') {
+      e.preventDefault();
+      clock.setRunning(!state.running); top.paintSpeed(); paintLive(); syncGameBgm();
+    } else if (k === 't') {
+      e.preventDefault();
+      menu?.openTime(state);
+    } else if (k >= '1' && k <= String(KEY_SKILLS.length)) {
+      e.preventDefault();
+      useSkillByKey(Number(k) - 1);
+    }
+  }
+  window.addEventListener('keydown', onGameKey);
+  detachKeys = () => window.removeEventListener('keydown', onGameKey);
 
   // แผนที่จริงโหลดแบบ async (fetch map.svg) — เวลาเริ่มเดินหลังแผนที่พร้อม
   applyZoneColors(document.head);

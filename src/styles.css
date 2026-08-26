@@ -1424,6 +1424,33 @@ img.game-icon {
 }
 .qte-wrap.is-in { opacity: 1; }
 
+/* ── อนิเมชั่นปิดจอ (ต้องยาวเท่า CLOSE_MS ใน ui/qte.js) ─────────
+   ผ่าน = แผงวูบสว่างแล้วขยายจางหายไป · แพ้ = ทรุดลงแล้วจาง
+   ขยับด้วย transform/opacity เท่านั้นตามกฎรอบ 10.11 */
+.qte-wrap.is-out { opacity: 0; transition: opacity 620ms ease-in; }
+.qte-wrap.is-out.is-win .qte-panel  { animation: qte-out-win 620ms cubic-bezier(.25,.9,.35,1) forwards; }
+.qte-wrap.is-out.is-lose .qte-panel { animation: qte-out-lose 620ms ease-in forwards; }
+@keyframes qte-out-win {
+  0%   { transform: none; }
+  22%  { transform: scale(1.05); }
+  100% { transform: scale(1.5); }
+}
+@keyframes qte-out-lose {
+  0%   { transform: none; }
+  100% { transform: translateY(calc(var(--u) * 4)) scale(0.9); }
+}
+/* วงแหวนแสงกระเพื่อมออกจากกลางจอตอนผ่าน — ให้รู้สึกว่า "ได้เวลามาแล้ว" */
+.qte-wrap.is-out.is-win::after {
+  content: ''; position: absolute; left: 50%; top: 50%;
+  width: calc(var(--u) * 12); height: calc(var(--u) * 12); border-radius: 50%;
+  border: 3px solid var(--ok); pointer-events: none;
+  animation: qte-out-ring 620ms ease-out forwards;
+}
+@keyframes qte-out-ring {
+  0%   { opacity: 0.9; transform: translate(-50%, -50%) scale(0.4); }
+  100% { opacity: 0;   transform: translate(-50%, -50%) scale(3.2); }
+}
+
 .qte-panel {
   width: calc(var(--u) * 92); max-width: 96%;
   padding: calc(var(--u) * 1.8) calc(var(--u) * 2.4) calc(var(--u) * 1.6);

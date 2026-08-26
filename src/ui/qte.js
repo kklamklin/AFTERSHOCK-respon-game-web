@@ -45,6 +45,9 @@ function heartSvg(cls) {
  * @param hoursSoFar ต่อเวลาสะสมมาแล้วกี่ชั่วโมง (เอาไว้โชว์ยอดรวมบนจอ)
  * @param onFinish   (hoursGained, stat) — ถูกเรียกครั้งเดียวเสมอ แม้จะแพ้
  */
+// ต้องยาวเท่ากับอนิเมชั่นปิดจอใน styles.css (.qte-wrap.is-out) ไม่งั้นจอจะหายก่อนอนิเมชั่นจบ
+const CLOSE_MS = 620;
+
 export function runLastStandQte(root, roundIndex, hoursSoFar, onFinish) {
   const cfg = CONFIG.qte;
   const round = cfg.rounds[Math.min(roundIndex, cfg.rounds.length - 1)];
@@ -283,11 +286,13 @@ export function runLastStandQte(root, roundIndex, hoursSoFar, onFinish) {
       ? (last ? 'ยืดได้ครบทุกรอบแล้ว — ไม่มีต่อเวลาอีก' : 'กลับไปสั่งงานต่อ · หมดเวลาแล้วเจอกันรอบหน้า')
       : 'โรเบิร์ตสันหมดแรงแล้ว');
     later(() => {
+      // อนิเมชั่นปิดจอ — ผ่านแล้วแผงจะวูบสว่างแล้วขยายจางหายไป · แพ้จะทรุดลงแล้วจาง
       wrap.classList.remove('is-in');
+      wrap.classList.add('is-out', ok ? 'is-win' : 'is-lose');
       later(() => {
         destroy();
         onFinish?.(hoursGained, { hits: hitCount, livesLeft });
-      }, 420);
+      }, CLOSE_MS);
     }, 1200);
   }
 
