@@ -58,10 +58,15 @@ export function canEnterLastStand(state, opKey) {
  */
 export function resolveLastStandQte(state, opKey, hoursGained) {
   const unit = state.units[opKey];
+  state.lastStandQteDone = (state.lastStandQteDone ?? 0) + 1;
+  state.lastStandQtePendingLoops = 0;
+  // ยังเหลือรอบอยู่และรอบนี้ผ่าน → ตั้งกลับเป็น null เพื่อให้เปิดได้อีกตอนเวลาที่ต่อมาหมด
+  const hasMore = state.lastStandQteDone < CONFIG.qte.rounds.length;
   state.lastStandQte = 'done';
   if (unit.status !== 'laststand') return null;
 
   if (hoursGained > 0) {
+    if (hasMore) state.lastStandQte = null;
     unit.recoverRemainLoops = hours(hoursGained);
     unit.recoverTotalLoops = (unit.recoverTotalLoops ?? 0) + unit.recoverRemainLoops;
     return { opKey, from: 'laststand', to: 'laststand', hoursGained };
@@ -88,18 +93,20 @@ export function tickRecovery(state) {
     if (from === 'laststand') {
       // หมดเวลา Last Stand — ยังไม่ล้มทันที ให้ผู้เล่นเล่น QTE ต่อเวลาก่อน 1 ครั้ง
       // ตัวสถานะยังเป็น laststand อยู่ ตัวนับค้างที่ 0 จนกว่า resolveLastStandQte() จะถูกเรียก
-      if (state.lastStandQte == null) {
-        state.lastStandQte = 'pending';
-        state.lastStandQtePendingLoops = 0;
-        events.push({ opKey, from, to: 'qte' });
-        continue;
-      }
       if (state.lastStandQte === 'pending') {
         // ปกติเวลาหยุดตอนเล่นมินิเกม บรรทัดนี้จึงไม่ควรถูกเรียกเลย
         // ถ้าถูกเรียกแปลว่าไม่มีใครเปิดมินิเกมให้ → ถือว่าอดต่อเวลา ไม่ปล่อยให้ค้าง
         state.lastStandQtePendingLoops = (state.lastStandQtePendingLoops ?? 0) + 1;
         if (state.lastStandQtePendingLoops <= CONFIG.qte.pendingGraceLoops) continue;
         state.lastStandQte = 'done';
+      } else if (state.lastStandQte !== 'done'
+                 && (state.lastStandQteDone ?? 0) < CONFIG.qte.rounds.length) {
+        // ยังเหลือรอบมินิเกมอยู่ → เปิดให้เล่นต่อเวลาก่อน ยังไม่ล้ม
+        // (เล่นทีละรอบ ทุกครั้งที่เวลาที่ต่อมารอบก่อนหมดลง ไม่ใช่รวดเดียว 3 รอบ)
+        state.lastStandQte = 'pending';
+        state.lastStandQtePendingLoops = 0;
+        events.push({ opKey, from, to: 'qte', round: state.lastStandQteDone ?? 0 });
+        continue;
       }
       // เล่น QTE ไปแล้ว (หรือหมดสิทธิ์) → ล้มตามกฎเดิม (§5.4)
       unit.status = 'lost';

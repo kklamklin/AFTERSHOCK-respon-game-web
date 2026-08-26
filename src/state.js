@@ -27,6 +27,7 @@ export function createInitialState() {
     // มินิเกมต่อเวลา Last Stand — null = ยังไม่ถึงคิว · 'pending' = ถึงเวลาแล้ว รอผู้เล่นเล่น
     // · 'done' = เล่นจบแล้ว (ครั้งเดียวต่อเกมเหมือนตัว Last Stand เอง)
     lastStandQte: null,
+    lastStandQteDone: 0,          // เล่นมินิเกมไปแล้วกี่รอบ (สูงสุดเท่ากับ CONFIG.qte.rounds)
     lastStandQtePendingLoops: 0,  // กันสถานะค้างถ้าไม่มีใครเปิดมินิเกมให้ (ดู systems/status.js)
 
     totalRescued: 0,

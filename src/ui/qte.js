@@ -11,7 +11,7 @@
 
 import { CONFIG } from '../config.js';
 import { playSfx } from './audio.js';
-import { randInt, random } from '../utils/rng.js';
+import { random } from '../utils/rng.js';
 
 const el = (tag, cls, text) => {
   const n = document.createElement(tag);
@@ -35,12 +35,19 @@ function heartSvg(cls) {
 }
 
 /**
- * เปิดมินิเกม — คืน { destroy } ไว้ปิดทิ้งกลางคันตอนออกจากหน้าเกม
- * @param root     element ของหน้าเกม (อยู่ในเวที จึงถูกย่อ/ขยายไปด้วยกัน)
- * @param onFinish (hoursGained, stat) — ถูกเรียกครั้งเดียวเสมอ แม้จะแพ้
+ * เปิดมินิเกม "หนึ่งรอบ" — คืน { destroy } ไว้ปิดทิ้งกลางคันตอนออกจากหน้าเกม
+ *
+ * ⚠️ หนึ่งครั้งที่เปิด = หนึ่งรอบเท่านั้น ไม่ได้เล่นรวด 3 รอบ
+ * ผ่านแล้วปิดจอ กลับไปเล่นเกมต่อ พอเวลาที่ต่อมาหมดอีก เกมถึงเปิดรอบถัดไปให้
+ *
+ * @param root       element ของหน้าเกม (อยู่ในเวที จึงถูกย่อ/ขยายไปด้วยกัน)
+ * @param roundIndex รอบที่เท่าไหร่ (0-based) — ตัดสินจำนวนจังหวะและความถี่
+ * @param hoursSoFar ต่อเวลาสะสมมาแล้วกี่ชั่วโมง (เอาไว้โชว์ยอดรวมบนจอ)
+ * @param onFinish   (hoursGained, stat) — ถูกเรียกครั้งเดียวเสมอ แม้จะแพ้
  */
-export function runLastStandQte(root, onFinish) {
+export function runLastStandQte(root, roundIndex, hoursSoFar, onFinish) {
   const cfg = CONFIG.qte;
+  const round = cfg.rounds[Math.min(roundIndex, cfg.rounds.length - 1)];
   const wrap = el('div', 'qte-wrap');
   const panel = el('div', 'qte-panel');
   wrap.appendChild(panel);
@@ -90,13 +97,12 @@ export function runLastStandQte(root, onFinish) {
   requestAnimationFrame(() => wrap.classList.add('is-in')); // ให้ transition ทำงานรอบแรก
 
   // ── สถานะของมินิเกม ────────────────────────────────────────────
-  let livesLeft = cfg.lives;
+  let livesLeft = cfg.lives;   // พลาดได้ 3 ครั้งต่อรอบ — รอบใหม่ได้ครบใหม่เสมอ
   let hoursGained = 0;
-  let roundIndex = -1;
   let notes = [];          // เสี้ยวที่ยังไม่ถูกตัดสิน
   let queue = [];          // จังหวะที่ยังไม่ถึงเวลาโผล่
   let hitCount = 0;
-  let totalNotes = 0;
+  const totalNotes = round.notes;
   let roundEndAt = 0;
   let running = false;
   let raf = 0;
@@ -106,6 +112,10 @@ export function runLastStandQte(root, onFinish) {
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 
   function setSub(text) { sub.textContent = text; }
+
+  // บอกกติกาของรอบนี้ตั้งแต่แผงโผล่ ไม่ต้องรอจังหวะแรก ผู้เล่นจะได้อ่านทัน
+  setSub(`QTE ${roundIndex + 1} / ${cfg.rounds.length} · ${totalNotes} จังหวะ`
+       + ` · พลาดได้ ${cfg.lives} ครั้ง · ผ่านแล้ว +${round.hours} ชม.`);
 
   function paintLives() {
     livesIcons.forEach((h, i) => h.classList.toggle('is-gone', i >= livesLeft));
@@ -123,19 +133,9 @@ export function runLastStandQte(root, onFinish) {
     callout.classList.add('is-on');
   }
 
-  // ── รอบหนึ่ง ───────────────────────────────────────────────────
+  // ── รอบเดียวจบ ─────────────────────────────────────────────────
   function startRound() {
-    roundIndex += 1;
-    if (roundIndex >= cfg.rounds.length) return finish();
-
-    const r = cfg.rounds[roundIndex];
-    totalNotes = randInt(r.notes[0], r.notes[1]);
-    hitCount = 0;
-    notes = [];
-    queue = [];
     paintProgress();
-    setSub(`ROUND ${roundIndex + 1} / ${cfg.rounds.length} · ${totalNotes} จังหวะ · ผ่านรอบนี้ได้ +${r.hours} ชม.`);
-
     // ตั้งเวลาที่ต้องกดของทุกจังหวะไว้ล่วงหน้า — เวลาเป็นตัวจริง ตำแหน่งเป็นแค่ภาพ
     const lead = 1500;                              // เวลาให้ผู้เล่นตั้งตัวก่อนจังหวะแรก
     const t0 = performance.now() + lead;
@@ -143,24 +143,23 @@ export function runLastStandQte(root, onFinish) {
     for (let i = 0; i < totalNotes; i += 1) {
       // สลับฝั่งแบบสุ่ม แต่ห้ามซ้ำฝั่งเดิมเกิน 2 ครั้งติด จะได้ไม่กลายเป็นรัวข้างเดียว
       if (i > 0) side = random() < 0.62 ? (side === 'left' ? 'right' : 'left') : side;
-      queue.push({ side, hitTime: t0 + i * r.beatMs, el: null, done: false });
+      queue.push({ side, hitTime: t0 + i * round.beatMs, el: null, done: false });
     }
-    roundEndAt = t0 + (totalNotes - 1) * r.beatMs + cfg.hitWindowMs + 400;
+    roundEndAt = t0 + (totalNotes - 1) * round.beatMs + cfg.hitWindowMs + 400;
 
-    flash(`ROUND ${roundIndex + 1}`, 'go');
+    flash(`QTE ${roundIndex + 1}`, 'go');
     running = true;
   }
 
   function roundCleared() {
     running = false;
-    const r = cfg.rounds[roundIndex];
-    hoursGained += r.hours;
-    bonus.textContent = `+${hoursGained} ชม.`;
+    hoursGained = round.hours;
+    bonus.textContent = `+${hoursSoFar + hoursGained} ชม.`;
     bonus.classList.remove('is-bump');
     void bonus.offsetWidth;
     bonus.classList.add('is-bump');
-    flash(`+${r.hours} HOURS`, 'clear');
-    later(startRound, 1500);
+    flash(`+${round.hours} HOURS`, 'clear');
+    later(finish, 1200);
   }
 
   // ── ตัวจับเวลาแสดงผล ───────────────────────────────────────────
@@ -266,7 +265,7 @@ export function runLastStandQte(root, onFinish) {
   // ── จบ ─────────────────────────────────────────────────────────
   function fail() {
     running = false;
-    setSub('พลาดครบ 3 ครั้ง — หมดสิทธิ์ต่อเวลา');
+    setSub(`พลาดครบ ${cfg.lives} ครั้ง — หมดสิทธิ์ต่อเวลา`);
     flash('FAILED', 'fail');
     later(finish, 1400);
   }
@@ -276,9 +275,13 @@ export function runLastStandQte(root, onFinish) {
     finished = true;
     running = false;
     const ok = hoursGained > 0;
+    const last = roundIndex >= cfg.rounds.length - 1;
     title.textContent = ok ? `LAST STAND +${hoursGained} HOURS` : 'LAST STAND OVER';
     title.classList.add(ok ? 'is-win' : 'is-lose');
-    setSub(ok ? 'โรเบิร์ตสันยังยืนอยู่' : 'โรเบิร์ตสันหมดแรงแล้ว');
+    // บอกด้วยว่ายังมีรอบต่อไปรออยู่ไหม ผู้เล่นจะได้รู้ว่าต้องเก็บแรงไว้อีก
+    setSub(ok
+      ? (last ? 'ยืดได้ครบทุกรอบแล้ว — ไม่มีต่อเวลาอีก' : 'กลับไปสั่งงานต่อ · หมดเวลาแล้วเจอกันรอบหน้า')
+      : 'โรเบิร์ตสันหมดแรงแล้ว');
     later(() => {
       wrap.classList.remove('is-in');
       later(() => {

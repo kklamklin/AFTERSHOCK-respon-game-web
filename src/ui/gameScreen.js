@@ -611,16 +611,21 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
 
   // ── มินิเกมต่อเวลา Last Stand ────────────────────────────────
   // เวลาในเกมหยุด แต่เพลงเล่นต่อ (เหมือนตอนลากไอคอน) เพราะจังหวะของมินิเกมอิงเพลง
-  function openQte(opKey) {
+  function openQte(opKey, roundIndex) {
     if (activeQte) return;
     const wasRunning = state.running;
     bgmKeepPlaying = true;
     clock.setRunning(false);
     top.paintSpeed();
     syncGameBgm();
-    alignBgmToCue();
+    // จับเพลงให้ตรงท่อนเฉพาะรอบแรก — รอบ 2/3 มาทีหลังอีกหลายชั่วโมงในเกม
+    // ถ้าไปกรอทุกรอบเพลงจะกระโดดถอยหลังกลับมาที่เดิมทุกครั้ง
+    if (roundIndex === 0) alignBgmToCue();
 
-    activeQte = runLastStandQte(root, (hoursGained) => {
+    // ต่อเวลาสะสมจากรอบก่อน ๆ (เอาไว้โชว์ยอดรวมบนจอมินิเกม)
+    const soFar = CONFIG.qte.rounds.slice(0, roundIndex).reduce((s, r) => s + r.hours, 0);
+
+    activeQte = runLastStandQte(root, roundIndex, soFar, (hoursGained) => {
       activeQte = null;
       const ev = resolveLastStandQte(state, opKey, hoursGained);
       const name = OPS_FOR_STATUS[opKey].name;
@@ -683,10 +688,11 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
         }
       },
       // ฟื้นตัว / หมดเวลา Last Stand — แจ้งใน Feed ให้ผู้เล่นรู้
-      onStatusChange: ({ opKey, from, to }) => {
+      onStatusChange: ({ opKey, from, to, round }) => {
         const name = OPS_FOR_STATUS[opKey].name;
         // เวลา Last Stand หมด → ยังไม่ล้ม เปิดมินิเกมต่อเวลาก่อน (systems/status.js เป็นคนบอก)
-        if (to === 'qte') { openQte(opKey); return; }
+        // เปิดทีละรอบ ทุกครั้งที่เวลาที่ต่อมารอบก่อนหมดลง
+        if (to === 'qte') { openQte(opKey, round ?? 0); return; }
         if (from === 'laststand') feed.pushNote(`${name} หมดแรง — หมดสติ`, 'hurt', 'laststand');
         else if (to === 'normal') feed.pushNote(`${name} กลับมาพร้อมปฏิบัติงาน`, 'ok', 'recovered');
       },
