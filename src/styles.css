@@ -250,6 +250,15 @@ html, body {
 .howto-heading { font-size: 18px; font-weight: 800; margin-top: 20px; }
 .howto-heading:first-child { margin-top: 0; }
 .howto-text { font-size: 15px; line-height: 1.6; color: #333; margin-top: 4px; }
+/* รายการหัวข้อย่อยและตารางตัวเลขในคู่มือ */
+.howto-list { margin: 6px 0 0; padding-left: 20px; }
+.howto-list li { font-size: 15px; line-height: 1.6; margin-top: 4px; }
+.howto-table {
+  display: grid; grid-template-columns: minmax(140px, 30%) 1fr;
+  gap: 4px 14px; margin-top: 8px; font-size: 14px; line-height: 1.55;
+}
+.howto-cell-key { font-weight: 700; }
+.howto-cell-val { }
 
 /* หน้ารายชื่อ จนท. (Field operator / Baseplate) */
 .screen--roster { padding: 32px 48px 96px; align-items: stretch; }
@@ -1440,6 +1449,9 @@ img.game-icon {
    ทุกอย่างที่ขยับใช้ transform/opacity เท่านั้น (ดูกฎรอบ 10.11)
    ══════════════════════════════════════════════════════════════ */
 .qte-wrap {
+  /* --u ปกติมาจาก .screen--game แต่หน้าฝึกซ้อมเปิดจากหน้า Intel ซึ่งไม่มีตัวแปรนี้
+     จึงตั้งค่าเริ่มต้นเท่ากันไว้ที่นี่ ให้แผงมีขนาดเท่ากันไม่ว่าเปิดจากหน้าไหน */
+  --u: 10.5px;
   position: absolute; inset: 0; z-index: 60;
   display: flex; align-items: center; justify-content: center;
   background: radial-gradient(80% 120% at 50% 50%, rgba(6,12,28,0.82), rgba(3,6,16,0.96));
@@ -1492,7 +1504,17 @@ img.game-icon {
   75%      { transform: translateX(calc(var(--u) * 0.7)); }
 }
 
-.qte-head { text-align: center; }
+.qte-head { text-align: center; position: relative; }
+/* ปุ่มออกจากหน้าฝึกซ้อม — มีเฉพาะโหมดฝึก (ของจริงจบเองไม่มีปุ่มออก) */
+.qte-exit {
+  position: absolute; right: 0; top: 0;
+  padding: calc(var(--u) * 0.4) calc(var(--u) * 1.1);
+  font-family: var(--font-ui); font-size: calc(var(--u) * 1.15);
+  color: var(--ink); background: rgba(8, 20, 44, 0.9);
+  border: 1px solid var(--line-hot); border-radius: calc(var(--u) * 0.5);
+  cursor: pointer;
+}
+.qte-exit:hover { background: rgba(20, 44, 86, 0.95); }
 .qte-title {
   font-family: var(--font-display); font-size: calc(var(--u) * 2.9); font-weight: 800;
   letter-spacing: calc(var(--u) * 0.28); color: var(--accent);
@@ -1919,9 +1941,21 @@ img.game-icon {
 .howto-heading, .card-heading {
   font-family: var(--font-display); color: var(--accent); letter-spacing: 1.5px;
 }
-.howto-text, .card-text { color: var(--ink-dim); }
+.howto-text, .card-text, .howto-list li { color: var(--ink-dim); }
+.howto-list li::marker { color: var(--accent); }
+.howto-cell-key { color: var(--accent); }
+.howto-cell-val { color: var(--ink-dim); }
 .card-facts { color: var(--ink); }
 .card-skill-name { color: var(--warn); }
+/* ปุ่มเปิดหน้าฝึกซ้อม QTE บนการ์ด Robertson */
+.card-practice-btn {
+  display: block; margin-top: 20px; padding: 10px 18px;
+  font-family: var(--font-display); font-size: 15px; letter-spacing: 1px;
+  color: var(--ink); background: rgba(20, 44, 86, 0.9);
+  border: 1px solid var(--line-hot); border-radius: 6px;
+  box-shadow: var(--glow-soft); cursor: pointer;
+}
+.card-practice-btn:hover { background: rgba(30, 62, 114, 0.95); }
 .roster-row { background: none; border: none; color: var(--ink); }
 .roster-name { font-family: var(--font-display); letter-spacing: 1.5px; }
 .roster-sub { color: var(--muted); }

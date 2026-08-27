@@ -34,8 +34,11 @@ function heartSvg(cls) {
   return svg;
 }
 
+// ต้องยาวเท่ากับอนิเมชั่นปิดจอใน styles.css (.qte-wrap.is-out) ไม่งั้นจอจะหายก่อนอนิเมชั่นจบ
+const CLOSE_MS = 620;
+
 /**
- * เปิดมินิเกม "หนึ่งรอบ" — คืน { destroy } ไว้ปิดทิ้งกลางคันตอนออกจากหน้าเกม
+ * เปิดมินิเกม "หนึ่งรอบ" ของจริง — คืน { destroy } ไว้ปิดทิ้งกลางคันตอนออกจากหน้าเกม
  *
  * ⚠️ หนึ่งครั้งที่เปิด = หนึ่งรอบเท่านั้น ไม่ได้เล่นรวด 3 รอบ
  * ผ่านแล้วปิดจอ กลับไปเล่นเกมต่อ พอเวลาที่ต่อมาหมดอีก เกมถึงเปิดรอบถัดไปให้
@@ -45,10 +48,20 @@ function heartSvg(cls) {
  * @param hoursSoFar ต่อเวลาสะสมมาแล้วกี่ชั่วโมง (เอาไว้โชว์ยอดรวมบนจอ)
  * @param onFinish   (hoursGained, stat) — ถูกเรียกครั้งเดียวเสมอ แม้จะแพ้
  */
-// ต้องยาวเท่ากับอนิเมชั่นปิดจอใน styles.css (.qte-wrap.is-out) ไม่งั้นจอจะหายก่อนอนิเมชั่นจบ
-const CLOSE_MS = 620;
-
 export function runLastStandQte(root, roundIndex, hoursSoFar, onFinish) {
+  return buildQte(root, { roundIndex, hoursSoFar, onFinish });
+}
+
+/**
+ * หน้าฝึกซ้อม QTE — เล่นได้ไม่สิ้นสุด พลาดกี่ครั้งก็ได้ ไม่มีผลกับเกมจริง
+ * ใช้จากหน้า Intel → Operator → Robertson (ดู ui/screens.js)
+ * ออกได้ทางเดียวคือกดปุ่มออกเอง จึงต้องมีปุ่มบนจอเสมอ
+ */
+export function runQtePractice(root, onExit) {
+  return buildQte(root, { practice: true, onExit });
+}
+
+function buildQte(root, { roundIndex = 0, hoursSoFar = 0, onFinish, practice = false, onExit } = {}) {
   const cfg = CONFIG.qte;
   const round = cfg.rounds[Math.min(roundIndex, cfg.rounds.length - 1)];
   const wrap = el('div', 'qte-wrap');
@@ -56,9 +69,17 @@ export function runLastStandQte(root, roundIndex, hoursSoFar, onFinish) {
   wrap.appendChild(panel);
 
   const head = el('div', 'qte-head');
-  const title = el('div', 'qte-title', 'CLICK A CORRECT RHYTHM');
+  const title = el('div', 'qte-title', practice ? 'QTE TRAINING' : 'CLICK A CORRECT RHYTHM');
   const sub = el('div', 'qte-sub', '');
   head.append(title, sub);
+
+  // โหมดฝึกไม่มีทางจบเอง ต้องมีปุ่มออกเสมอ
+  let exitBtn = null;
+  if (practice) {
+    exitBtn = el('button', 'qte-exit', 'ออกจากการฝึก ✕');
+    exitBtn.type = 'button';
+    head.appendChild(exitBtn);
+  }
 
   const stage = el('div', 'qte-stage');
   const hitL = el('div', 'qte-hit qte-hit--left');
@@ -105,6 +126,7 @@ export function runLastStandQte(root, roundIndex, hoursSoFar, onFinish) {
   let notes = [];          // เสี้ยวที่ยังไม่ถูกตัดสิน
   let queue = [];          // จังหวะที่ยังไม่ถึงเวลาโผล่
   let hitCount = 0;
+  let missCount = 0;         // โหมดฝึกนับพลาดสะสมไว้โชว์เฉย ๆ ไม่ได้ตัดจบ
   const totalNotes = round.notes;
   let roundEndAt = 0;
   let running = false;
@@ -117,14 +139,23 @@ export function runLastStandQte(root, roundIndex, hoursSoFar, onFinish) {
   function setSub(text) { sub.textContent = text; }
 
   // บอกกติกาของรอบนี้ตั้งแต่แผงโผล่ ไม่ต้องรอจังหวะแรก ผู้เล่นจะได้อ่านทัน
-  setSub(`QTE ${roundIndex + 1} / ${cfg.rounds.length} · ${totalNotes} จังหวะ`
+  if (practice) setSub('ฝึกได้ไม่จำกัด · พลาดกี่ครั้งก็ได้ · ไม่มีผลกับเกมจริง');
+  else setSub(`QTE ${roundIndex + 1} / ${cfg.rounds.length} · ${totalNotes} จังหวะ`
        + ` · พลาดได้ ${cfg.lives} ครั้ง · ผ่านแล้ว +${round.hours} ชม.`);
 
   function paintLives() {
-    livesIcons.forEach((h, i) => h.classList.toggle('is-gone', i >= livesLeft));
+    // โหมดฝึกไม่มีชีวิตให้เสีย — หัวใจติดครบตลอด
+    livesIcons.forEach((h, i) => h.classList.toggle('is-gone', !practice && i >= livesLeft));
   }
 
   function paintProgress() {
+    if (practice) {
+      // ฝึกซ้อมไม่มีเส้นชัย จึงโชว์ "ความแม่น" แทนความคืบหน้า
+      const total = hitCount + missCount;
+      bonus.textContent = total ? `แม่น ${Math.round((hitCount / total) * 100)}%` : 'แม่น —';
+      progFill.style.transform = `scaleX(${total ? hitCount / total : 0})`;
+      return;
+    }
     const pct = totalNotes ? Math.round((hitCount / totalNotes) * 100) : 0;
     progFill.style.transform = `scaleX(${pct / 100})`;
   }
@@ -136,18 +167,32 @@ export function runLastStandQte(root, roundIndex, hoursSoFar, onFinish) {
     callout.classList.add('is-on');
   }
 
-  // ── รอบเดียวจบ ─────────────────────────────────────────────────
+  // ── สร้างจังหวะ ───────────────────────────────────────────────
+  // สลับฝั่งแบบสุ่ม แต่เอนไปทางสลับข้าง จะได้ไม่กลายเป็นรัวข้างเดียวยาว ๆ
+  let lastSide = random() < 0.5 ? 'left' : 'right';
+  let nextBeatAt = 0;
+  function pushBeat(at) {
+    lastSide = random() < 0.62 ? (lastSide === 'left' ? 'right' : 'left') : lastSide;
+    queue.push({ side: lastSide, hitTime: at, el: null, done: false });
+  }
+
   function startRound() {
     paintProgress();
-    // ตั้งเวลาที่ต้องกดของทุกจังหวะไว้ล่วงหน้า — เวลาเป็นตัวจริง ตำแหน่งเป็นแค่ภาพ
+    // ตั้งเวลาที่ต้องกดไว้ล่วงหน้า — เวลาเป็นตัวจริง ตำแหน่งเป็นแค่ภาพ
     const lead = 1500;                              // เวลาให้ผู้เล่นตั้งตัวก่อนจังหวะแรก
     const t0 = performance.now() + lead;
-    let side = random() < 0.5 ? 'left' : 'right';
-    for (let i = 0; i < totalNotes; i += 1) {
-      // สลับฝั่งแบบสุ่ม แต่ห้ามซ้ำฝั่งเดิมเกิน 2 ครั้งติด จะได้ไม่กลายเป็นรัวข้างเดียว
-      if (i > 0) side = random() < 0.62 ? (side === 'left' ? 'right' : 'left') : side;
-      queue.push({ side, hitTime: t0 + i * round.beatMs, el: null, done: false });
+
+    if (practice) {
+      // ฝึกซ้อม: เติมจังหวะไปเรื่อย ๆ ไม่มีเส้นชัย (frame() เติมต่อให้เอง)
+      for (let i = 0; i < 8; i += 1) pushBeat(t0 + i * round.beatMs);
+      nextBeatAt = t0 + 8 * round.beatMs;
+      roundEndAt = Infinity;
+      flash('TRAINING', 'go');
+      running = true;
+      return;
     }
+
+    for (let i = 0; i < totalNotes; i += 1) pushBeat(t0 + i * round.beatMs);
     roundEndAt = t0 + (totalNotes - 1) * round.beatMs + cfg.hitWindowMs + 400;
 
     flash(`QTE ${roundIndex + 1}`, 'go');
@@ -169,6 +214,14 @@ export function runLastStandQte(root, roundIndex, hoursSoFar, onFinish) {
   function frame(now) {
     raf = requestAnimationFrame(frame);
     if (!running) return;
+
+    // ฝึกซ้อม: เติมจังหวะถัดไปเรื่อย ๆ ให้คิวไม่มีวันหมด
+    if (practice) {
+      while (nextBeatAt - now <= cfg.travelMs + round.beatMs * 4) {
+        pushBeat(nextBeatAt);
+        nextBeatAt += round.beatMs;
+      }
+    }
 
     // ถึงเวลาโผล่ (นับถอยหลังจากจุดที่ต้องกด travelMs)
     while (queue.length && queue[0].hitTime - now <= cfg.travelMs) {
@@ -210,6 +263,17 @@ export function runLastStandQte(root, roundIndex, hoursSoFar, onFinish) {
   }
 
   function loseLife(text) {
+    if (practice) {
+      // ฝึกซ้อมพลาดได้ไม่จำกัด — นับไว้คิด %ความแม่นอย่างเดียว
+      missCount += 1;
+      paintProgress();
+      playSfx('wrongRhythm');
+      flash(text, 'miss');
+      wrap.classList.remove('is-shake');
+      void wrap.offsetWidth;
+      wrap.classList.add('is-shake');
+      return;
+    }
     livesLeft -= 1;
     paintLives();
     playSfx('wrongRhythm');
@@ -252,6 +316,18 @@ export function runLastStandQte(root, roundIndex, hoursSoFar, onFinish) {
     flash('PERFECT', 'hit');
   }
 
+  if (exitBtn) exitBtn.addEventListener('click', () => closePractice());
+
+  // ปิดหน้าฝึก — เล่นอนิเมชั่นปิดจอเหมือนของจริงแล้วค่อยคืนหน้าเดิม
+  function closePractice() {
+    if (finished) return;
+    finished = true;
+    running = false;
+    wrap.classList.remove('is-in');
+    wrap.classList.add('is-out', 'is-win');
+    later(() => { destroy(); onExit?.({ hits: hitCount, misses: missCount }); }, CLOSE_MS);
+  }
+
   const onKeyL = (e) => { e.preventDefault(); press('left'); };
   const onKeyR = (e) => { e.preventDefault(); press('right'); };
   keyL.addEventListener('pointerdown', onKeyL);
@@ -265,6 +341,7 @@ export function runLastStandQte(root, roundIndex, hoursSoFar, onFinish) {
   function onKey(e) {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
     const k = e.key.toLowerCase();
+    if (practice && e.key === 'Escape') { e.preventDefault(); closePractice(); return; }
     if (LEFT_KEYS.includes(k)) { e.preventDefault(); press('left'); }
     else if (RIGHT_KEYS.includes(k)) { e.preventDefault(); press('right'); }
   }
