@@ -369,6 +369,30 @@ html, body {
 .vn-team-group--on { transform: scale(1.15); }
 .vn-team-group--dim { opacity: 0.3; }
 
+/* แถบไอคอนสกิลในหน้าสอนเล่น (data insert type 'skills') — 2 กลุ่ม ภาคสนาม / บัฟ */
+.vn-skills {
+  background: #fff; border: 2px solid #1b1f24; border-radius: 6px;
+  padding: 16px 18px; display: flex; gap: 22px; align-items: flex-start;
+}
+.vn-skill-group { transition: opacity 0.3s, transform 0.3s; }
+.vn-skill-group--on { transform: scale(1.08); }
+.vn-skill-group--dim { opacity: 0.32; }
+.vn-skill-title {
+  font-size: 15px; font-weight: 700; color: #2b6cb0; text-align: center;
+  margin-bottom: 8px; letter-spacing: 0.5px;
+}
+.vn-skill-group:nth-child(2) .vn-skill-title { color: #b8590a; }
+.vn-skill-row { display: flex; gap: 12px; }
+.vn-skill-chip { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 54px; }
+.vn-skill-glyph {
+  width: 42px; height: 42px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: #eef4fb; border: 1px solid #cddcf0;
+}
+.vn-skill-ico { font-size: 24px; line-height: 1; }
+.vn-skill-ico.game-icon:not(.game-icon--emoji) { width: 26px; height: 26px; object-fit: contain; }
+.vn-skill-name { font-size: 12px; color: #444; }
+
 .vn-gameover-flash {
   position: absolute; inset: 0; background: #7a0000; z-index: 5;
   animation: vnGameOverFlash 0.9s ease forwards;

@@ -1,72 +1,123 @@
-// บทสอนเล่น (Tutorial) แบบ visual novel — คัดลอกจาก docs/AFTERSHOCK_Tutorial_Script_UI.md
-// แต่ละ step = 1 บทพูด = 1 จังหวะ "Click to next"
+// บทสอนเล่น (Tutorial) แบบ visual novel — เขียนใหม่ทั้งฉาก (รอบ 10.16) ให้ครอบคลุมระบบปัจจุบัน
+// โทน: Lia สายเข้ม เจ้าระเบียบ พูดเป๊ะ ปะทะ Lyla สายฮา กวน ชอบแทรก · Robertson พูดคำเดียวเป็นมุกคั่น
 //
+// แต่ละ step = 1 บทพูด = 1 จังหวะ "Click to next"
 // field ที่ใช้:
-//   speaker    'ria' | 'lyla' | 'robertson'
+//   speaker    'ria' | 'lyla' | 'robertson'   (ria = Lia — ชื่อ key เดิม ห้ามเปลี่ยน)
 //   sprite     ไฟล์ภาพใน assets/characters/ (จาก OPERATORS[x].portraits)
 //   text       บทพูด
-//   interrupt  true = พูดแทรก ตัดไปทันทีไม่มีอนิเมชันเข้าฉาก
-//   insert     ของแทรกฉาก (แผนที่ / สถิติ / ทีม / บาดเจ็บ / จบเกม) หรือ null = ห้องบัญชาการปกติ
+//   interrupt  true = พูดแทรก ตัดเข้าทันทีไม่มีอนิเมชันสั่นตัวละคร
+//   insert     ของแทรกฉาก (แผนที่/สถิติ/ทีม/แถบสกิล/บาดเจ็บ/จบเกม) หรือ null = ห้องบัญชาการปกติ
 //   final      true = จบบท เฟดดำ จบ tutorial
 //   narration  true = ข้อความบรรยายฉากเปิดเรื่อง ไม่มีตัวละคร/ป้ายชื่อ ตัวเอียง แค่พื้นหลัง
+//
+// ── คีย์สไปรต์ (เจ้าของกำหนดความหมายแต่ละไฟล์) ─────────────────────
+//   Base-op-Lia.png            Lia หน้านิ่ง
+//   Base-op-Lia-talking1.png   Lia ตอนพูด
+//   Base-op-Lia-talking2.png   Lia ยิ้มนิดๆ (แซว/อบอุ่น)
+//   Field-op-Lyla.png          Lyla ปกติ
+//   Field-op-Lyla-talking1.png Lyla หลับตา (กวน/ถอนใจ)
+//   Field-op-Lyla-talking2.png Lyla พูด (ออกแรง/แทรก)
+//   Field-op-robertson.png     Robertson หน้าปกติ
+//   ฉากมืดดึงสไปรต์พิเศษที่มีไฟล์อยู่แล้ว: Lyla-injured / Lyla-unconscious / robertson-finalstand
+
+const LIA_IDLE = 'Base-op-Lia.png';
+const LIA_TALK = 'Base-op-Lia-talking1.png';
+const LIA_SMILE = 'Base-op-Lia-talking2.png';
+const LYLA_IDLE = 'Field-op-Lyla.png';
+const LYLA_SHUT = 'Field-op-Lyla-talking1.png';
+const LYLA_TALK = 'Field-op-Lyla-talking2.png';
+const LYLA_HURT = 'Field-op-Lyla-injured.png';
+const LYLA_DOWN = 'Field-op-Lyla-unconscious.png';
+const ROB_IDLE = 'Field-op-robertson.png';
+const ROB_STAND = 'Field-op-robertson-finalstand.png';
 
 export const TUTORIAL_SCRIPT = [
-  { narration: true, text: '6 ชั่วโมงหลังแผ่นดินไหวถล่มเมือง คุณถูกเรียกตัวมาที่ศูนย์บัญชาการทันที' },
+  { narration: true, text: '72 ชั่วโมงหลังแผ่นดินไหวถล่มเมือง มีคน 1,200 ชีวิตติดอยู่ใต้ซาก และคุณคือคนที่ตัดสินใจทุกอย่างจากห้องนี้' },
 
-  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'ผู้บัญชาการ... เมืองเจอแผ่นดินไหวเมื่อ 6 ชั่วโมงก่อน' },
-  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'ก่อนเริ่ม ขอพาดูระบบก่อนนิดนึง' },
+  // — แนะนำตัว / เมือง —
+  { speaker: 'ria', sprite: LIA_TALK, text: 'ผู้บัญชาการ มาถึงพอดี ฉัน Lia ฝ่ายวิเคราะห์ข้อมูล เดี๋ยวปูพื้นให้ก่อน' },
+  { speaker: 'lyla', sprite: LYLA_TALK, text: 'โห เริ่มด้วยคำว่า "ปูพื้น" เลยเหรอ เข้มตั้งแต่ประโยคแรก' },
+  { speaker: 'ria', sprite: LIA_IDLE, text: 'มันเรียกแบบนี้จริงๆ' },
+  { speaker: 'ria', sprite: LIA_TALK, text: 'เมืองถูกแบ่งเป็น 47 โซน', insert: { type: 'map', mode: 'full' } },
+  { speaker: 'ria', sprite: LIA_IDLE, text: 'เทา — ยังพอมีเวลา · เหลือง — เริ่มอันตราย · แดง —', insert: { type: 'map', mode: 'full', level: 'cycle' } },
+  { speaker: 'lyla', sprite: LYLA_TALK, text: '—แดงคือใกล้หมดเวลาแล้ว! ยิ่งทิ้งไว้ คนยิ่งหาย', interrupt: true, insert: { type: 'map', mode: 'full', level: 'red' } },
+  { speaker: 'ria', sprite: LIA_IDLE, text: '...ฉันกำลังจะพูดพอดี', insert: { type: 'map', mode: 'full', level: 'red' } },
+  { speaker: 'lyla', sprite: LYLA_SHUT, text: 'เห็นมั้ย ฉันช่วยย่อให้สั้นลง' },
+  { speaker: 'ria', sprite: LIA_SMILE, text: 'เธอช่วยแย่งพูดมากกว่า' },
 
-  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'เมืองแบ่งเป็น 47 โซน', insert: { type: 'map', mode: 'full' } },
-  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'เทา — ปกติ เหลือง — อันตราย แดง —', insert: { type: 'map', mode: 'full', level: 'cycle' } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla-talking2.png', text: '—วิกฤต เดี๋ยวก็รู้เองว่าทำไมสีมันน่ากลัว', interrupt: true, insert: { type: 'map', mode: 'full', level: 'red' } },
-  { speaker: 'ria', sprite: 'Base-op-Lia-talking1.png', text: '...แย่งพูดอีกแล้ว', insert: { type: 'map', mode: 'full', level: 'red' } },
+  // — เวลาเดินตลอด —
+  { speaker: 'lyla', sprite: LYLA_TALK, text: 'เอาจริงนะผู้บัญชาการ เรื่องสำคัญสุดคือ — เวลาไม่เคยหยุด', insert: { type: 'stat', kind: 'survivors' } },
+  { speaker: 'lyla', sprite: LYLA_IDLE, text: 'ตอนเรายืนคุยกันเนี่ย ข้างนอกก็มีคนหมดเวลาไปเรื่อยๆ', insert: { type: 'stat', kind: 'survivors' } },
+  { speaker: 'ria', sprite: LIA_TALK, text: 'โซนแดงหายไวที่สุด อย่าให้มันค้างนาน', insert: { type: 'stat', kind: 'redzone' } },
+  { speaker: 'lyla', sprite: LYLA_SHUT, text: 'เออ อันนี้เธอพูดสั้นได้นี่หว่า' },
+  { speaker: 'ria', sprite: LIA_SMILE, text: '...ฉันพูดสั้นเป็น เธอต่างหากที่ฟังไม่จบ' },
 
-  { speaker: 'lyla', sprite: 'Field-op-Lyla.png', text: 'เธออธิบายเป็นวิชาการไปหน่อยนะ ขอบ้าง' },
-  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: '...เอาสิ ลองดู' },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla-talking2.png', text: 'ผู้บัญชาการ ฟังทางนี้' },
+  // — ทีมสองฝ่าย —
+  { speaker: 'ria', sprite: LIA_TALK, text: 'ทีมมีสี่คน แบ่งเป็นสองฝ่าย', insert: { type: 'team' } },
+  { speaker: 'lyla', sprite: LYLA_TALK, text: 'ฉันกับ Robertson เป็น "ภาคสนาม" — พวกที่ลงไปลุยของจริง', insert: { type: 'team', highlight: 'field' } },
+  { speaker: 'lyla', sprite: LYLA_IDLE, text: 'และฉันเข้าได้ทุกโซน แม้แต่แดงที่คนอื่นไม่กล้าแตะ', insert: { type: 'team', highlight: 'field' } },
+  { speaker: 'robertson', sprite: ROB_IDLE, text: 'ผมก็เข้าแดงได้' },
+  { speaker: 'lyla', sprite: LYLA_SHUT, text: '...เข้าได้ แต่รอดยากกว่าเยอะนะพี่' },
+  { speaker: 'robertson', sprite: ROB_IDLE, text: 'รับทราบ' },
+  { speaker: 'ria', sprite: LIA_TALK, text: 'ส่วนฉันกับ Mudongzock เป็น "ภาคฐาน" — ไม่ลงพื้นที่ แต่คอยหนุนอยู่หลังจอ', insert: { type: 'team', highlight: 'support' } },
+  { speaker: 'lyla', sprite: LYLA_SHUT, text: 'แปลว่านั่งเชียร์อยู่บ้านน่ะ', insert: { type: 'team', highlight: 'support' } },
+  { speaker: 'ria', sprite: LIA_SMILE, text: 'แปลว่าเป็นคนทำให้เธอไม่ตายในโซนแดง', insert: { type: 'team', highlight: 'support' } },
 
-  { speaker: 'lyla', sprite: 'Field-op-Lyla.png', text: 'ลากตัวเรา ไปวางบนโซนที่จะส่งไป', insert: { type: 'map', mode: 'side', team: true } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla.png', text: 'ง่ายๆ แค่นั้น', insert: { type: 'map', mode: 'side', team: true } },
-  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: '—ก่อนปล่อยมือ มันจะโชว์ % ให้ดูก่อน', interrupt: true, insert: { type: 'map', mode: 'side', team: true, percent: 72 } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla-talking2.png', text: 'อ๋อใช่ ปล่อยมือปุ๊บคือส่งจริง', insert: { type: 'map', mode: 'side', team: true, percent: 72 } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla.png', text: 'ยกเลิกไม่ได้แล้วนะ', insert: { type: 'map', mode: 'side', team: true, percent: 72 } },
+  // — สกิลคือหัวใจ —
+  { speaker: 'ria', sprite: LIA_TALK, text: 'ทุกอย่างที่คุณสั่ง ทำผ่าน "ไอคอนสกิล" ที่แถบสองข้างจอ', insert: { type: 'skills' } },
+  { speaker: 'ria', sprite: LIA_IDLE, text: 'สกิลของภาคสนามคือตัวหลัก — ราว 70% ของเกมคือการใช้พวกนี้ส่งคนลงไปช่วย', insert: { type: 'skills', highlight: 'field' } },
+  { speaker: 'lyla', sprite: LYLA_TALK, text: 'วิธีใช้ไม่มีอะไรเลย — ลากไอคอนไปวางบนโซนที่อยากส่ง', insert: { type: 'map', mode: 'side', team: true } },
+  { speaker: 'ria', sprite: LIA_TALK, text: 'ก่อนปล่อยมือ ระบบจะกางตัวเลขให้ดูก่อน — โอกาสสำเร็จ ความเสี่ยงบาดเจ็บ ราคาที่ต้องจ่าย', insert: { type: 'map', mode: 'side', team: true, percent: 72 } },
+  { speaker: 'lyla', sprite: LYLA_TALK, text: 'แล้วปล่อยมือปุ๊บ = ส่งจริงทันที ยกเลิกไม่ได้นะ', insert: { type: 'map', mode: 'side', team: true, percent: 72 } },
+  { speaker: 'lyla', sprite: LYLA_IDLE, text: 'เพราะงั้นเล็งดีๆ ก่อนปล่อย อย่าลากมั่วแล้วมือลั่น', insert: { type: 'map', mode: 'side', team: true, percent: 72 } },
+  { speaker: 'robertson', sprite: ROB_IDLE, text: 'เคยลั่นมั้ย' },
+  { speaker: 'lyla', sprite: LYLA_TALK, text: '...ไม่เคย! คนละเรื่อง' },
+  { speaker: 'ria', sprite: LIA_SMILE, text: 'เคยสามรอบ ฉันมีบันทึก' },
+  { speaker: 'lyla', sprite: LYLA_SHUT, text: 'เธอนี่มันจริงๆ เลยนะ' },
 
-  { speaker: 'robertson', sprite: 'Field-op-robertson.png', text: 'รับทราบ' },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla-talking1.png', text: '...พูดคำเดียวตลอดเลยเนี่ย' },
-  { speaker: 'ria', sprite: 'Base-op-Lia-talking2.png', text: 'แต่เชื่อถือได้' },
+  // — AP —
+  { speaker: 'ria', sprite: LIA_TALK, text: 'ทุกครั้งที่ส่งทีมหรือใช้สกิล ต้องจ่าย AP', insert: { type: 'stat', kind: 'ap' } },
+  { speaker: 'ria', sprite: LIA_IDLE, text: 'AP เพิ่มขึ้นเรื่อยๆ ตามเวลา แต่บอกตรงๆ — ไม่มีวันพอทุกอย่าง', insert: { type: 'stat', kind: 'ap' } },
+  { speaker: 'lyla', sprite: LYLA_TALK, text: 'เพราะงั้นอย่าทุ่มหมดหน้าตักตั้งแต่ต้น เลือกโซนที่คุ้มสุด', insert: { type: 'stat', kind: 'ap' } },
+  { speaker: 'ria', sprite: LIA_IDLE, text: 'หรือจะเก็บไว้ทุ่มทีเดียวตอนจำเป็นก็ได้ — เราคิดไม่เหมือนกันเรื่องนี้' },
+  { speaker: 'lyla', sprite: LYLA_SHUT, text: 'เห็นมั้ย เรื่องนี้เถียงกันมาสามวันแล้ว ลองเล่นเองแล้วตัดสินเอาละกัน' },
 
-  { speaker: 'lyla', sprite: 'Field-op-Lyla.png', text: 'อ้อ เดี๋ยวก่อน' },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla-talking2.png', text: 'เวลาไม่รอนะ ตอนทีมกำลังเดินไป คนก็ตายไปเรื่อยๆ', insert: { type: 'stat', kind: 'survivors' } },
-  { speaker: 'ria', sprite: 'Base-op-Lia-talking1.png', text: '...พูดง่ายไปป่ะ', insert: { type: 'stat', kind: 'survivors' } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla.png', text: 'ก็มันจริง', insert: { type: 'stat', kind: 'survivors' } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla.png', text: 'โซนแดงยิ่งตายไว', insert: { type: 'stat', kind: 'redzone' } },
+  // — สกิลหนุน (บัฟ) —
+  { speaker: 'ria', sprite: LIA_TALK, text: 'ฝ่ายฐานมีสกิล "บัฟ" — ไม่ได้ช่วยคนเอง แต่ดันโอกาสสำเร็จให้ทีมสนาม', insert: { type: 'skills', highlight: 'buff' } },
+  { speaker: 'ria', sprite: LIA_IDLE, text: 'ฉันมี Scan เพิ่ม % ให้ และ Alert การันตีว่าเที่ยวนั้นทีมจะไม่บาดเจ็บเลย', insert: { type: 'skills', highlight: 'buff' } },
+  { speaker: 'ria', sprite: LIA_TALK, text: 'Mudongzock มี Air Deploy ชะลอการตายทั้งเมืองพร้อมกัน ไว้ตอนหลายโซนใกล้หมดเวลา', insert: { type: 'skills', highlight: 'buff' } },
+  { speaker: 'lyla', sprite: LYLA_TALK, text: 'เคล็ดลับเด็ด — ตอนฉันบุกโซนแดง เอาบัฟมาซ้อนบนหัวฉันด้วย % จะพุ่งเลย' },
+  { speaker: 'ria', sprite: LIA_IDLE, text: 'ลงบัฟทับโซนที่มีคนกำลังทำงานอยู่ได้ นั่นแหละคอมโบหลักของเกมนี้' },
+  { speaker: 'lyla', sprite: LYLA_SHUT, text: 'พูดง่ายๆ คือเธอทำให้ฉันดูเก่งขึ้นน่ะ' },
+  { speaker: 'ria', sprite: LIA_SMILE, text: 'พูดง่ายๆ คือฉันทำให้เธอกลับมาทั้งตัว' },
 
-  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'ทุกครั้งที่ส่งทีม ใช้ AP', insert: { type: 'stat', kind: 'ap' } },
-  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'ได้มาเรื่อยๆ ตามเวลา แต่ไม่พอหรอก', insert: { type: 'stat', kind: 'ap' } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla-talking1.png', text: 'เพราะงั้น—', insert: { type: 'stat', kind: 'ap' } },
-  { speaker: 'ria', sprite: 'Base-op-Lia-talking1.png', text: '—อย่าทุ่มมั่ว', interrupt: true, insert: { type: 'stat', kind: 'ap' } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla.png', text: 'ฉันจะบอกว่ากั๊กไว้บ้างก็ดีนะ' },
-  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'หรือทุ่มตอนจำเป็นก็ได้' },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla-talking2.png', text: 'เห็นไหม เราคิดไม่ตรงกันเรื่องนี้เลย' },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla.png', text: 'ลองเล่นดูเองละกัน' },
+  // — ผลลัพธ์ทอยสองชั้น —
+  { speaker: 'ria', sprite: LIA_TALK, text: 'ตอนทีมทำงานเสร็จ เกมจะทอยสองชั้น — ชั้นแรก "สำเร็จมั้ย" ชั้นสอง "ช่วยได้กี่คน"' },
+  { speaker: 'ria', sprite: LIA_IDLE, text: 'บัฟทุกตัวไปบวกที่ชั้นแรก ยิ่ง % สูง ยิ่งพลาดยาก' },
+  { speaker: 'lyla', sprite: LYLA_IDLE, text: 'สำเร็จเมื่อไหร่ โซนเปลี่ยนเป็นเขียว จบ ไม่ต้องกลับไปห่วงอีก' },
 
-  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'ทีมมีสี่คน', insert: { type: 'team' } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla-talking2.png', text: 'ฉันกับ Robertson ลงพื้นที่', insert: { type: 'team', highlight: 'field' } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla.png', text: 'ฉันเข้าได้ทุกที่ ที่คนอื่นเข้าไม่ได้', insert: { type: 'team', highlight: 'field' } },
-  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'ที่เหลือคือฉันกับอีกคน — ไม่ลงพื้นที่ แต่ช่วยเพิ่มโอกาสสำเร็จ', insert: { type: 'team', highlight: 'support' } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla-talking1.png', text: '...เวลาฉันบุกโซนแดง ช่วยเสริมด้วยล่ะ', insert: { type: 'team', highlight: 'support' } },
+  // — ด้านมืด: บาดเจ็บ —
+  { speaker: 'ria', sprite: LIA_TALK, text: 'แต่ถ้าล้มเหลว... เจ้าหน้าที่มีโอกาสบาดเจ็บ', insert: { type: 'tone-dark' } },
+  { speaker: 'lyla', sprite: LYLA_HURT, text: 'เจ็บแล้วเจ็บซ้ำอีกที — หมดสติเลย หายไปพักใหญ่', insert: { type: 'injury' } },
+  { speaker: 'lyla', sprite: LYLA_DOWN, text: 'แล้วถ้าฉันกับ Robertson หมดสติพร้อมกันทั้งคู่...', insert: { type: 'injury' } },
+  { speaker: 'ria', sprite: LIA_IDLE, text: 'เกมจบทันที', insert: { type: 'gameover' } },
+  { speaker: 'lyla', sprite: LYLA_HURT, text: '...อันนี้ไม่ตลกแล้วนะ' },
+  { speaker: 'ria', sprite: LIA_TALK, text: 'ใช่ เพราะงั้น — พวกเราไม่ใช่แค่ตัวเลขบนจอ' },
 
-  { speaker: 'ria', sprite: 'Base-op-Lia-talking1.png', text: 'ภารกิจล้มเหลว... เจ้าหน้าที่มีโอกาสบาดเจ็บ', insert: { type: 'tone-dark' } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla-talking1.png', text: 'บาดเจ็บซ้ำ — หมดสติ ใช้งานไม่ได้ชั่วคราว', insert: { type: 'injury' } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla.png', text: 'ถ้าฉันกับ Robertson หมดสติพร้อมกัน...', insert: { type: 'injury' } },
-  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'เกมจบ', insert: { type: 'gameover' } },
-  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'เพราะงั้น... ไม่ใช่แค่ตัวเลขบนหน้าจอนะ' },
+  // — ยืนหยัดครั้งสุดท้าย —
+  { speaker: 'robertson', sprite: ROB_STAND, text: '...ถ้าถึงตรงนั้นจริง ผมยังไม่ล้มง่ายๆ' },
+  { speaker: 'lyla', sprite: LYLA_IDLE, text: 'ถ้าเลวร้ายสุดๆ Robertson จะฝืนสู้ต่ออีกเฮือก — แต่ขออย่าให้ต้องถึงตรงนั้นเลยนะ' },
+  { speaker: 'ria', sprite: LIA_IDLE, text: 'อย่าไปพึ่งมัน มันคือทางเลือกสุดท้าย ไม่ใช่แผน' },
 
-  { speaker: 'ria', sprite: 'Base-op-Lia.png', text: 'ระบบมีเท่านี้', insert: { type: 'map', mode: 'full' } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla-talking1.png', text: '1,200 คน 47 โซน 72 ชั่วโมง', insert: { type: 'map', mode: 'full' } },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla.png', text: '...โหดอยู่นะเนี่ย', insert: { type: 'map', mode: 'full' } },
-  { speaker: 'robertson', sprite: 'Field-op-robertson.png', text: 'พร้อมเสมอ' },
-  { speaker: 'lyla', sprite: 'Field-op-Lyla-talking2.png', text: 'พาพวกเรารอดด้วยล่ะ ผู้บัญชาการ', final: true },
+  // — เป้าหมาย / แรงก์ —
+  { speaker: 'ria', sprite: LIA_TALK, text: 'สรุป — 1,200 ชีวิต 47 โซน 72 ชั่วโมง', insert: { type: 'map', mode: 'full' } },
+  { speaker: 'ria', sprite: LIA_IDLE, text: 'จบเกมจะวัดผลเป็นแรงก์ ตั้งแต่ E จนถึง S ยิ่งช่วยได้มาก ยิ่งสูง', insert: { type: 'map', mode: 'full' } },
+  { speaker: 'lyla', sprite: LYLA_SHUT, text: '...ฟังดูโหดชิบเป๋งเลยนะเนี่ย' },
+  { speaker: 'ria', sprite: LIA_SMILE, text: 'ภาษาราชการเรียกว่า "ท้าทาย"' },
+  { speaker: 'lyla', sprite: LYLA_TALK, text: 'เห็นมั้ย เข้มจนได้' },
+  { speaker: 'robertson', sprite: ROB_IDLE, text: 'พร้อมเสมอ' },
+  { speaker: 'lyla', sprite: LYLA_IDLE, text: 'เอาล่ะ พาพวกเรารอดกลับมาให้ครบด้วยล่ะ ผู้บัญชาการ', final: true },
 ];
 
 // ป้ายชื่อ/สีของแต่ละตัว — ใช้ตอนแสดงกล่องข้อความ
@@ -78,9 +129,9 @@ export const SPEAKER_META = {
 
 // สรุปเนื้อเรื่องแบบย่อ — โชว์ตอนกด Skip all แล้วยืนยัน
 export const TUTORIAL_SYNOPSIS =
-  'Lia บรีฟผู้บัญชาการหลังแผ่นดินไหว 6 ชม.: เมืองมี 47 โซน แบ่งเป็นเทา/เหลือง/แดงตามความอันตราย ' +
-  'Lyla สอนวิธีส่งทีม — ลากไอคอนไปวางบนโซน ระบบจะโชว์ % สำเร็จก่อนปล่อยมือ ปล่อยแล้วคือยืนยันทันที ยกเลิกไม่ได้ ' +
-  'Robertson รับทราบสั้นๆ ตามสไตล์ · เวลาเดินตลอด คนในโซน (โดยเฉพาะโซนแดง) ตายไปเรื่อยๆ ระหว่างรอผล ' +
-  'ทุกการส่งทีม/ใช้สกิลต้องใช้ AP ซึ่งได้เพิ่มตามเวลาแต่ไม่พอเสมอไป ต้องบริหารให้ดี ' +
-  'ทีมมี 4 คน: Robertson กับ Lyla ลงพื้นที่ ส่วน Lia กับภูตอีกตนช่วยเพิ่มโอกาสสำเร็จจากฐาน ' +
-  'ถ้าภารกิจไม่สำเร็จ เจ้าหน้าที่อาจบาดเจ็บ บาดเจ็บซ้ำจะหมดสติ และถ้าเจ้าหน้าที่ภาคสนามหมดสติพร้อมกันทั้งคู่ เกมจบทันที';
+  'Lia (สายวิเคราะห์) กับ Lyla (สายลุย) บรีฟผู้บัญชาการหลังแผ่นดินไหว: เมืองมี 47 โซน แบ่งเป็นเทา/เหลือง/แดงตามความอันตราย โซนแดงตายไวสุด · ' +
+  'เวลาเดินตลอด คนในโซนทยอยตายระหว่างรอผล · ทีมมี 4 คนสองฝ่าย: Robertson กับ Lyla ลงพื้นที่ (Lyla เข้าได้ทุกโซนรวมแดง) ส่วน Lia กับ Mudongzock เป็นภาคฐานคอยบัฟ · ' +
+  'สั่งงานผ่านไอคอนสกิลสองข้างจอ — สกิลภาคสนามคือตัวหลัก ลากไอคอนไปวางบนโซน ระบบโชว์ %สำเร็จ/ความเสี่ยง/ราคาก่อนปล่อยมือ ปล่อยแล้วคือยืนยัน ยกเลิกไม่ได้ · ' +
+  'ทุกอย่างจ่ายด้วย AP ซึ่งได้เพิ่มตามเวลาแต่ไม่เคยพอ · บัฟ (Scan/Alert/Air Deploy) ดัน %สำเร็จให้ทีมสนาม ลงซ้อนโซนที่มีคนทำงานอยู่ได้ = คอมโบหลัก · ' +
+  'เกมทอยสองชั้น (สำเร็จมั้ย → ช่วยกี่คน) บัฟบวกที่ชั้นแรก · ภารกิจล้มเหลวทำให้บาดเจ็บ บาดเจ็บซ้ำ=หมดสติ ถ้าภาคสนามหมดสติพร้อมกันทั้งคู่ เกมจบ · ' +
+  'จบเกมวัดผลเป็นแรงก์ E ถึง S ยิ่งช่วยได้มากยิ่งสูง';

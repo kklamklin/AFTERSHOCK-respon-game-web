@@ -167,6 +167,47 @@ export function renderTutorial(root, { onFinish } = {}) {
       insertPanel.appendChild(wrap);
       return;
     }
+
+    // แถบไอคอนสกิล — 2 กลุ่ม: ภาคสนาม (สกิลหลัก) กับ บัฟ (สกิลหนุน)
+    // ไอคอนดึงจาก data/icons.js ตัวเดียวกับที่หน้าเกมใช้ (มี emoji สำรองถ้ายังไม่มีไฟล์)
+    if (ins.type === 'skills') {
+      const wrap = document.createElement('div');
+      wrap.className = 'vn-skills';
+      const groupClass = (name) =>
+        `vn-skill-group ${ins.highlight === name ? 'vn-skill-group--on' : ins.highlight ? 'vn-skill-group--dim' : ''}`;
+
+      const chip = (iconKey, label) => {
+        const c = document.createElement('div');
+        c.className = 'vn-skill-chip';
+        const box = document.createElement('div');
+        box.className = 'vn-skill-glyph';
+        box.appendChild(iconNode(iconKey, 'vn-skill-ico'));
+        c.append(box, Object.assign(
+          document.createElement('span'), { className: 'vn-skill-name', textContent: label }));
+        return c;
+      };
+
+      // ภาคสนาม = สกิลหลัก (ใช้ไอคอนประเภท "ลงพื้นที่" 📥)
+      const field = document.createElement('div');
+      field.className = groupClass('field');
+      field.append(
+        Object.assign(document.createElement('div'), { className: 'vn-skill-title', textContent: 'ภาคสนาม' }),
+        (() => { const r = document.createElement('div'); r.className = 'vn-skill-row';
+          r.append(chip('skillField', 'Robertson'), chip('skillField', 'Lyla')); return r; })());
+
+      // บัฟ = สกิลหนุน (ไอคอนจริงของแต่ละสกิล)
+      const buff = document.createElement('div');
+      buff.className = groupClass('buff');
+      buff.append(
+        Object.assign(document.createElement('div'), { className: 'vn-skill-title', textContent: 'บัฟ' }),
+        (() => { const r = document.createElement('div'); r.className = 'vn-skill-row';
+          r.append(chip('crowd', 'Crowd'), chip('scan', 'Scan'), chip('alert', 'Alert'), chip('air', 'Air'));
+          return r; })());
+
+      wrap.append(field, buff);
+      insertPanel.appendChild(wrap);
+      return;
+    }
   }
 
   function renderStep(i) {
