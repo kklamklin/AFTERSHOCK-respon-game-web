@@ -12,6 +12,8 @@
 //   narration  true = ข้อความบรรยายฉากเปิดเรื่อง ไม่มีตัวละคร/ป้ายชื่อ ตัวเอียง แค่พื้นหลัง
 //
 // ── คีย์สไปรต์ (เจ้าของกำหนดความหมายแต่ละไฟล์) ─────────────────────
+// ⚠️ ใช้ได้เฉพาะ 7 ไฟล์นี้เท่านั้นในฉากพูด — ห้ามใช้สไปรต์บาดเจ็บ/หมดสติ/Last Stand
+//    ของ Lyla หรือ Robertson แทรกเข้ามาในบทพูด (เจ้าของสั่งเอาออกแล้ว)
 //   Base-op-Lia.png            Lia หน้านิ่ง
 //   Base-op-Lia-talking1.png   Lia ตอนพูด
 //   Base-op-Lia-talking2.png   Lia ยิ้มนิดๆ (แซว/อบอุ่น)
@@ -19,7 +21,6 @@
 //   Field-op-Lyla-talking1.png Lyla หลับตา (กวน/ถอนใจ)
 //   Field-op-Lyla-talking2.png Lyla พูด (ออกแรง/แทรก)
 //   Field-op-robertson.png     Robertson หน้าปกติ
-//   ฉากมืดดึงสไปรต์พิเศษที่มีไฟล์อยู่แล้ว: Lyla-injured / Lyla-unconscious / robertson-finalstand
 
 const LIA_IDLE = 'Base-op-Lia.png';
 const LIA_TALK = 'Base-op-Lia-talking1.png';
@@ -27,10 +28,7 @@ const LIA_SMILE = 'Base-op-Lia-talking2.png';
 const LYLA_IDLE = 'Field-op-Lyla.png';
 const LYLA_SHUT = 'Field-op-Lyla-talking1.png';
 const LYLA_TALK = 'Field-op-Lyla-talking2.png';
-const LYLA_HURT = 'Field-op-Lyla-injured.png';
-const LYLA_DOWN = 'Field-op-Lyla-unconscious.png';
 const ROB_IDLE = 'Field-op-robertson.png';
-const ROB_STAND = 'Field-op-robertson-finalstand.png';
 
 export const TUTORIAL_SCRIPT = [
   { narration: true, text: '72 ชั่วโมงหลังแผ่นดินไหวถล่มเมือง มีคน 1,200 ชีวิตติดอยู่ใต้ซาก และคุณคือคนที่ตัดสินใจทุกอย่างจากห้องนี้' },
@@ -99,14 +97,14 @@ export const TUTORIAL_SCRIPT = [
 
   // — ด้านมืด: บาดเจ็บ —
   { speaker: 'ria', sprite: LIA_TALK, text: 'แต่ถ้าล้มเหลว... เจ้าหน้าที่มีโอกาสบาดเจ็บ', insert: { type: 'tone-dark' } },
-  { speaker: 'lyla', sprite: LYLA_HURT, text: 'เจ็บแล้วเจ็บซ้ำอีกที — หมดสติเลย หายไปพักใหญ่', insert: { type: 'injury' } },
-  { speaker: 'lyla', sprite: LYLA_DOWN, text: 'แล้วถ้าฉันกับ Robertson หมดสติพร้อมกันทั้งคู่...', insert: { type: 'injury' } },
+  { speaker: 'lyla', sprite: LYLA_SHUT, text: 'เจ็บแล้วเจ็บซ้ำอีกที — หมดสติเลย หายไปพักใหญ่', insert: { type: 'injury' } },
+  { speaker: 'lyla', sprite: LYLA_SHUT, text: 'แล้วถ้าฉันกับ Robertson หมดสติพร้อมกันทั้งคู่...', insert: { type: 'injury' } },
   { speaker: 'ria', sprite: LIA_IDLE, text: 'เกมจบทันที', insert: { type: 'gameover' } },
-  { speaker: 'lyla', sprite: LYLA_HURT, text: '...อันนี้ไม่ตลกแล้วนะ' },
+  { speaker: 'lyla', sprite: LYLA_TALK, text: '...อันนี้ไม่ตลกแล้วนะ' },
   { speaker: 'ria', sprite: LIA_TALK, text: 'ใช่ เพราะงั้น — พวกเราไม่ใช่แค่ตัวเลขบนจอ' },
 
   // — ยืนหยัดครั้งสุดท้าย —
-  { speaker: 'robertson', sprite: ROB_STAND, text: '...ถ้าถึงตรงนั้นจริง ผมยังไม่ล้มง่ายๆ' },
+  { speaker: 'robertson', sprite: ROB_IDLE, text: '...ถ้าถึงตรงนั้นจริง ผมยังไม่ล้มง่ายๆ' },
   { speaker: 'lyla', sprite: LYLA_IDLE, text: 'ถ้าเลวร้ายสุดๆ Robertson จะฝืนสู้ต่ออีกเฮือก — แต่ขออย่าให้ต้องถึงตรงนั้นเลยนะ' },
   { speaker: 'ria', sprite: LIA_IDLE, text: 'อย่าไปพึ่งมัน มันคือทางเลือกสุดท้าย ไม่ใช่แผน' },
 
