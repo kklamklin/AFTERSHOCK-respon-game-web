@@ -73,9 +73,8 @@ export const OPERATORS = {
     },
   },
 
-  // หมายเหตุ: โฟลเดอร์ Operators สะกดว่า "Lia" ส่วนโฟลเดอร์ Icon สะกดว่า "Ria" —
-  // เจ้าของโปรเจกต์ยืนยันแล้วว่าชื่อจริงคือ "Lia" ไฟล์ไอคอนสกิลด้านล่างจึงยังใช้ชื่อเดิม (Ria) ตามไฟล์จริง
-  // ต้องเปลี่ยนตอนอัปไฟล์จริงให้ตรงเป็น Lia ไม่งั้น path จะพัง
+  // ⚠️ ชื่อในเกมคือ "Lia" แต่ไฟล์ไอคอนสกิลสะกดว่า "Ria" — เจ้าของสั่งให้ค้างไว้แบบนี้
+  // ห้ามเปลี่ยนชื่อไฟล์ ห้ามแก้ path ด้านล่าง เปลี่ยนแล้วไอคอนหายทันที (ไฟล์จริงยังชื่อ Ria)
   elf: {
     name: 'Lia', side: 'support',
     portraits: {
@@ -84,11 +83,11 @@ export const OPERATORS = {
     },
     skills: {
       scan: {
-        name: 'Scan Area', icon: 'Icon-skills-Ria-scan_area.PNG', type: 'buff', // TODO: เปลี่ยนเป็น Lia เมื่อเจ้าของแก้ชื่อไฟล์จริง
+        name: 'Scan Area', icon: 'Icon-skills-Ria-scan_area.PNG', type: 'buff', // ชื่อไฟล์สะกด Ria โดยตั้งใจ (ดูหมายเหตุด้านบน) ห้ามแก้
         ...buffSpec('scan'), scope: 'multi',
       },
       alert: {
-        name: 'Alert Allied', icon: 'Icon-skills-Ria-alert_allied.PNG', type: 'shield', // TODO: เปลี่ยนเป็น Lia เมื่อเจ้าของแก้ชื่อไฟล์จริง
+        name: 'Alert Allied', icon: 'Icon-skills-Ria-alert_allied.PNG', type: 'shield', // ชื่อไฟล์สะกด Ria โดยตั้งใจ (ดูหมายเหตุด้านบน) ห้ามแก้
         ...buffSpec('alert'), immune: true,
       },
     },
@@ -102,9 +101,8 @@ export const OPERATORS = {
     },
     skills: {
       air: {
-        // หมายเหตุ: ไฟล์จริงสะกด "mudongzong" (ไม่มี c) — เจ้าของยืนยันชื่อจริงคือ mudongzock
-        // ต้องเปลี่ยนไฟล์นี้ให้ตรงตอนอัปจริง ตอนนี้ path อ้างตามไฟล์ที่มีอยู่ (มี ✅ ไฟล์แล้ว)
-        name: 'Air Deploy', icon: 'Icon-skills-mudongzong-air_deploy.PNG', type: 'buff', // TODO: แก้เป็น Icon-skills-mudongzock-air_deploy.PNG
+        // ⚠️ ในเกมชื่อ "Mudongzock" แต่ไฟล์จริงสะกด "mudongzong" (ไม่มี c) — เจ้าของสั่งให้ค้างไว้แบบนี้
+        name: 'Air Deploy', icon: 'Icon-skills-mudongzong-air_deploy.PNG', type: 'buff', // ชื่อไฟล์สะกด mudongzong โดยตั้งใจ ห้ามแก้ (ในเกมชื่อ Mudongzock)
         ...buffSpec('air'),
       },
     },
