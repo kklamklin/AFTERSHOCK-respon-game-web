@@ -241,6 +241,31 @@ html, body {
 }
 .intel-btn:hover { color: #e8484a; }
 
+/* หน้าเลือกโหมด (กด Play แล้วมาที่นี่) — โครงสร้าง ส่วนสีอยู่ในบล็อกธีมท้ายไฟล์ */
+.screen--mode { padding: 32px 48px 96px; align-items: stretch; }
+.mode-list {
+  display: flex; flex-direction: column; gap: 16px;
+  margin-top: 32px; max-width: 720px;
+}
+.mode-row {
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
+  padding: 16px 20px; border-radius: 8px; cursor: pointer; text-align: left;
+}
+.mode-row-main { display: flex; align-items: center; gap: 12px; }
+.mode-label { font-size: 28px; font-weight: 800; letter-spacing: 2px; }
+.mode-desc { font-size: 15px; }
+.mode-tag { font-size: 12px; letter-spacing: 2px; padding: 2px 8px; border-radius: 4px; }
+.mode-row.is-locked { cursor: not-allowed; }
+.mode-play {
+  position: absolute; right: 48px; bottom: 24px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 26px; font-weight: 800; letter-spacing: 3px;
+  padding: 10px 22px; border-radius: 8px; cursor: pointer;
+}
+/* ลูกศรขยับตอนชี้ — ใช้ transform อย่างเดียว ไม่สั่งวาดจอใหม่ (§รอบ 10.11) */
+.mode-play-arrow { transition: transform 0.18s ease; }
+.mode-play:hover .mode-play-arrow { transform: translateX(4px); }
+
 /* หน้า How to Play — เนื้อหายาว เลื่อนได้ */
 .screen--howto { padding: 32px 48px 96px; align-items: stretch; }
 .howto-body {
@@ -1931,6 +1956,33 @@ img.game-icon {
 
 /* แถบเลื่อนเสียง/ความสว่าง — ทำให้เข้าธีม แทนแถบสีเทาของเบราว์เซอร์ */
 .settings-slider { accent-color: var(--accent); }
+
+/* ── หน้าเลือกโหมด ───────────────────────────────────────── */
+.mode-row {
+  background: var(--bg-panel); border: 1px solid var(--line);
+  color: var(--ink); font-family: var(--font-display);
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.mode-row:hover:not(.is-locked) { border-color: var(--line-hot); }
+/* ตัวที่เลือกอยู่ — ขอบสว่าง + เรืองแสง ให้เห็นชัดว่ากด PLAY แล้วจะได้อันนี้ */
+.mode-row.is-picked {
+  border-color: var(--accent); background: var(--bg-raise);
+  box-shadow: var(--glow-soft);
+}
+.mode-row.is-picked .mode-label { color: var(--accent); }
+.mode-desc { font-family: var(--font-ui); color: var(--ink-dim); }
+.mode-row.is-locked { opacity: 0.45; }
+.mode-tag {
+  font-family: var(--font-display); color: var(--warn);
+  border: 1px solid var(--warn);
+}
+.mode-play {
+  font-family: var(--font-display); color: var(--bg-deep);
+  background: var(--accent); border: 1px solid var(--accent);
+  box-shadow: var(--glow-soft);
+  transition: filter 0.18s ease;
+}
+.mode-play:hover { filter: brightness(1.15); }
 
 /* ── เนื้อหายาว (How to play / การ์ด จนท.) ────────────────── */
 .howto-body, .card-body {

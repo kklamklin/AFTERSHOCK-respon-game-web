@@ -81,7 +81,7 @@ function buildLogo({ size = 'lg', subtitle = 'Response', iconsBeside = false } =
 const SCREEN_CLASSES = [
   'screen--splash', 'screen--menu', 'screen--blank', 'screen--settings',
   'screen--quit', 'screen--intel', 'screen--howto', 'screen--roster', 'screen--card', 'screen--vn',
-  'screen--game', 'screen--result',
+  'screen--game', 'screen--result', 'screen--mode',
 ];
 
 function setScreenClass(root, cls) {
@@ -259,6 +259,108 @@ function buildBackToMenu(onBack) {
   btn.textContent = 'BACK TO MENU';
   btn.addEventListener('click', () => onBack?.());
   return btn;
+}
+
+// ── หน้าเลือกโหมด (กด Play แล้วมาที่นี่ก่อน) ─────────────────────
+// เพิ่มโหมดใหม่ = เพิ่มบรรทัดในตารางนี้ที่เดียว ไม่ต้องแตะโค้ดข้างล่าง
+//   locked: true  = ยังเล่นไม่ได้ ขึ้นป้าย SOON กดไม่ติด
+//   id ที่ส่งออกไปทาง onPlay จะถูกเอาไปเลือกว่าจะเริ่มเกมแบบไหน
+export const GAME_MODES = [
+  {
+    id: 'main',
+    label: 'Main',
+    desc: 'ภารกิจหลัก · ผู้รอดชีวิต 1,200 คน 47 โซน ใน 72 ชั่วโมง',
+    locked: false,
+  },
+  {
+    id: 'building21',
+    label: 'Building 21',
+    desc: 'ยังไม่เปิดให้เล่น — อยู่ระหว่างพัฒนา',
+    locked: true,
+  },
+];
+
+export function renderModeSelect(root, { onBack, onPlay } = {}) {
+  root.innerHTML = '';
+  setScreenClass(root, 'screen--mode');
+
+  root.appendChild(buildSubHeader('SELECT OPERATION', onBack));
+
+  // โหมดที่เลือกอยู่ตอนนี้ — เริ่มที่ตัวแรกที่ยังไม่ล็อก (ปกติคือ Main)
+  let picked = GAME_MODES.findIndex((m) => !m.locked);
+  if (picked < 0) picked = 0;
+
+  const list = document.createElement('div');
+  list.className = 'mode-list';
+
+  const rows = GAME_MODES.map((mode, i) => {
+    const row = document.createElement('button');
+    row.className = 'mode-row';
+    row.disabled = !!mode.locked;
+    if (mode.locked) row.classList.add('is-locked');
+
+    const main = document.createElement('div');
+    main.className = 'mode-row-main';
+
+    const label = document.createElement('span');
+    label.className = 'mode-label';
+    label.textContent = mode.label;
+    main.appendChild(label);
+
+    if (mode.locked) {
+      const tag = document.createElement('span');
+      tag.className = 'mode-tag';
+      tag.textContent = 'SOON';
+      main.appendChild(tag);
+    }
+
+    const desc = document.createElement('span');
+    desc.className = 'mode-desc';
+    desc.textContent = mode.desc;
+
+    row.append(main, desc);
+    // โหมดที่ล็อกอยู่กดไม่ติด (ปุ่ม disabled ไม่ยิง click อยู่แล้ว)
+    row.addEventListener('click', () => { picked = i; paint(); });
+    list.appendChild(row);
+    return row;
+  });
+
+  root.appendChild(list);
+
+  // ปุ่ม PLAY มุมขวาล่าง — ยืนยันโหมดที่เลือก
+  const play = document.createElement('button');
+  play.className = 'mode-play';
+  play.innerHTML = '<span>PLAY</span><span class="mode-play-arrow">▸</span>';
+  play.addEventListener('click', () => {
+    const mode = GAME_MODES[picked];
+    if (!mode || mode.locked) return;
+    detachKeys();
+    onPlay?.(mode.id);
+  });
+  root.appendChild(play);
+
+  function paint() {
+    rows.forEach((row, i) => row.classList.toggle('is-picked', i === picked));
+  }
+  paint();
+
+  // คีย์ลัดสำหรับเล่นบนคอม — ขึ้น/ลง เลือกโหมด · Enter เริ่ม · Esc ย้อนกลับ
+  // (ข้ามโหมดที่ล็อกไปเลย จะได้ไม่ค้างอยู่บนตัวที่กดไม่ได้)
+  function onKey(e) {
+    if (e.key === 'Escape') { detachKeys(); onBack?.(); return; }
+    if (e.key === 'Enter') { play.click(); return; }
+    const step = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+    if (!step) return;
+    e.preventDefault();
+    for (let n = 1; n <= GAME_MODES.length; n++) {
+      const i = (picked + step * n + GAME_MODES.length * n) % GAME_MODES.length;
+      if (!GAME_MODES[i].locked) { picked = i; paint(); break; }
+    }
+  }
+  function detachKeys() { document.removeEventListener('keydown', onKey); }
+  document.addEventListener('keydown', onKey);
+
+  root.appendChild(buildBackToMenu(() => { detachKeys(); onBack?.(); }));
 }
 
 export function renderIntelMenu(root, { onBack, onNavigate } = {}) {
@@ -685,18 +787,30 @@ export function initScreens(root) {
   const showOperatorMenu = () => quick(() => { menuBgm(); renderOperatorMenu(root, { onBack: showIntel, onNavigate: onOperatorNavigate }); });
   const showRoster = (side) => quick(() => { menuBgm(); renderOperatorRoster(root, { side, onBack: showOperatorMenu, onSelect: (key) => showCard(key, side) }); });
   const showCard = (speciesKey, side) => quick(() => { menuBgm(); renderOperatorCard(root, { speciesKey, onBack: () => showRoster(side) }); });
-  // Play -> Tutorial (visual novel) -> หน้าเกมหลัก -> หน้า Result
+  // Play -> เลือกโหมด -> Tutorial (visual novel) -> หน้าเกมหลัก -> หน้า Result
   // เล่นใหม่จากหน้า Result ข้าม tutorial ไปเลย (renderGameScreen รีเซ็ต state ให้เองอยู่แล้ว)
   const showGame = () => scene(() => { clearFx(); renderGameScreen(root, { onExit: showMenu, onFinish: showResult }); });
   const showResult = () => quick(() => { clearFx(); renderResult(root, { state, onHome: showMenu, onReplay: showGame }); });
   // กด Play = เพลงเมนูหยุดทันที (เจ้าของสั่งไว้) หน้าบรีฟจึงเงียบ
   const showTutorial = () => { setBgm(null); scene(() => renderTutorial(root, { onFinish: showGame })); };
+  // หน้าเลือกโหมด — ยังอยู่ในโซนเมนู เพลงเมนูจึงเล่นต่อ (เพลงหยุดตอนกด PLAY เข้าฉากบรีฟ)
+  const showModeSelect = () => quick(() => {
+    menuBgm();
+    renderModeSelect(root, { onBack: showMenu, onPlay: onModeStart });
+  });
+
+  // เลือกโหมดแล้วจะเริ่มยังไง — ตอนนี้มีโหมดเดียวที่เล่นได้
+  // โหมดใหม่ (เช่น Building 21) มาต่อ else if ตรงนี้
+  function onModeStart(modeId) {
+    if (modeId === 'main') showTutorial();
+    else showBlank(modeId, showModeSelect);
+  }
 
   function onMenuNavigate(id) {
     if (id === 'settings') showSettings();
     else if (id === 'quit') showQuit();
     else if (id === 'intel') showIntel();
-    else if (id === 'play') showTutorial();
+    else if (id === 'play') showModeSelect();
     else showBlank(id);
   }
 
