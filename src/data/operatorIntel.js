@@ -56,7 +56,7 @@ export const OPERATOR_INTEL = {
   },
 
   elf: {
-    fullName: 'Ria Valerius',
+    fullName: 'Lia Valerius',
     codename: 'AF-03',
     age: 'unknown',
     unit: 'Analyst division',
