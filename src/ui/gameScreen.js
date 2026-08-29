@@ -736,6 +736,12 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
   const clock = createClock(state, tick);
   activeClock = clock;
 
+  // ⚠️ ต้องสั่งเพลงตั้งแต่หน้าเกมเปิด ไม่ใช่รอลูปแรกจบ
+  // ของเดิมเรียก syncGameBgm() ใน tick() ที่เดียว ซึ่งทำงานตอน "จบลูปแรก"
+  // = เกมเงียบไป 4.2 วินาทีแรกทุกครั้ง (ที่ความเร็ว 1) กว่าเพลงจะเริ่ม
+  // (ตรงนี้เวลายังไม่เดิน เพลงจึงยังถูกพักไว้ — ไปเริ่มจริงตอนแผนที่โหลดเสร็จด้านล่าง)
+  syncGameBgm();
+
   // เมนู ☰ · หน้าเวลา · ป๊อปอัพหยุดเวลาอัตโนมัติ (§6 · §7 · §2.1)
   // มันเป็นคนคุมการหยุด/เดินเวลาของตัวเอง จำได้ว่าก่อนเปิดเวลาเดินอยู่ไหม
   menu = createGameMenu(root, {
@@ -835,7 +841,8 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
       mapHandle = handle;
       zoomHandle = handle.panzoom;
       paintAll();
-      if (activeClock === clock) { clock.setRate(CONFIG.startSpeed); clock.setRunning(true); top.paintSpeed(); }
+      // เวลาเริ่มเดินตรงนี้ = จังหวะที่เพลงต้องเริ่มด้วย (syncGameBgm อ่าน state.running)
+      if (activeClock === clock) { clock.setRate(CONFIG.startSpeed); clock.setRunning(true); top.paintSpeed(); syncGameBgm(); }
     })
     .catch((err) => {
       mapViewport.innerHTML = '';

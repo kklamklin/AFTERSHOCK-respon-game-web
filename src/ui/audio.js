@@ -38,34 +38,41 @@ function makeNode(key) {
   el.preload = spec.lazy ? 'none' : 'auto';
   el.crossOrigin = 'anonymous';
   el.dataset.sound = key;
+  el._gain = spec.gain ?? 1;
   if (spec.kind === 'bgm') el.loop = true; // เพลงประจำฉากวนซ้ำเสมอ จนกว่าจะถูกสั่งเปลี่ยน
-  connect(el, spec.gain ?? 1);
+  // ยังไม่ต่อเข้า Web Audio ตอนนี้ — ต่อตอนผู้เล่นแตะจอครั้งแรก (ดู unlockAudio)
+  el.volume = Math.min(1, el._gain) * master;
   // ใส่ลง DOM จริง (ไม่มี controls จึงมองไม่เห็น) เพื่อให้ตรวจสถานะเสียงได้จากภายนอก
   // new Audio() เฉย ๆ จะลอยอยู่นอกหน้า ทั้งเทสและ DevTools มองไม่เห็นว่าอะไรกำลังเล่นอยู่
   document.body.appendChild(el);
   return el;
 }
 
+/** ทุก <audio> ที่สร้างไว้ — ใช้ตอนต่อสายเสียงและตอนปลุกเครื่องเสียงบนมือถือ */
+function allElements() {
+  return [...singles.values(), ...[...pools.values()].flatMap((x) => x.nodes)];
+}
+
 // ต่อ element เข้ากับสายเสียง — ถ้าต่อไม่ได้ ถอยไปใช้ el.volume (ดังสุดได้แค่ 1)
-function connect(el, gain) {
+function connect(el) {
   if (!ctx) {
-    el.volume = Math.min(1, gain) * master;
-    el._gain = gain;
+    el.volume = Math.min(1, el._gain) * master;
     return;
   }
   try {
     const src = ctx.createMediaElementSource(el);
     const g = ctx.createGain();
-    g.gain.value = gain;
+    g.gain.value = el._gain;
     src.connect(g).connect(masterGain);
     el._node = g;
+    el.volume = 1; // เสียงถูกคุมด้วย gain node แล้ว (บน iOS ตั้ง volume ไม่ได้อยู่ดี)
   } catch {
-    el.volume = Math.min(1, gain) * master;
-    el._gain = gain;
+    el.volume = Math.min(1, el._gain) * master;
   }
 }
 
 function makeContext() {
+  if (ctx) return;
   const AC = window.AudioContext ?? window.webkitAudioContext;
   if (!AC) return;
   try {
@@ -87,7 +94,7 @@ function makeContext() {
 
 /** โหลดไฟล์เสียงทุกอันไว้ล่วงหน้า — เรียกตอนเปิดเกม */
 export function preloadSounds() {
-  makeContext();
+  // ⚠️ ห้ามสร้าง AudioContext ตรงนี้ — ดูเหตุผลใน unlockAudio()
   for (const [key, spec] of Object.entries(SOUNDS)) {
     if (spec.kind === 'sfx') {
       pools.set(key, { nodes: Array.from({ length: spec.pool ?? 2 }, () => makeNode(key)), next: 0 });
@@ -105,40 +112,107 @@ function applyMaster(v) {
     masterGain.gain.value = v;
     return;
   }
-  // โหมดสำรอง (ไม่มี Web Audio) — คูณเข้าไปที่ el.volume ของทุกตัว
-  const all = [...singles.values(), ...[...pools.values()].flatMap((x) => x.nodes)];
-  for (const el of all) el.volume = Math.min(1, (el._gain ?? 1) * v);
+  // โหมดสำรอง (ยังไม่ได้ต่อ Web Audio) — คูณเข้าไปที่ el.volume ของทุกตัว
+  for (const el of allElements()) el.volume = Math.min(1, (el._gain ?? 1) * v);
 }
 
 /**
  * ปลดล็อกเสียง — ต้องเรียกจากในเหตุการณ์ที่ผู้ใช้กด/แตะจริงเท่านั้น
- * ถ้ามีเพลงที่ถูกสั่งไว้ก่อนหน้าแต่ยังเล่นไม่ได้ ให้เริ่มเล่นตรงนี้เลย
+ *
+ * ⚠️ เรียกได้ทุกครั้งที่ผู้เล่นแตะจอ ไม่ใช่แค่ครั้งแรก — จงใจ
+ * บนมือถือ AudioContext ถูก "พัก" ได้เรื่อย ๆ หลังปลดล็อกไปแล้ว
+ * (สลับแอป · ล็อกจอ · มีสายเข้า · หมุนจอ — iOS จะเปลี่ยนสถานะเป็น 'interrupted')
+ * ถ้าปลุกแค่ครั้งเดียวแล้วจำว่า "ปลดล็อกแล้ว" พอโดนพักอีกรอบจะเงียบไปตลอดทั้งเกม
+ * เพราะเสียงทุกเส้นเดินผ่าน AudioContext ตัวนี้ ไม่มีทางออกอื่น
  */
 export function unlockAudio() {
-  if (unlocked) return;
-  unlocked = true;
-  ctx?.resume?.().catch(() => {});
-  if (bgmKey && !bgmPaused) singles.get(bgmKey)?.play?.().catch(() => {});
-  warmLazySounds();
+  // ครั้งแรกเท่านั้น: สร้าง AudioContext + ต่อสายเสียง + ปลุกทุกไฟล์
+  //
+  // ⚠️ ต้องสร้าง AudioContext "ในจังหวะที่ผู้ใช้แตะจอ" ห้ามสร้างตอนเปิดหน้า
+  // Safari บน iOS ถือว่า context ที่เกิดก่อนผู้ใช้แตะจอเป็นของที่ปลุกไม่ขึ้น
+  // ผลคือทุกเสียงถูกดูดเข้า context ที่ไม่ทำงาน = เงียบสนิททั้งเกม
+  if (!unlocked) {
+    unlocked = true;
+    makeContext();
+    for (const el of allElements()) connect(el);
+    primeAll();
+  }
+  // ทุกครั้ง: ถ้า context ไม่ได้ทำงานอยู่ ให้ปลุกใหม่ (มือถือพักมันได้ตลอดเวลา)
+  if (ctx && ctx.state !== 'running') ctx.resume?.().catch(() => {});
+  playBgmEl();
 }
 
-// เริ่มโหลดไฟล์เสียงก้อนใหญ่ "หลังจาก" หน้าแรกขึ้นครบแล้ว
-// 2 วินาทีหลังผู้เล่นแตะหน้าปก — ตอนนั้นอยู่หน้าเมนู/หน้าสอนเล่น ยังเหลือเวลาอีกเป็นนาที
-// กว่าจะถึงหน้าเกมจริง เพลงจึงโหลดทันแน่นอน โดยไม่ไปแย่งเน็ตตอนเปิดเกม
-function warmLazySounds() {
-  setTimeout(() => {
-    for (const [key, spec] of Object.entries(SOUNDS)) {
-      if (!spec.lazy) continue;
-      const nodes = pools.get(key)?.nodes ?? [singles.get(key)];
-      for (const el of nodes) {
-        // ถ้ากำลังเล่นอยู่แล้วห้ามสั่ง load() ซ้ำ — มันจะดีดกลับไปเริ่มใหม่
-        if (!el || !el.paused || el.preload === 'auto') continue;
-        el.preload = 'auto';
-        el.load();
-      }
-    }
-  }, 2000);
+/** สั่งเล่นเพลงประจำฉากที่ค้างไว้ (จองสิทธิ์ก่อนเสมอ กันการปลุกไปหยุดทับ) */
+function playBgmEl() {
+  const el = bgmKey && !bgmPaused ? singles.get(bgmKey) : null;
+  if (!el) return;
+  wantPlay(el);
+  el.play().catch(() => {});
 }
+
+/**
+ * "ปลุก" ทุก <audio> ในจังหวะที่ผู้ใช้แตะจอ — เล่นแวบเดียวแล้วหยุดทันที
+ *
+ * ⚠️ จำเป็นเฉพาะมือถือ (โดยเฉพาะ iOS): แต่ละ <audio> ต้องเคยถูกสั่ง play()
+ * ตอนที่ผู้ใช้กดจริงอย่างน้อยหนึ่งครั้ง ไม่งั้นเรียก play() ทีหลังจะถูกปฏิเสธถาวร
+ * ของเดิมปลุกแค่เสียงคลิกกับเพลงเมนู เสียงที่เหลือ (ผลภารกิจ · เพลงในเกม · เสียงนับคะแนน)
+ * จึงไม่เคยถูกปลุกเลย = ในเกมเงียบสนิททั้งที่หน้าเมนูมีเพลง
+ *
+ * ปิด gain ไว้ระหว่างปลุกเพื่อไม่ให้ได้ยินเสียง "แปะ" ตอนแตะจอครั้งแรก
+ */
+function primeAll() {
+  // เพลงที่กำลังจะเล่นอยู่แล้วไม่ต้องปลุก เดี๋ยวไปสั่งหยุดทับกันเอง
+  const skip = bgmKey && !bgmPaused ? singles.get(bgmKey) : null;
+  for (const [key, spec] of Object.entries(SOUNDS)) {
+    const els = pools.get(key)?.nodes ?? [singles.get(key)];
+    for (const el of els) {
+      if (!el || el === skip || !el.paused) continue;
+      // ไฟล์ก้อนใหญ่: เริ่มโหลดตรงนี้เลย — ต้องอยู่ใน gesture เดียวกัน
+      //
+      // ⚠️ ของเดิมสั่ง load() ทีหลัง 2 วินาทีผ่าน setTimeout ซึ่งอยู่นอก gesture แล้ว
+      // iOS ถือว่า load() นอก gesture = ยกเลิกสิทธิ์เล่นของ element นั้นทิ้ง
+      // เพลงในเกมกับเสียงนับคะแนน (ทั้งคู่เป็น lazy) จึงเล่นไม่ออกบน iPhone
+      if (spec.lazy && el.preload !== 'auto') { el.preload = 'auto'; el.load(); }
+      primeOne(el);
+    }
+  }
+}
+
+function primeOne(el) {
+  const g = el._node;
+  const keep = g ? g.gain.value : null;
+  if (g) g.gain.value = 0;
+  const restore = () => { if (g) g.gain.value = keep; };
+  // จดไว้ว่าตอนเริ่มปลุก element นี้ถูกสั่งเล่นไปแล้วกี่ครั้ง
+  // ถ้าระหว่างรอ promise มีคนสั่งเล่น "ของจริง" มาแทรก ต้องไม่ไปสั่งหยุดทับเขา
+  // (เกิดจริงตอนแตะหน้าปก: เสียงคลิกถูกสั่งเล่นในจังหวะเดียวกับที่กำลังปลุกอยู่พอดี)
+  const token = wantPlay(el);
+  const stop = () => {
+    if (el._want !== token) { restore(); return; } // มีคนสั่งเล่นจริงมาแทรก ปล่อยให้เขาเล่นไป
+    el.pause();
+    try { el.currentTime = 0; } catch { /* ยังไม่มีข้อมูลไฟล์ ตั้งเวลาไม่ได้ ไม่เป็นไร */ }
+    restore();
+  };
+  try {
+    const r = el.play();
+    if (r && r.then) r.then(stop, restore);
+    else stop();
+  } catch {
+    restore();
+  }
+}
+
+/** จองสิทธิ์เล่น element นี้ — ทุกที่ที่สั่ง play() จริงต้องเรียกก่อน (ดู primeOne) */
+function wantPlay(el) {
+  el._want = (el._want ?? 0) + 1;
+  return el._want;
+}
+
+// มือถือพัก AudioContext ตอนสลับแอป/ล็อกจอ — กลับมาแล้วต้องปลุกเอง ไม่งั้นเงียบต่อ
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (ctx && ctx.state !== 'running') ctx.resume?.().catch(() => {});
+});
 
 /** เสียงสั้น — เล่นซ้อนกันได้ ไม่ตัดตัวเอง */
 export function playSfx(key) {
@@ -146,7 +220,10 @@ export function playSfx(key) {
   if (!pool) return;
   const el = pool.nodes[pool.next];
   pool.next = (pool.next + 1) % pool.nodes.length;
-  el.currentTime = 0;
+  // ⚠️ ตั้ง currentTime ตอนไฟล์ยังโหลดไม่ถึงไหน บางเบราว์เซอร์โยน error ทันที
+  // (ไม่ใช่ promise — .catch() ข้างล่างรับไม่ได้) ถ้าไม่กันไว้จะทำให้โค้ดที่เรียกพังตาม
+  try { el.currentTime = 0; } catch { /* ยังกรอไม่ได้ ปล่อยให้เล่นจากตรงที่อยู่ */ }
+  wantPlay(el);
   el.play().catch(() => {}); // เบราว์เซอร์ปฏิเสธได้ถ้ายังไม่ปลดล็อก — ห้ามให้เกมพัง
 }
 
@@ -158,7 +235,7 @@ export function playSfx(key) {
 export function setBgm(key) {
   const next = key && SOUNDS[key]?.kind === 'bgm' ? key : null;
   if (next === bgmKey) {
-    if (next && !bgmPaused) singles.get(next)?.play?.().catch(() => {});
+    playBgmEl();
     return;
   }
   if (bgmKey) {
@@ -170,7 +247,8 @@ export function setBgm(key) {
   if (!bgmKey) return;
   const el = singles.get(bgmKey);
   if (!el) return;
-  el.currentTime = 0;
+  try { el.currentTime = 0; } catch { /* ไฟล์ยังไม่พร้อม กรอไม่ได้ ไม่เป็นไร */ }
+  wantPlay(el);
   el.play().catch(() => {});
 }
 
@@ -183,7 +261,7 @@ export function setBgmPaused(paused) {
   const el = bgmKey && singles.get(bgmKey);
   if (!el) return;
   if (bgmPaused) el.pause();
-  else el.play().catch(() => {});
+  else playBgmEl();
 }
 
 export function currentBgm() {
@@ -218,7 +296,8 @@ export function startCue(key) {
   const el = singles.get(key);
   if (!el || SOUNDS[key]?.kind !== 'cue') return;
   el.loop = true; // เผื่ออนิเมชั่นยาวกว่าไฟล์ — ผู้เรียกเป็นคนสั่งหยุดเอง
-  el.currentTime = 0;
+  try { el.currentTime = 0; } catch { /* ไฟล์ยังไม่พร้อม กรอไม่ได้ ไม่เป็นไร */ }
+  wantPlay(el);
   el.play().catch(() => {});
 }
 
