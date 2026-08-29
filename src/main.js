@@ -8,7 +8,7 @@
 import { initScreens } from './ui/screens.js';
 import { probeIcons } from './data/icons.js';
 import { preloadSounds, attachClickSound } from './ui/audio.js';
-import { loadPrefs } from './data/prefs.js';
+import { loadPrefs, loadGameOptions } from './data/prefs.js';
 import { initStage } from './ui/stage.js';
 import { state } from './state.js';
 import { CONFIG } from './config.js';
@@ -25,6 +25,9 @@ initStage();
 // อ่านค่าเสียง/ความสว่างที่ผู้เล่นตั้งไว้ครั้งก่อนก่อนทุกอย่าง
 // ต้องมาก่อน preloadSounds() เพราะระบบเสียงอ่านค่าระดับเสียงตอนถูกสร้าง
 loadPrefs();
+
+// ตัวเลือกย่อยในหน้าเลือกโหมด (ข้ามเนื้อเรื่อง / คำใบ้) — จำไว้ในเครื่องเหมือนกัน
+loadGameOptions();
 
 // โหลดไฟล์เสียงไว้ล่วงหน้า + ต่อเสียงคลิกเข้ากับทุกปุ่มครั้งเดียว (ดู ui/audio.js)
 // เสียงจริงจะดังได้หลังผู้เล่นแตะจอครั้งแรกเท่านั้น (autoplay policy ของเบราว์เซอร์)

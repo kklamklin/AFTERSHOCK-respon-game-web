@@ -69,6 +69,47 @@ export function brightnessFactor(v = prefs.brightness) {
   return 0.6 + (clamp(v) / 100) * 0.8;
 }
 
+// ── ตัวเลือกย่อยในหน้าเลือกโหมด ──────────────────────────────────
+// เก็บแยกจาก prefs ด้านบนเพราะเป็น true/false ไม่ใช่ค่า 0..100 ที่ปัดผ่าน clamp()
+//
+//   skipStory — ข้ามฉากสอนเล่น (VN) ไปหน้าเกมเลย
+//   hints     — คำใบ้ในหน้าเกมหลัก (บอกว่าสกิลใช้ยังไง ต้องกด/ลากตรงไหน)
+//               ⚠️ ตัวนี้ยังไม่มีใครอ่านไปใช้ — เก็บค่าไว้ก่อน รอสร้างระบบคำใบ้ในหน้าเกม
+//
+// ทั้งคู่ค่าเริ่มต้นเป็น true ตามที่เจ้าของสั่ง
+const OPTS_KEY = 'aftershocks:gameOpts';
+const OPT_DEFAULTS = { skipStory: true, hints: true };
+
+const gameOpts = { ...OPT_DEFAULTS };
+
+/** อ่านค่าที่จำไว้ในเครื่อง — เรียกครั้งเดียวตอนเปิดเกม (main.js) */
+export function loadGameOptions() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(OPTS_KEY) ?? '{}');
+    for (const k of Object.keys(OPT_DEFAULTS)) {
+      if (typeof saved[k] === 'boolean') gameOpts[k] = saved[k];
+    }
+  } catch {
+    // อ่านไม่ได้ก็ใช้ค่าเริ่มต้น ไม่ต้องทำอะไรต่อ
+  }
+  return { ...gameOpts };
+}
+
+export function getGameOptions() {
+  return { ...gameOpts };
+}
+
+/** เปิด/ปิดตัวเลือก 1 ตัว แล้วจำไว้ในเครื่อง */
+export function setGameOption(key, on) {
+  if (!(key in OPT_DEFAULTS)) return;
+  gameOpts[key] = !!on;
+  try {
+    localStorage.setItem(OPTS_KEY, JSON.stringify(gameOpts));
+  } catch {
+    // เซฟไม่ได้ก็ยังใช้ได้ในรอบนี้ แค่ไม่ถูกจำข้ามครั้ง
+  }
+}
+
 // ── ปลดล็อกโหมด Building 21 (DLC) ────────────────────────────────
 // เก็บแยกจาก prefs ด้านบนเพราะเป็น true/false ไม่ใช่ค่า 0..100 ที่ปัดตาม DEFAULTS
 const DLC_KEY = 'aftershocks:dlcUnlocked';

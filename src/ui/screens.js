@@ -13,7 +13,10 @@ import { iconNode } from '../data/icons.js';
 import { fadeSwap, clearFx } from './fx.js';
 import { buildSkyline } from './skyline.js';
 import { setBgm } from './audio.js';
-import { getPrefs, setPref, onPrefsChange, brightnessFactor, isDlcUnlocked, setDlcUnlocked } from '../data/prefs.js';
+import {
+  getPrefs, setPref, onPrefsChange, brightnessFactor,
+  isDlcUnlocked, setDlcUnlocked, getGameOptions, setGameOption,
+} from '../data/prefs.js';
 import { CONFIG } from '../config.js';
 
 // ความสว่างหน้าจอ — ผูกครั้งเดียวตอนโหลด แล้วอัปเดตเองทุกครั้งที่ค่าเปลี่ยน
@@ -282,6 +285,13 @@ export const GAME_MODES = [
   },
 ];
 
+// ตัวเลือกย่อยใต้รายการโหมด — ค่าจริงกับค่าเริ่มต้นอยู่ที่ data/prefs.js (OPT_DEFAULTS)
+// ที่นี่เก็บแค่ "ข้อความที่ผู้เล่นเห็น" เพิ่มตัวเลือกใหม่ = เพิ่มบรรทัดที่นี่ + ที่ OPT_DEFAULTS
+const MODE_OPTIONS = [
+  { key: 'skipStory', label: 'ข้ามเนื้อเรื่อง', note: 'ไม่ต้องดูฉากสอนเล่น เข้าเกมเลย' },
+  { key: 'hints', label: 'คำใบ้ในเกม', note: 'บอกว่าสกิลใช้ยังไง ต้องกด/ลากตรงไหน' },
+];
+
 export function renderModeSelect(root, { onBack, onPlay, onGated } = {}) {
   root.innerHTML = '';
   setScreenClass(root, 'screen--mode');
@@ -335,6 +345,40 @@ export function renderModeSelect(root, { onBack, onPlay, onGated } = {}) {
 
   root.appendChild(list);
 
+  // ── ตัวเลือกย่อย — เปิด/ปิดได้ ค่าถูกจำไว้ในเครื่อง (data/prefs.js) ──
+  // ทั้งสองตัวเริ่มต้นเป็นเปิดตามที่เจ้าของสั่ง
+  const opts = document.createElement('div');
+  opts.className = 'mode-opts';
+  for (const { key, label, note } of MODE_OPTIONS) {
+    const t = document.createElement('button');
+    t.className = 'mode-opt';
+    t.dataset.opt = key;
+    t.setAttribute('role', 'switch');
+
+    const box = document.createElement('span');
+    box.className = 'mode-opt-box';
+    box.textContent = '✓'; // ซ่อน/โชว์ด้วย CSS ตามสถานะ จะได้ไม่ต้องเขียน DOM ซ้ำตอนสลับ
+
+    const text = document.createElement('span');
+    text.className = 'mode-opt-label';
+    text.textContent = label;
+
+    const hint = document.createElement('span');
+    hint.className = 'mode-opt-note';
+    hint.textContent = note;
+
+    t.append(box, text, hint);
+    const paintOpt = () => {
+      const on = getGameOptions()[key];
+      t.classList.toggle('is-on', on);
+      t.setAttribute('aria-checked', String(on));
+    };
+    t.addEventListener('click', () => { setGameOption(key, !getGameOptions()[key]); paintOpt(); });
+    paintOpt();
+    opts.appendChild(t);
+  }
+  root.appendChild(opts);
+
   // ปุ่ม PLAY มุมขวาล่าง — ยืนยันโหมดที่เลือก
   const play = document.createElement('button');
   play.className = 'mode-play';
@@ -358,6 +402,9 @@ export function renderModeSelect(root, { onBack, onPlay, onGated } = {}) {
   // (ข้ามโหมดที่ล็อกไปเลย จะได้ไม่ค้างอยู่บนตัวที่กดไม่ได้)
   function onKey(e) {
     if (e.key === 'Escape') { detachKeys(); onBack?.(); return; }
+    // ถ้ากำลังโฟกัสอยู่ที่ปุ่มตัวเลือกย่อย (เดินมาด้วย Tab) ปล่อยให้ Enter/เว้นวรรค
+    // ไปสลับตัวเลือกนั้นตามปกติของปุ่ม ไม่ใช่เริ่มเกม
+    if (document.activeElement?.closest('.mode-opts')) return;
     if (e.key === 'Enter') { play.click(); return; }
     const step = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
     if (!step) return;
@@ -875,9 +922,15 @@ export function initScreens(root) {
 
   // เลือกโหมดแล้วจะเริ่มยังไง — Building 21 ยังไม่มีเนื้อหาจริง เข้าไปแล้วเจอหน้าว่างไปก่อน
   // (เจ้าของสั่งไว้ว่ายังไม่ต้องทำอะไร) โหมดใหม่ในอนาคตมาต่อ else if ตรงนี้
+  //
+  // ติ๊ก "ข้ามเนื้อเรื่อง" ไว้ = ข้ามฉากสอนเล่น เข้าหน้าเกมเลย (ค่าเริ่มต้นคือติ๊กไว้)
   function onModeStart(modeId) {
-    if (modeId === 'main') showTutorial();
-    else showBlank(GAME_MODES.find((m) => m.id === modeId)?.label ?? modeId, showModeSelect);
+    if (modeId === 'main') {
+      if (getGameOptions().skipStory) showGame();
+      else showTutorial();
+    } else {
+      showBlank(GAME_MODES.find((m) => m.id === modeId)?.label ?? modeId, showModeSelect);
+    }
   }
 
   function onMenuNavigate(id) {
