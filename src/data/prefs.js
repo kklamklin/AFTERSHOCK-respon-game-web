@@ -68,3 +68,25 @@ export function volumeGain(v = prefs.volume) {
 export function brightnessFactor(v = prefs.brightness) {
   return 0.6 + (clamp(v) / 100) * 0.8;
 }
+
+// ── ปลดล็อกโหมด Building 21 (DLC) ────────────────────────────────
+// เก็บแยกจาก prefs ด้านบนเพราะเป็น true/false ไม่ใช่ค่า 0..100 ที่ปัดตาม DEFAULTS
+const DLC_KEY = 'aftershocks:dlcUnlocked';
+
+/** เครื่องนี้เคยใส่รหัส Building 21 ถูกมาก่อนหรือยัง */
+export function isDlcUnlocked() {
+  try {
+    return localStorage.getItem(DLC_KEY) === '1';
+  } catch {
+    return false; // localStorage ใช้ไม่ได้ (โหมดส่วนตัว) — ถือว่ายังไม่ปลดล็อก ต้องใส่รหัสใหม่ทุกครั้ง
+  }
+}
+
+/** จำไว้ในเครื่องว่าปลดล็อกแล้ว จะได้ไม่ต้องพิมพ์รหัสซ้ำ */
+export function setDlcUnlocked() {
+  try {
+    localStorage.setItem(DLC_KEY, '1');
+  } catch {
+    // เซฟไม่ได้ก็ยังผ่านเข้าไปได้ในรอบนี้ แค่ไม่ถูกจำข้ามครั้ง
+  }
+}

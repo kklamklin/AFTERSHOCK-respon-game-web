@@ -266,6 +266,32 @@ html, body {
 .mode-play-arrow { transition: transform 0.18s ease; }
 .mode-play:hover .mode-play-arrow { transform: translateX(4px); }
 
+/* หน้าใส่รหัสผ่าน Building 21 (โครงสร้าง ส่วนสีอยู่ในบล็อกธีมท้ายไฟล์) */
+.screen--dlccode { padding: 32px 48px 96px; align-items: stretch; }
+.dlccode-wrap {
+  display: flex; flex-direction: column; gap: 14px; align-items: flex-start;
+  margin-top: 48px; max-width: 420px;
+}
+.dlccode-hint { font-size: 16px; }
+.dlccode-input {
+  width: 100%; font-size: 24px; letter-spacing: 4px; padding: 12px 16px;
+  border-radius: 8px; font-family: var(--font-mono);
+}
+.dlccode-error { font-size: 14px; min-height: 1.2em; }
+.dlccode-submit {
+  font-size: 18px; font-weight: 800; letter-spacing: 2px;
+  padding: 10px 24px; border-radius: 8px; cursor: pointer; align-self: flex-start;
+}
+/* สั่นตอนใส่รหัสผิด — ใช้ transform ล้วน (§รอบ 10.11) */
+@keyframes dlccode-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+.dlccode-wrap.is-shake { animation: dlccode-shake 0.35s ease; }
+
 /* หน้า How to Play — เนื้อหายาว เลื่อนได้ */
 .screen--howto { padding: 32px 48px 96px; align-items: stretch; }
 .howto-body {
@@ -1983,6 +2009,23 @@ img.game-icon {
   transition: filter 0.18s ease;
 }
 .mode-play:hover { filter: brightness(1.15); }
+/* ป้าย PASSCODE ต่างจาก SOON — ยังกดเข้าได้ ไม่ใช่ป้ายบอกว่าใช้ไม่ได้ ใช้สี accent แทน warn */
+.mode-tag--gated { color: var(--accent); border-color: var(--accent); }
+
+/* ── หน้าใส่รหัสผ่าน Building 21 ─────────────────────────── */
+.dlccode-hint, .dlccode-error { font-family: var(--font-ui); }
+.dlccode-hint { color: var(--ink-dim); }
+.dlccode-error { color: var(--danger); }
+.dlccode-input {
+  background: var(--bg-panel); border: 1px solid var(--line); color: var(--ink);
+}
+.dlccode-input:focus { outline: none; border-color: var(--accent); box-shadow: var(--glow-soft); }
+.dlccode-submit {
+  font-family: var(--font-display); color: var(--bg-deep);
+  background: var(--accent); border: 1px solid var(--accent);
+  box-shadow: var(--glow-soft); transition: filter 0.18s ease;
+}
+.dlccode-submit:hover { filter: brightness(1.15); }
 
 /* ── เนื้อหายาว (How to play / การ์ด จนท.) ────────────────── */
 .howto-body, .card-body {
