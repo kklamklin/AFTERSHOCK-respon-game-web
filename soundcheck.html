@@ -11,7 +11,11 @@
     ชั้น 1  <audio> เล่นตรง ๆ                    ← ไม่พึ่ง Web Audio เลย
     ชั้น 2  Web Audio ล้วน (สร้างคลื่นเสียงเอง)   ← ทดสอบว่า AudioContext ทำงานไหม
     ชั้น 3  <audio> + createMediaElementSource   ← แบบที่เกมจริงใช้ ตัวต้องสงสัยอันดับหนึ่ง
-    ชั้น 4  เหมือนชั้น 3 แต่เป็นไฟล์ใหญ่ที่ตั้ง preload="none" (เพลงในเกม)
+    ชั้น 4  เพลงในเกม (ไฟล์ใหญ่ preload="none") เล่นตรง ๆ
+    ชั้น 5  เพลงเดียวกัน แต่ผ่าน Web Audio — เทียบกับชั้น 4 เพื่อแยกว่าปัญหาคือ Web Audio หรือการโหลดไฟล์ใหญ่
+
+  ⚠️ ชั้น 4/5 ต้องกรอไปนาทีที่ 0:30 ก่อนเล่น — วัดจากไฟล์จริงแล้ว 3 วินาทีแรก
+     เป็นอินโทรที่เบากว่าท่อนปกติ 3 เท่า เล่นจากวินาที 0 ผู้ฟังจะตอบว่าไม่ได้ยินทั้งที่เพลงเล่นอยู่
 
   ทุกชั้นวัดคลื่นเสียงด้วย AnalyserNode ควบคู่กับการถามหูผู้ใช้
   เพราะสองอย่างนี้แยกสาเหตุคนละแบบ:
@@ -69,7 +73,7 @@
 <body>
 
 <h1>ตรวจเสียง AFTERSHOCKS</h1>
-<p class="sub">เปิดหน้านี้ในเครื่องที่ <b>ไม่มีเสียง</b> แล้วกดตามลำดับ 1 → 4<br>
+<p class="sub">เปิดหน้านี้ในเครื่องที่ <b>ไม่มีเสียง</b> แล้วกดตามลำดับ 1 → 5<br>
 ⚠️ เร่งเสียงเครื่องขึ้นมาก่อน · iPhone ให้ปิดโหมดเงียบ (สวิตช์ข้างเครื่อง)</p>
 
 <div class="card step live" id="s0">
@@ -110,13 +114,23 @@
 </div>
 
 <div class="card step" id="s4">
-  <h2>4 · เพลงในเกม (ไฟล์ใหญ่ โหลดทีหลัง)</h2>
-  <p>เพลงจริงในเกม ซึ่งตั้งให้ยังไม่โหลดตอนเปิดหน้า</p>
-  <button data-run="4">▶ เล่นเพลง 3 วินาที</button>
+  <h2>4 · เพลงในเกม เล่นตรง ๆ (ไม่ใช้ Web Audio)</h2>
+  <p>ไฟล์ใหญ่ที่ตั้งให้ยังไม่โหลดตอนเปิดหน้า · ข้ามไปนาทีที่ 0:30 เพราะช่วงต้นเพลงเป็นอินโทรที่เบามาก</p>
+  <button data-run="4">▶ เล่นเพลง 5 วินาที</button>
   <div class="ask" data-ask="4"><span>ได้ยินเพลงไหม?</span>
     <div class="row"><button class="yes" data-ans="4:1">ได้ยิน</button><button class="no" data-ans="4:0">ไม่ได้ยิน</button></div>
   </div>
   <div class="res" id="r4"></div>
+</div>
+
+<div class="card step" id="s5">
+  <h2>5 · เพลงในเกม + Web Audio ⭐ (แบบที่เกมใช้จริง)</h2>
+  <p>ไฟล์เดียวกับข้อ 4 ช่วงเดียวกัน แต่เดินผ่าน AudioContext</p>
+  <button data-run="5">▶ เล่นเพลง 5 วินาที</button>
+  <div class="ask" data-ask="5"><span>ได้ยินเพลงไหม?</span>
+    <div class="row"><button class="yes" data-ans="5:1">ได้ยิน</button><button class="no" data-ans="5:0">ไม่ได้ยิน</button></div>
+  </div>
+  <div class="res" id="r5"></div>
 </div>
 
 <div class="card" id="verdict" style="display:none">
@@ -137,8 +151,8 @@
 <script>
 // ── สถานะการตรวจ ────────────────────────────────────────────────
 var log = [];
-var heard = {};   // ผลจากหูผู้ใช้ 1..4
-var wave = {};    // คลื่นที่วัดได้จาก AnalyserNode 2..4
+var heard = {};   // ผลจากหูผู้ใช้ 1..5
+var wave = {};    // คลื่นที่วัดได้จาก AnalyserNode (เฉพาะชั้นที่ผ่าน Web Audio)
 var ctx = null, analyser = null, masterGain = null;
 var CLICK = 'assets/click.mp3';
 var MUSIC = 'assets/London%20Bridge.mp3';
@@ -259,40 +273,63 @@ function test3() {
   ask(3);
 }
 
-// ── ชั้น 4: ไฟล์ใหญ่ที่ preload='none' (เพลงในเกม) ───────────────
-function test4() {
-  if (!ctx) { say('r4', 'ไม่มี AudioContext'); ask(4); return; }
-  ctx.resume();
+// ── ชั้น 4/5: ไฟล์ใหญ่ที่ preload='none' (เพลงในเกม) ─────────────
+//
+// ⚠️ ต้องข้ามไปนาทีที่ 0:30 ก่อนเล่น — วัดจากไฟล์จริงแล้วพบว่า 3 วินาทีแรก
+// เป็นอินโทรที่เบากว่าท่อนปกติ 3 เท่า (peak 0.066 เทียบกับ 0.19 หลังคูณ gain)
+// ถ้าเล่นจากวินาทีที่ 0 ผู้ฟังจะตอบว่า "ไม่ได้ยิน" ทั้งที่เพลงเล่นอยู่จริง
+var SEEK_TO = 30;
+
+function playMusic(useWebAudio, resId, n) {
   var el = new Audio();
   el.preload = 'none';
   el.src = MUSIC;
-  el.crossOrigin = 'anonymous';
   var out = [];
-  try {
-    var src = ctx.createMediaElementSource(el);
-    var g = ctx.createGain(); g.gain.value = 0.3;
-    src.connect(g); g.connect(masterGain);
-    out.push('ต่อ createMediaElementSource สำเร็จ');
-  } catch (e) {
-    out.push('❌ ต่อไม่ได้: ' + e.name);
+  if (useWebAudio) {
+    if (!ctx) { say(resId, 'ไม่มี AudioContext'); ask(n); return; }
+    ctx.resume();
+    el.crossOrigin = 'anonymous';
+    try {
+      var src = ctx.createMediaElementSource(el);
+      var g = ctx.createGain(); g.gain.value = 0.3; // ค่าจริงที่เกมใช้กับเพลงนี้
+      src.connect(g); g.connect(masterGain);
+      out.push('ต่อ createMediaElementSource สำเร็จ');
+    } catch (e) {
+      out.push('❌ ต่อไม่ได้: ' + e.name + ' ' + e.message);
+      add('ชั้น' + n + ' ต่อไม่ได้: ' + e.name);
+    }
+  } else {
+    out.push('เล่นตรง ๆ ไม่ผ่าน Web Audio');
   }
   el.load(); // อยู่ใน gesture เดียวกับที่ผู้ใช้กด — ถูกกฎของ iOS
-  el.play().then(function () { add('ชั้น4 play สำเร็จ'); },
-                 function (e) { out.push('❌ play() ถูกปฏิเสธ: ' + e.name); add('ชั้น4 play ถูกปฏิเสธ: ' + e.name); });
-  say('r4', out.join('\n') + '\nกำลังโหลดและวัด (3 วินาที)...');
+
+  // กระโดดไปท่อนที่ดังพอจะได้ยิน แล้วค่อยเล่น
+  el.addEventListener('loadedmetadata', function () {
+    try { el.currentTime = SEEK_TO; } catch (e) { out.push('กรอไม่ได้: ' + e.name); }
+  });
+  el.play().then(function () { add('ชั้น' + n + ' play สำเร็จ'); },
+                 function (e) { out.push('❌ play() ถูกปฏิเสธ: ' + e.name); add('ชั้น' + n + ' play ถูกปฏิเสธ: ' + e.name); });
+
+  say(resId, out.join('\n') + '\nกำลังโหลดและเล่น 5 วินาที...');
   setTimeout(function () {
-    measure(2500).then(function (p) {
-      wave[4] = p;
+    var doneMeasure = useWebAudio ? measure(3500) : Promise.resolve(-1);
+    doneMeasure.then(function (p) {
+      if (useWebAudio) wave[n] = p;
+      out.push('เล่นถึงวินาทีที่ ' + el.currentTime.toFixed(1) + (el.currentTime < SEEK_TO ? ' ⚠️ กรอไม่สำเร็จ (ยังอยู่ท่อนอินโทรที่เบา)' : ' ✓ อยู่ในท่อนที่ดังปกติ'));
       out.push('readyState=' + el.readyState + ' networkState=' + el.networkState + (el.error ? ' error=' + el.error.code : ''));
-      say('r4', out.join('\n') + '\nctx.state=' + ctx.state + '\nคลื่นที่วัดได้: ' + fmt(p));
-      add('ชั้น4 คลื่น=' + p.toFixed(4) + ' rs=' + el.readyState);
-      setTimeout(function () { el.pause(); }, 300);
+      if (useWebAudio) out.push('ctx.state=' + ctx.state + '\nคลื่นที่วัดได้: ' + fmt(p));
+      say(resId, out.join('\n'));
+      add('ชั้น' + n + ' t=' + el.currentTime.toFixed(1) + ' rs=' + el.readyState + (useWebAudio ? ' คลื่น=' + p.toFixed(4) : ''));
+      setTimeout(function () { el.pause(); }, 400);
     });
-  }, 500);
-  ask(4);
+  }, 1500);
+  ask(n);
 }
 
-var TESTS = { 1: test1, 2: test2, 3: test3, 4: test4 };
+function test4() { playMusic(false, 'r4', 4); }
+function test5() { playMusic(true, 'r5', 5); }
+
+var TESTS = { 1: test1, 2: test2, 3: test3, 4: test4, 5: test5 };
 document.addEventListener('click', function (e) {
   var run = e.target.getAttribute && e.target.getAttribute('data-run');
   if (run) { TESTS[run](); return; }
@@ -302,7 +339,7 @@ document.addEventListener('click', function (e) {
     heard[parts[0]] = parts[1] === '1';
     add('ชั้น' + parts[0] + ' หู: ' + (heard[parts[0]] ? 'ได้ยิน' : 'ไม่ได้ยิน'));
     var next = Number(parts[0]) + 1;
-    if (next <= 4) open(next);
+    if (next <= 5) open(next);
     verdict();
   }
 });
@@ -311,24 +348,31 @@ document.addEventListener('click', function (e) {
 function verdict() {
   if (heard[1] === undefined || heard[3] === undefined) return;
   var t = '', b = '';
+  var webAudioBroken = heard[1] && !heard[3];
+  var musicOnlyBroken = heard[4] === true && heard[5] === false;
+
   if (!heard[1] && !heard[2] && !heard[3]) {
     t = '🔇 เงียบทุกแบบ — น่าจะอยู่ที่ตัวเครื่อง';
     b = 'แม้แต่การเล่นแบบธรรมดาก็ไม่ได้ยิน แปลว่าไม่ใช่เรื่องโค้ดเกม\n'
       + '• iPhone: สลับสวิตช์ปิดเสียงข้างเครื่อง แล้วลองใหม่\n'
       + '• เร่งระดับเสียงสื่อ (ไม่ใช่เสียงเรียกเข้า)\n'
       + '• ถอดหูฟัง/ตัดการเชื่อมต่อบลูทูธ';
-  } else if (heard[1] && !heard[3]) {
+  } else if (webAudioBroken) {
     t = '🎯 เจอแล้ว — Web Audio คือตัวปัญหา';
-    b = 'เล่นตรง ๆ ได้ยิน แต่พอเดินผ่าน AudioContext แล้วเงียบ\n'
-      + 'ซึ่งตรงกับที่เกมทำอยู่พอดี\n\n'
+    b = 'เล่นตรง ๆ ได้ยิน แต่พอเดินผ่าน AudioContext แล้วเงียบ ซึ่งตรงกับที่เกมทำอยู่พอดี\n\n'
       + (wave[3] > 0.001
-          ? 'คลื่นเสียงออกจากกราฟจริง แต่หูไม่ได้ยิน → เสียงถูกส่งไปผิดทาง/ถูกเครื่องปิด'
+          ? 'กราฟมีคลื่นออกจริง แต่หูไม่ได้ยิน → เสียงถูกส่งไปผิดทาง หรือถูกเครื่องปิด'
           : 'กราฟไม่มีคลื่นออกเลย → createMediaElementSource ส่งความเงียบออกมา (บั๊กของเบราว์เซอร์)')
       + '\n\nทางแก้: ไม่ให้เกมใช้ Web Audio บนเครื่องแบบนี้ ให้เล่นตรง ๆ แทน';
-  } else if (heard[1] && heard[3] && heard[4] === false) {
+  } else if (musicOnlyBroken) {
+    t = '🎯 เจอแล้ว — เฉพาะเพลงที่ผ่าน Web Audio';
+    b = 'เพลงเล่นตรง ๆ ได้ยิน แต่ผ่าน AudioContext แล้วเงียบ\n'
+      + 'เสียงสั้นไม่มีปัญหา แปลว่าติดที่ไฟล์ใหญ่ + Web Audio รวมกัน';
+  } else if (heard[4] === false && heard[5] === false) {
     t = '🎯 เจอแล้ว — เฉพาะไฟล์ใหญ่ที่โหลดทีหลัง';
-    b = 'เสียงสั้นดังปกติ แต่เพลงในเกมไม่ออก\nปัญหาอยู่ที่การโหลดไฟล์ใหญ่ ไม่ใช่ระบบเสียงทั้งระบบ';
-  } else if (heard[1] && heard[3]) {
+    b = 'เสียงสั้นดังปกติ แต่เพลงไม่ออกทั้งสองแบบ\n'
+      + 'ปัญหาอยู่ที่การโหลดไฟล์ใหญ่ ไม่ใช่ Web Audio';
+  } else if (heard[1] && heard[3] && heard[5] !== false) {
     t = '✅ ระบบเสียงทำงานปกติในหน้านี้';
     b = 'ทุกชั้นผ่าน แปลว่ากลไกเสียงใช้ได้บนเครื่องนี้\n'
       + 'ถ้าในเกมยังเงียบ แสดงว่าปัญหาอยู่ที่ "จังหวะ" ที่เกมปลุกเสียง ไม่ใช่ตัวกลไก\n'
@@ -347,7 +391,7 @@ function render() {
   var lines = ['=== ผลตรวจเสียง AFTERSHOCKS ==='];
   lines.push('เวลา: ' + new Date().toLocaleString('th-TH'));
   lines.push('หน้าจอ: ' + screen.width + 'x' + screen.height);
-  for (var i = 1; i <= 4; i++) {
+  for (var i = 1; i <= 5; i++) {
     lines.push('ชั้น' + i + ': หู=' + (heard[i] === undefined ? '-' : heard[i] ? 'ได้ยิน' : 'ไม่ได้ยิน')
       + ' คลื่น=' + (wave[i] === undefined ? '-' : wave[i].toFixed(4)));
   }
