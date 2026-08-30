@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ตรวจเสียง — AFTERSHOCKS</title>
+<!--
+  หน้าตรวจเสียง (ไม่ใช่ส่วนหนึ่งของเกม) — ใช้ไล่บั๊ก "เล่นบนมือถือแล้วไม่มีเสียง"
+
+  แยกทดสอบทีละชั้นว่าเสียงตายตรงไหน:
+    ชั้น 1  <audio> เล่นตรง ๆ                    ← ไม่พึ่ง Web Audio เลย
+    ชั้น 2  Web Audio ล้วน (สร้างคลื่นเสียงเอง)   ← ทดสอบว่า AudioContext ทำงานไหม
+    ชั้น 3  <audio> + createMediaElementSource   ← แบบที่เกมจริงใช้ ตัวต้องสงสัยอันดับหนึ่ง
+    ชั้น 4  เหมือนชั้น 3 แต่เป็นไฟล์ใหญ่ที่ตั้ง preload="none" (เพลงในเกม)
+
+  ทุกชั้นวัดคลื่นเสียงด้วย AnalyserNode ควบคู่กับการถามหูผู้ใช้
+  เพราะสองอย่างนี้แยกสาเหตุคนละแบบ:
+    มีคลื่น + ไม่ได้ยิน = เสียงถูกส่งออกแล้วแต่ถูกเครื่องปิด (สวิตช์เงียบ/ระดับเสียง)
+    ไม่มีคลื่น          = Web Audio ส่งความเงียบออกมาเอง (บั๊กของเบราว์เซอร์)
+
+  หน้านี้ไม่บังคับแนวนอนโดยตั้งใจ — เป็นเครื่องมือ ไม่ใช่เกม
+-->
+<style>
+  :root {
+    --bg: #0a1226; --panel: rgba(18,34,68,.72); --line: rgba(86,170,232,.38);
+    --ink: #dceaff; --dim: #8fa8cc; --accent: #45d0ff; --ok: #3ddc97;
+    --warn: #ffc247; --bad: #ff5a6e;
+    --font: 'Noto Sans Thai','IBM Plex Sans Thai','Sarabun','Leelawadee UI',system-ui,sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; padding: 16px calc(16px + env(safe-area-inset-right)) 40px calc(16px + env(safe-area-inset-left));
+    background: var(--bg); color: var(--ink); font-family: var(--font); line-height: 1.6;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: 1px; }
+  .sub { color: var(--dim); font-size: 13px; margin: 0 0 18px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px; margin-bottom: 12px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 6px; color: var(--accent); }
+  .card p { font-size: 13px; color: var(--dim); margin: 0 0 10px; }
+  button {
+    font-family: var(--font); font-size: 15px; font-weight: 700;
+    padding: 12px 18px; border-radius: 8px; cursor: pointer; border: 1px solid var(--accent);
+    background: var(--accent); color: #04070f; min-height: 46px;
+  }
+  button:disabled { opacity: .4; }
+  button.ghost { background: none; color: var(--ink); border-color: var(--line); }
+  button.yes { background: var(--ok); border-color: var(--ok); }
+  button.no  { background: var(--bad); border-color: var(--bad); color: #fff; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .ask { margin-top: 10px; display: none; }
+  .ask.show { display: block; }
+  .ask span { display: block; font-size: 14px; margin-bottom: 8px; color: var(--ink); }
+  .res { font-size: 13px; margin-top: 8px; font-family: ui-monospace, monospace; white-space: pre-wrap; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+  #verdict { border-color: var(--accent); }
+  #verdict .big { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  textarea {
+    width: 100%; min-height: 150px; background: #04070f; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px; padding: 10px;
+    font-family: ui-monospace, monospace; font-size: 12px;
+  }
+  .step { opacity: .45; pointer-events: none; }
+  .step.live { opacity: 1; pointer-events: auto; }
+</style>
+</head>
+<body>
+
+<h1>ตรวจเสียง AFTERSHOCKS</h1>
+<p class="sub">เปิดหน้านี้ในเครื่องที่ <b>ไม่มีเสียง</b> แล้วกดตามลำดับ 1 → 4<br>
+⚠️ เร่งเสียงเครื่องขึ้นมาก่อน · iPhone ให้ปิดโหมดเงียบ (สวิตช์ข้างเครื่อง)</p>
+
+<div class="card step live" id="s0">
+  <h2>เริ่มตรวจ</h2>
+  <p>กดปุ่มนี้ก่อน เพื่อให้เบราว์เซอร์อนุญาตให้เล่นเสียงได้</p>
+  <button id="start">แตะเพื่อเริ่ม</button>
+  <div class="res" id="r0"></div>
+</div>
+
+<div class="card step" id="s1">
+  <h2>1 · เสียงธรรมดา (ไม่ใช้ Web Audio)</h2>
+  <p>เล่นไฟล์เสียงตรง ๆ แบบที่เว็บทั่วไปทำ</p>
+  <button data-run="1">▶ เล่นเสียงคลิก</button>
+  <div class="ask" data-ask="1"><span>ได้ยินเสียงไหม?</span>
+    <div class="row"><button class="yes" data-ans="1:1">ได้ยิน</button><button class="no" data-ans="1:0">ไม่ได้ยิน</button></div>
+  </div>
+  <div class="res" id="r1"></div>
+</div>
+
+<div class="card step" id="s2">
+  <h2>2 · Web Audio ล้วน (เสียงบี๊บที่สร้างเอง)</h2>
+  <p>ไม่ใช้ไฟล์เลย ให้ AudioContext สร้างคลื่นเสียงขึ้นมาเอง</p>
+  <button data-run="2">▶ เล่นเสียงบี๊บ 1 วินาที</button>
+  <div class="ask" data-ask="2"><span>ได้ยินเสียงบี๊บไหม?</span>
+    <div class="row"><button class="yes" data-ans="2:1">ได้ยิน</button><button class="no" data-ans="2:0">ไม่ได้ยิน</button></div>
+  </div>
+  <div class="res" id="r2"></div>
+</div>
+
+<div class="card step" id="s3">
+  <h2>3 · ไฟล์เสียง + Web Audio ⭐ (แบบที่เกมใช้)</h2>
+  <p>ไฟล์เดียวกับข้อ 1 แต่เดินผ่าน AudioContext — <b>ตัวต้องสงสัยอันดับหนึ่ง</b></p>
+  <button data-run="3">▶ เล่นเสียงคลิกผ่าน Web Audio</button>
+  <div class="ask" data-ask="3"><span>ได้ยินเสียงไหม?</span>
+    <div class="row"><button class="yes" data-ans="3:1">ได้ยิน</button><button class="no" data-ans="3:0">ไม่ได้ยิน</button></div>
+  </div>
+  <div class="res" id="r3"></div>
+</div>
+
+<div class="card step" id="s4">
+  <h2>4 · เพลงในเกม (ไฟล์ใหญ่ โหลดทีหลัง)</h2>
+  <p>เพลงจริงในเกม ซึ่งตั้งให้ยังไม่โหลดตอนเปิดหน้า</p>
+  <button data-run="4">▶ เล่นเพลง 3 วินาที</button>
+  <div class="ask" data-ask="4"><span>ได้ยินเพลงไหม?</span>
+    <div class="row"><button class="yes" data-ans="4:1">ได้ยิน</button><button class="no" data-ans="4:0">ไม่ได้ยิน</button></div>
+  </div>
+  <div class="res" id="r4"></div>
+</div>
+
+<div class="card" id="verdict" style="display:none">
+  <div class="big" id="vtitle"></div>
+  <div class="res" id="vbody"></div>
+</div>
+
+<div class="card">
+  <h2>ผลตรวจ — ส่งให้ผม</h2>
+  <p>กดคัดลอกแล้ววางในแชตได้เลย</p>
+  <div class="row">
+    <button class="ghost" id="copy">คัดลอกผลตรวจ</button>
+    <button class="ghost" id="again">เริ่มใหม่</button>
+  </div>
+  <textarea id="out" readonly></textarea>
+</div>
+
+<script>
+// ── สถานะการตรวจ ────────────────────────────────────────────────
+var log = [];
+var heard = {};   // ผลจากหูผู้ใช้ 1..4
+var wave = {};    // คลื่นที่วัดได้จาก AnalyserNode 2..4
+var ctx = null, analyser = null, masterGain = null;
+var CLICK = 'assets/click.mp3';
+var MUSIC = 'assets/London%20Bridge.mp3';
+
+function say(id, html) { document.getElementById(id).innerHTML = html; }
+function add(line) { log.push(line); render(); }
+function open(n) { var el = document.getElementById('s' + n); if (el) el.classList.add('live'); }
+function ask(n) { document.querySelector('[data-ask="' + n + '"]').classList.add('show'); }
+
+// วัดคลื่นเสียงที่ออกจริงจากกราฟ Web Audio (ไม่ใช่ดูแค่สถานะ)
+function measure(ms) {
+  return new Promise(function (res) {
+    if (!analyser) return res(-1);
+    var buf = new Float32Array(analyser.fftSize), peak = 0, t0 = performance.now();
+    (function tick() {
+      analyser.getFloatTimeDomainData(buf);
+      for (var i = 0; i < buf.length; i++) { var a = Math.abs(buf[i]); if (a > peak) peak = a; }
+      if (performance.now() - t0 < ms) requestAnimationFrame(tick); else res(peak);
+    })();
+  });
+}
+
+function fmt(p) { return p < 0 ? 'วัดไม่ได้' : p.toFixed(4) + (p > 0.001 ? ' (มีคลื่นออก ✓)' : ' (ไม่มีคลื่นเลย ✗)'); }
+
+// ── ขั้นที่ 0: สร้าง AudioContext ในจังหวะที่ผู้ใช้แตะจริง ───────
+document.getElementById('start').addEventListener('click', function () {
+  var info = [];
+  info.push('UA: ' + navigator.userAgent);
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) {
+    info.push('❌ เบราว์เซอร์นี้ไม่มี AudioContext เลย');
+    say('r0', info.join('\n')); add('ctx: ไม่รองรับ'); open(1); return;
+  }
+  try {
+    ctx = new AC();
+    masterGain = ctx.createGain();
+    analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
+    masterGain.connect(analyser); analyser.connect(ctx.destination);
+    info.push('สร้าง AudioContext แล้ว · sampleRate=' + ctx.sampleRate);
+    info.push('สถานะทันทีหลังสร้าง: ' + ctx.state);
+    add('ctx.state แรกเริ่ม = ' + ctx.state);
+    ctx.resume().then(function () {
+      info.push('หลังสั่ง resume(): ' + ctx.state + (ctx.state === 'running' ? ' ✅' : ' ❌ ปลุกไม่ขึ้น'));
+      add('ctx.state หลัง resume = ' + ctx.state);
+      say('r0', info.join('\n'));
+    }, function (e) {
+      info.push('resume() ล้มเหลว: ' + e.name);
+      add('resume ล้มเหลว: ' + e.name);
+      say('r0', info.join('\n'));
+    });
+  } catch (e) {
+    info.push('❌ สร้าง AudioContext ไม่ได้: ' + e.name + ' ' + e.message);
+    add('สร้าง ctx ไม่ได้: ' + e.name);
+  }
+  say('r0', info.join('\n'));
+  add('UA: ' + navigator.userAgent);
+  open(1);
+});
+
+// ── ชั้น 1: <audio> ตรง ๆ ────────────────────────────────────────
+function test1() {
+  var el = new Audio(CLICK);
+  el.volume = 1;
+  var out = ['เล่นแบบธรรมดา ไม่ผ่าน Web Audio'];
+  el.play().then(function () {
+    out.push('play() สำเร็จ · volume ที่อ่านได้ = ' + el.volume);
+    if (el.volume !== 1) out.push('⚠️ ตั้ง volume ไม่ได้ (ปกติของ iOS)');
+    say('r1', out.join('\n')); add('ชั้น1 play สำเร็จ');
+  }, function (e) {
+    out.push('❌ play() ถูกปฏิเสธ: ' + e.name);
+    say('r1', out.join('\n')); add('ชั้น1 play ถูกปฏิเสธ: ' + e.name);
+  });
+  say('r1', out.join('\n'));
+  ask(1);
+}
+
+// ── ชั้น 2: Web Audio ล้วน ───────────────────────────────────────
+function test2() {
+  if (!ctx) { say('r2', 'ไม่มี AudioContext'); ask(2); return; }
+  ctx.resume();
+  var osc = ctx.createOscillator(), g = ctx.createGain();
+  osc.frequency.value = 440; g.gain.value = 0.25;
+  osc.connect(g); g.connect(masterGain);
+  osc.start(); osc.stop(ctx.currentTime + 1);
+  say('r2', 'สร้างคลื่น 440Hz · ctx.state=' + ctx.state + '\nกำลังวัด...');
+  measure(1100).then(function (p) {
+    wave[2] = p;
+    say('r2', 'ctx.state=' + ctx.state + '\nคลื่นที่วัดได้: ' + fmt(p));
+    add('ชั้น2 คลื่น=' + p.toFixed(4) + ' state=' + ctx.state);
+  });
+  ask(2);
+}
+
+// ── ชั้น 3: <audio> + MediaElementSource (แบบที่เกมใช้) ──────────
+function test3() {
+  if (!ctx) { say('r3', 'ไม่มี AudioContext'); ask(3); return; }
+  ctx.resume();
+  var el = new Audio(CLICK);
+  el.crossOrigin = 'anonymous';
+  var out = [];
+  try {
+    var src = ctx.createMediaElementSource(el);
+    var g = ctx.createGain(); g.gain.value = 5.28; // ค่าจริงที่เกมใช้กับเสียงคลิก
+    src.connect(g); g.connect(masterGain);
+    out.push('ต่อ createMediaElementSource สำเร็จ');
+  } catch (e) {
+    out.push('❌ createMediaElementSource ล้มเหลว: ' + e.name + ' ' + e.message);
+    add('ชั้น3 ต่อไม่ได้: ' + e.name);
+  }
+  el.play().then(function () { add('ชั้น3 play สำเร็จ'); },
+                 function (e) { out.push('❌ play() ถูกปฏิเสธ: ' + e.name); add('ชั้น3 play ถูกปฏิเสธ: ' + e.name); });
+  say('r3', out.join('\n') + '\nกำลังวัด...');
+  measure(1200).then(function (p) {
+    wave[3] = p;
+    say('r3', out.join('\n') + '\nctx.state=' + ctx.state + '\nคลื่นที่วัดได้: ' + fmt(p));
+    add('ชั้น3 คลื่น=' + p.toFixed(4) + ' state=' + ctx.state);
+  });
+  ask(3);
+}
+
+// ── ชั้น 4: ไฟล์ใหญ่ที่ preload='none' (เพลงในเกม) ───────────────
+function test4() {
+  if (!ctx) { say('r4', 'ไม่มี AudioContext'); ask(4); return; }
+  ctx.resume();
+  var el = new Audio();
+  el.preload = 'none';
+  el.src = MUSIC;
+  el.crossOrigin = 'anonymous';
+  var out = [];
+  try {
+    var src = ctx.createMediaElementSource(el);
+    var g = ctx.createGain(); g.gain.value = 0.3;
+    src.connect(g); g.connect(masterGain);
+    out.push('ต่อ createMediaElementSource สำเร็จ');
+  } catch (e) {
+    out.push('❌ ต่อไม่ได้: ' + e.name);
+  }
+  el.load(); // อยู่ใน gesture เดียวกับที่ผู้ใช้กด — ถูกกฎของ iOS
+  el.play().then(function () { add('ชั้น4 play สำเร็จ'); },
+                 function (e) { out.push('❌ play() ถูกปฏิเสธ: ' + e.name); add('ชั้น4 play ถูกปฏิเสธ: ' + e.name); });
+  say('r4', out.join('\n') + '\nกำลังโหลดและวัด (3 วินาที)...');
+  setTimeout(function () {
+    measure(2500).then(function (p) {
+      wave[4] = p;
+      out.push('readyState=' + el.readyState + ' networkState=' + el.networkState + (el.error ? ' error=' + el.error.code : ''));
+      say('r4', out.join('\n') + '\nctx.state=' + ctx.state + '\nคลื่นที่วัดได้: ' + fmt(p));
+      add('ชั้น4 คลื่น=' + p.toFixed(4) + ' rs=' + el.readyState);
+      setTimeout(function () { el.pause(); }, 300);
+    });
+  }, 500);
+  ask(4);
+}
+
+var TESTS = { 1: test1, 2: test2, 3: test3, 4: test4 };
+document.addEventListener('click', function (e) {
+  var run = e.target.getAttribute && e.target.getAttribute('data-run');
+  if (run) { TESTS[run](); return; }
+  var ans = e.target.getAttribute && e.target.getAttribute('data-ans');
+  if (ans) {
+    var parts = ans.split(':');
+    heard[parts[0]] = parts[1] === '1';
+    add('ชั้น' + parts[0] + ' หู: ' + (heard[parts[0]] ? 'ได้ยิน' : 'ไม่ได้ยิน'));
+    var next = Number(parts[0]) + 1;
+    if (next <= 4) open(next);
+    verdict();
+  }
+});
+
+// ── สรุปว่าปัญหาน่าจะอยู่ตรงไหน ─────────────────────────────────
+function verdict() {
+  if (heard[1] === undefined || heard[3] === undefined) return;
+  var t = '', b = '';
+  if (!heard[1] && !heard[2] && !heard[3]) {
+    t = '🔇 เงียบทุกแบบ — น่าจะอยู่ที่ตัวเครื่อง';
+    b = 'แม้แต่การเล่นแบบธรรมดาก็ไม่ได้ยิน แปลว่าไม่ใช่เรื่องโค้ดเกม\n'
+      + '• iPhone: สลับสวิตช์ปิดเสียงข้างเครื่อง แล้วลองใหม่\n'
+      + '• เร่งระดับเสียงสื่อ (ไม่ใช่เสียงเรียกเข้า)\n'
+      + '• ถอดหูฟัง/ตัดการเชื่อมต่อบลูทูธ';
+  } else if (heard[1] && !heard[3]) {
+    t = '🎯 เจอแล้ว — Web Audio คือตัวปัญหา';
+    b = 'เล่นตรง ๆ ได้ยิน แต่พอเดินผ่าน AudioContext แล้วเงียบ\n'
+      + 'ซึ่งตรงกับที่เกมทำอยู่พอดี\n\n'
+      + (wave[3] > 0.001
+          ? 'คลื่นเสียงออกจากกราฟจริง แต่หูไม่ได้ยิน → เสียงถูกส่งไปผิดทาง/ถูกเครื่องปิด'
+          : 'กราฟไม่มีคลื่นออกเลย → createMediaElementSource ส่งความเงียบออกมา (บั๊กของเบราว์เซอร์)')
+      + '\n\nทางแก้: ไม่ให้เกมใช้ Web Audio บนเครื่องแบบนี้ ให้เล่นตรง ๆ แทน';
+  } else if (heard[1] && heard[3] && heard[4] === false) {
+    t = '🎯 เจอแล้ว — เฉพาะไฟล์ใหญ่ที่โหลดทีหลัง';
+    b = 'เสียงสั้นดังปกติ แต่เพลงในเกมไม่ออก\nปัญหาอยู่ที่การโหลดไฟล์ใหญ่ ไม่ใช่ระบบเสียงทั้งระบบ';
+  } else if (heard[1] && heard[3]) {
+    t = '✅ ระบบเสียงทำงานปกติในหน้านี้';
+    b = 'ทุกชั้นผ่าน แปลว่ากลไกเสียงใช้ได้บนเครื่องนี้\n'
+      + 'ถ้าในเกมยังเงียบ แสดงว่าปัญหาอยู่ที่ "จังหวะ" ที่เกมปลุกเสียง ไม่ใช่ตัวกลไก\n'
+      + 'ส่งผลตรวจนี้มาให้ผมดูได้เลย';
+  } else {
+    t = '⚠️ ผลออกมาผสม';
+    b = 'ส่งผลตรวจทั้งหมดมาให้ผมวิเคราะห์';
+  }
+  document.getElementById('verdict').style.display = 'block';
+  document.getElementById('vtitle').textContent = t;
+  document.getElementById('vbody').textContent = b;
+  render();
+}
+
+function render() {
+  var lines = ['=== ผลตรวจเสียง AFTERSHOCKS ==='];
+  lines.push('เวลา: ' + new Date().toLocaleString('th-TH'));
+  lines.push('หน้าจอ: ' + screen.width + 'x' + screen.height);
+  for (var i = 1; i <= 4; i++) {
+    lines.push('ชั้น' + i + ': หู=' + (heard[i] === undefined ? '-' : heard[i] ? 'ได้ยิน' : 'ไม่ได้ยิน')
+      + ' คลื่น=' + (wave[i] === undefined ? '-' : wave[i].toFixed(4)));
+  }
+  lines.push('--- รายละเอียด ---');
+  document.getElementById('out').value = lines.concat(log).join('\n');
+}
+
+document.getElementById('copy').addEventListener('click', function () {
+  var ta = document.getElementById('out');
+  ta.select(); ta.setSelectionRange(0, 99999);
+  try { document.execCommand('copy'); this.textContent = 'คัดลอกแล้ว ✓'; }
+  catch (e) { this.textContent = 'คัดลอกไม่ได้ — เลือกข้อความเอง'; }
+});
+document.getElementById('again').addEventListener('click', function () { location.reload(); });
+render();
+</script>
+</body>
+</html>
