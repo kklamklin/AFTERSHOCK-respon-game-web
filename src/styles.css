@@ -2284,3 +2284,98 @@ html.is-dimmed .drag-ghost {
 @media (prefers-reduced-motion: reduce) {
   .rotate-phone { animation: none; transform: rotate(-82deg); }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   โหมดกราฟิกต่ำ — สำหรับมือถือรุ่นเล็ก (เปิดจากหน้า Settings)
+   ────────────────────────────────────────────────────────────────
+   ตัดเฉพาะของที่ "สวยแต่แพง" ออก — กฎเกม ตำแหน่ง และขนาดทุกอย่างเหมือนเดิมเป๊ะ
+   ผู้เล่นยังอ่านข้อมูลได้ครบ แค่ไม่มีแสงเรือง ไม่มีของขยับตลอดเวลา
+
+   ของแพงที่ตัดออก เรียงตามที่วัดแล้วว่ากินเครื่องมากสุด:
+     1 อนิเมชั่นที่วิ่งตลอดเวลา — บังคับให้เบราว์เซอร์คำนวณสไตล์ใหม่ทุกเฟรม
+       (เส้นสแกนเต็มจอคือตัวหนักสุด เพราะคลุมทั้งหน้า)
+     2 box-shadow / text-shadow ที่ใช้เป็นแสงเรือง — แพงตอนระบายสี ยิ่งชิ้นใหญ่ยิ่งแพง
+     3 backdrop-filter กับ filter — บังคับให้การ์ดจอทำงานซ้ำทั้งชั้น
+     4 ตารางกริดกับไล่เฉดพื้นหลัง — ระบายเต็มจอ
+   ══════════════════════════════════════════════════════════════════ */
+
+/* 1 · หยุดของที่ขยับตลอดเวลา ─────────────────────────────────── */
+html.is-low-gfx .screen-overlay::after,       /* เส้นสแกนไล่ลงทั้งจอ */
+html.is-low-gfx .game-top::after,             /* เส้นแสงวิ่งใต้แถบบน */
+html.is-low-gfx .side-title::before,          /* จุดไฟกะพริบหน้าหัวข้อ */
+html.is-low-gfx .op-gauge--working .op-gauge-fill::after {  /* ลายวิ่งบนแถบ % */
+  animation: none !important;
+}
+html.is-low-gfx .screen-overlay::after,
+html.is-low-gfx .op-gauge--working .op-gauge-fill::after { display: none; }
+/* ตึกบนหน้าเมนูหยุดสั่น (ยังเห็นเมืองเหมือนเดิม แค่ไม่ไหว) */
+html.is-low-gfx .sky-layer--near,
+html.is-low-gfx .sky-layer--mid,
+html.is-low-gfx .sky-layer--far,
+html.is-low-gfx .sky-win--flicker { animation: none !important; }
+
+/* ป้ายสถานะยังกะพริบอยู่ แต่ช้าลงมาก — ยังเห็นว่าเป็นของเร่งด่วน โดยไม่กินเครื่อง */
+html.is-low-gfx .op-status--injured,
+html.is-low-gfx .op-status--laststand,
+html.is-low-gfx .game-critical,
+html.is-low-gfx .fx-frame.is-on { animation-duration: 3s !important; }
+
+/* 2 · ตัดแสงเรืองทั้งหมด ─────────────────────────────────────── */
+html.is-low-gfx {
+  --glow: none;
+  --glow-soft: none;
+}
+html.is-low-gfx .screen-overlay *,
+html.is-low-gfx .screen-overlay { text-shadow: none !important; }
+html.is-low-gfx .op-card,
+html.is-low-gfx .skill-icon,
+html.is-low-gfx .game-top,
+html.is-low-gfx .game-bottom,
+html.is-low-gfx .feed-card,
+html.is-low-gfx .howto-body,
+html.is-low-gfx .card-body,
+html.is-low-gfx .mode-row,
+html.is-low-gfx .mode-play,
+html.is-low-gfx .zone-op-halo { box-shadow: none !important; }
+
+/* 3 · ตัด filter / backdrop-filter ─────────────────────────────
+   สองอันนี้บังคับให้การ์ดจอทำงานซ้ำทั้งชั้น เป็นของแพงที่สุดบนเครื่องเล็ก */
+html.is-low-gfx .game-bottom,
+html.is-low-gfx .feed-card,
+html.is-low-gfx .panel-box { backdrop-filter: none !important; }
+html.is-low-gfx #screen-root,
+html.is-low-gfx .fx-layer { filter: none !important; }
+
+/* 4 · พื้นหลังเรียบ ไม่มีตารางกริด/ไล่เฉด ───────────────────── */
+html.is-low-gfx .screen-overlay::before { display: none; }
+html.is-low-gfx body { background: var(--bg-deep); }
+
+/* 5 · ลดเอฟเฟกต์ตอนเปลี่ยนหน้า/ผลภารกิจ ───────────────────── */
+html.is-low-gfx .fx-flash { display: none !important; }   /* จอวาบสีตอนได้ผลภารกิจ */
+html.is-low-gfx .fx-fade { transition-duration: 90ms !important; }
+html.is-low-gfx .feed-card { animation: none !important; }
+
+/* ปุ่มติ๊กในหน้า Settings (Low graphics ฯลฯ) */
+.settings-toggle {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 10px; border-radius: 6px; cursor: pointer; text-align: left;
+  background: none; border: 1px solid transparent;
+  color: var(--ink-dim); font-family: var(--font-ui);
+  transition: color 0.18s ease, border-color 0.18s ease;
+}
+.settings-toggle:hover { color: var(--ink); border-color: var(--line); }
+.settings-toggle:focus-visible { outline: none; border-color: var(--accent); }
+.settings-toggle-box {
+  width: 20px; height: 20px; flex: none; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; line-height: 1;
+  border: 1px solid var(--line); background: var(--bg-panel);
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+.settings-toggle:not(.is-on) .settings-toggle-box { color: transparent; }
+.settings-toggle.is-on { color: var(--ink); }
+.settings-toggle.is-on .settings-toggle-box {
+  background: var(--accent); border-color: var(--accent); color: var(--bg-deep);
+}
+.settings-toggle-label { font-family: var(--font-display); font-size: 17px; letter-spacing: 1px; }
+.settings-toggle-note { font-size: 12px; color: var(--muted); flex-basis: 100%; }

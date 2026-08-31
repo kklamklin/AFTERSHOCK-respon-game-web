@@ -8,7 +8,7 @@
 import { initScreens } from './ui/screens.js';
 import { probeIcons } from './data/icons.js';
 import { preloadSounds, attachClickSound } from './ui/audio.js';
-import { loadPrefs, loadGameOptions } from './data/prefs.js';
+import { loadPrefs, loadGameOptions, loadLowGraphics } from './data/prefs.js';
 import { initStage } from './ui/stage.js';
 import { state } from './state.js';
 import { CONFIG } from './config.js';
@@ -28,6 +28,9 @@ loadPrefs();
 
 // ตัวเลือกย่อยในหน้าเลือกโหมด (ข้ามเนื้อเรื่อง / คำใบ้) — จำไว้ในเครื่องเหมือนกัน
 loadGameOptions();
+
+// โหมดกราฟิกต่ำ — ต้องอ่านก่อนวาดหน้าแรก ไม่งั้นเอฟเฟกต์จะโผล่แวบหนึ่งแล้วค่อยหาย
+loadLowGraphics();
 
 // โหลดไฟล์เสียงไว้ล่วงหน้า + ต่อเสียงคลิกเข้ากับทุกปุ่มครั้งเดียว (ดู ui/audio.js)
 // เสียงจริงจะดังได้หลังผู้เล่นแตะจอครั้งแรกเท่านั้น (autoplay policy ของเบราว์เซอร์)

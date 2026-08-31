@@ -80,6 +80,38 @@ export function brightnessFactor(v = prefs.brightness) {
 const OPTS_KEY = 'aftershocks:gameOpts';
 const OPT_DEFAULTS = { skipStory: true, hints: true };
 
+// ── โหมดกราฟิกต่ำ (สำหรับมือถือรุ่นเล็ก) ─────────────────────────
+// เก็บแยกอีกก้อนเพราะเป็นค่าของ "หน้า Settings" ไม่ใช่ตัวเลือกตอนเลือกโหมด
+// เปิดแล้วเกมจะตัดเอฟเฟกต์ที่กินเครื่องออก — รายละเอียดอยู่ใน styles.css (html.is-low-gfx)
+const GFX_KEY = 'aftershocks:lowGraphics';
+let lowGraphics = false;
+const gfxListeners = new Set();
+
+export function loadLowGraphics() {
+  try { lowGraphics = localStorage.getItem(GFX_KEY) === '1'; } catch { lowGraphics = false; }
+  // ⚠️ ต้องแจ้งคนที่รออยู่ด้วย — ui/screens.js ลงทะเบียนตอน import ซึ่งเกิด "ก่อน" บรรทัดนี้
+  // ถ้าไม่แจ้ง คลาส is-low-gfx จะไม่ถูกติดเลย ทั้งที่ค่าที่จำไว้เป็นเปิด
+  for (const fn of gfxListeners) fn(lowGraphics);
+  return lowGraphics;
+}
+
+export function isLowGraphics() {
+  return lowGraphics;
+}
+
+export function setLowGraphics(on) {
+  lowGraphics = !!on;
+  try { localStorage.setItem(GFX_KEY, lowGraphics ? '1' : '0'); } catch { /* เซฟไม่ได้ก็ใช้ได้ในรอบนี้ */ }
+  for (const fn of gfxListeners) fn(lowGraphics);
+}
+
+/** รับแจ้งเมื่อโหมดกราฟิกเปลี่ยน — เรียก fn ทันที 1 ครั้งด้วยค่าปัจจุบัน */
+export function onLowGraphicsChange(fn) {
+  gfxListeners.add(fn);
+  fn(lowGraphics);
+  return () => gfxListeners.delete(fn);
+}
+
 const gameOpts = { ...OPT_DEFAULTS };
 
 /** อ่านค่าที่จำไว้ในเครื่อง — เรียกครั้งเดียวตอนเปิดเกม (main.js) */

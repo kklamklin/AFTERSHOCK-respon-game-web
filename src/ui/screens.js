@@ -16,6 +16,7 @@ import { setBgm } from './audio.js';
 import {
   getPrefs, setPref, onPrefsChange, brightnessFactor,
   isDlcUnlocked, setDlcUnlocked, getGameOptions, setGameOption,
+  isLowGraphics, setLowGraphics, onLowGraphicsChange,
 } from '../data/prefs.js';
 import { CONFIG } from '../config.js';
 
@@ -28,6 +29,12 @@ onPrefsChange((prefs) => {
   const f = brightnessFactor(prefs.brightness);
   document.documentElement.style.setProperty('--ui-brightness', f);
   document.documentElement.classList.toggle('is-dimmed', Math.abs(f - 1) > 0.001);
+});
+
+// โหมดกราฟิกต่ำ — ติดคลาสที่ <html> แล้วให้ CSS ตัดเอฟเฟกต์เอง (ดูท้าย styles.css)
+// ทำที่นี่ที่เดียว หน้าจออื่นไม่ต้องรู้เรื่องเลย เปลี่ยนค่าปุ๊บมีผลทุกหน้าทันที
+onLowGraphicsChange((on) => {
+  document.documentElement.classList.toggle('is-low-gfx', on);
 });
 
 // ลำดับต้องตรงกับหน้าตาดราฟ: มนุษย์(หน้ากาก) → แมว → เอลฟ์(Lia) → ภูต(Mudongzock)
@@ -181,6 +188,35 @@ function buildSlider(label, prefKey) {
   return row;
 }
 
+// ปุ่มติ๊ก 1 แถวในหน้า Settings — อ่าน/เขียนค่าเองผ่านฟังก์ชันที่ส่งเข้ามา
+function buildToggle(label, note, read, write) {
+  const row = document.createElement('button');
+  row.className = 'settings-toggle';
+  row.setAttribute('role', 'switch');
+
+  const box = document.createElement('span');
+  box.className = 'settings-toggle-box';
+  box.textContent = '✓'; // ซ่อน/โชว์ด้วย CSS ตามสถานะ ไม่ต้องเขียน DOM ซ้ำตอนสลับ
+
+  const text = document.createElement('span');
+  text.className = 'settings-toggle-label';
+  text.textContent = label;
+
+  const hint = document.createElement('span');
+  hint.className = 'settings-toggle-note';
+  hint.textContent = note;
+
+  row.append(box, text, hint);
+  const paint = () => {
+    const on = read();
+    row.classList.toggle('is-on', on);
+    row.setAttribute('aria-checked', String(on));
+  };
+  row.addEventListener('click', () => { write(!read()); paint(); });
+  paint();
+  return row;
+}
+
 export function renderSettingsMenu(root, { onBack } = {}) {
   root.innerHTML = '';
   setScreenClass(root, 'screen--settings');
@@ -199,7 +235,12 @@ export function renderSettingsMenu(root, { onBack } = {}) {
 
   const body = document.createElement('div');
   body.className = 'settings-body';
-  body.append(buildSlider('Volume', 'volume'), buildSlider('Brightness', 'brightness'));
+  body.append(
+    buildSlider('Volume', 'volume'),
+    buildSlider('Brightness', 'brightness'),
+    buildToggle('Low graphics', 'สำหรับมือถือรุ่นเล็ก — ลดแสง การสั่น และเอฟเฟกต์ ให้เกมลื่นขึ้น',
+                isLowGraphics, setLowGraphics),
+  );
   root.appendChild(body);
 
   const backToMenu = document.createElement('button');

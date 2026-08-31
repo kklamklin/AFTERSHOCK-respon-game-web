@@ -180,30 +180,51 @@ function buildOverlay(handle, zones) {
     const fit = Math.min(box.width * 0.72, box.height * 0.8);
     const size = Math.max(unitsFor(MARK_MIN_PX), Math.min(unitsFor(MARK_WANT_PX), fit));
 
-    // ไอคอน จนท. อยู่ "กลางโซน" พอดี — เลขคนถูกดันขึ้นไปอยู่เหนือไอคอนตอนมีคนลงพื้นที่
-    // (ดู liftCount ใน updateZoneMarkers) · ไอคอนบัฟอยู่ใต้ไอคอน จนท.
-    const g = svgEl('g', { class: 'zone-mark' });
-    const halo = svgEl('circle', { class: 'zone-op-halo', cx, cy, r: size * 0.62 });
-    const icon = svgEl('image', {
-      class: 'zone-op', x: cx - size / 2, y: cy - size / 2, width: size, height: size,
-      preserveAspectRatio: 'xMidYMid meet',
-    });
-    // เลขนับถอยหลังเกาะขอบขวาของไอคอน
-    const timer = svgEl('text', {
-      class: 'zone-timer', x: cx + size * 0.62, y: cy,
-      'font-size': (size * 0.58).toFixed(1),
-    });
-    // ไอคอนบัฟเรียงกันใต้ไอคอน จนท. — เป็นกลุ่มเพราะแต่ละอันอาจเป็นรูปหรือ emoji
-    const buffs = svgEl('g', { class: 'zone-buffs' });
-    const cross = svgEl('text', { class: 'zone-cross', x: cx, y: cy, 'font-size': (size * 1.1).toFixed(1) });
-    cross.textContent = '✕';
-
-    g.append(halo, icon, timer, buffs, cross);
-    layer.appendChild(g);
-    handle.marks.set(zone.id, { g, halo, icon, timer, buffs, cross, cx, cy, size });
+    // ⚡ เก็บแค่ "ตำแหน่งกับขนาด" ไว้ก่อน ยังไม่สร้างหมุดจริง
+    //
+    // เดิมสร้างหมุดครบทั้ง 47 โซนตั้งแต่เปิดแผนที่ = 282 โหนดใน SVG ที่มองไม่เห็น
+    // ทั้งที่เกมมี จนท. ภาคสนามแค่ 2 คน จึงมีหมุดโผล่จริงพร้อมกันอย่างมาก 2-3 อัน
+    // โหนดที่มองไม่เห็นก็ยังกินเวลาคำนวณสไตล์ทุกครั้งที่จอเปลี่ยน — บนมือถือรุ่นเล็กคือของแพง
+    // ตอนนี้สร้างตอนโซนนั้น "ต้องใช้จริง" เท่านั้น (ดู ensureMarkNodes) และคืนทิ้งเมื่อไม่ใช้แล้ว
+    handle.marks.set(zone.id, { nodes: null, layer, cx, cy, size });
   }
 
   handle.svg.appendChild(layer);
+}
+
+/** สร้างหมุดของโซนนี้ขึ้นมาจริง ๆ (เรียกตอนจะใช้เท่านั้น) */
+function ensureMarkNodes(m) {
+  if (m.nodes) return m.nodes;
+  const { cx, cy, size } = m;
+
+  // ไอคอน จนท. อยู่ "กลางโซน" พอดี · ไอคอนบัฟอยู่ใต้ไอคอน จนท.
+  const g = svgEl('g', { class: 'zone-mark' });
+  const halo = svgEl('circle', { class: 'zone-op-halo', cx, cy, r: size * 0.62 });
+  const icon = svgEl('image', {
+    class: 'zone-op', x: cx - size / 2, y: cy - size / 2, width: size, height: size,
+    preserveAspectRatio: 'xMidYMid meet',
+  });
+  // เลขนับถอยหลังเกาะขอบขวาของไอคอน
+  const timer = svgEl('text', {
+    class: 'zone-timer', x: cx + size * 0.62, y: cy,
+    'font-size': (size * 0.58).toFixed(1),
+  });
+  // ไอคอนบัฟเรียงกันใต้ไอคอน จนท. — เป็นกลุ่มเพราะแต่ละอันอาจเป็นรูปหรือ emoji
+  const buffs = svgEl('g', { class: 'zone-buffs' });
+  const cross = svgEl('text', { class: 'zone-cross', x: cx, y: cy, 'font-size': (size * 1.1).toFixed(1) });
+  cross.textContent = '✕';
+
+  g.append(halo, icon, timer, buffs, cross);
+  m.layer.appendChild(g);
+  m.nodes = { g, halo, icon, timer, buffs, cross };
+  return m.nodes;
+}
+
+/** เอาหมุดออกจากจอเมื่อโซนนี้ไม่มีอะไรให้แสดงแล้ว — คืนโหนดให้เบราว์เซอร์ */
+function releaseMarkNodes(m) {
+  if (!m.nodes) return;
+  m.nodes.g.remove();
+  m.nodes = null;
 }
 
 // วาดไอคอน จนท. / บัฟ ใหม่ทั้งแมพ — เรียกทุกลูป
@@ -213,32 +234,45 @@ export function updateZoneMarkers(handle, state) {
     if (!m) continue;
 
     const unit = zone.unit;
-    m.icon.classList.toggle('is-on', !!unit);
-    m.halo.classList.toggle('is-on', !!unit);
-    if (unit) {
-      const src = OP_ICON[unit];
-      if (m.icon.dataset.src !== src) {
-        m.icon.setAttribute('href', src);
-        m.icon.dataset.src = src;
-      }
-      const loops = state.units[unit]?.busyRemainLoops ?? 0;
-      m.timer.textContent = (loops / 2).toFixed(1);
-    } else {
-      m.timer.textContent = '';
+    const types = zone.buffs.map((b) => b.type);
+
+    // โซนที่ไม่มีทั้ง จนท. และบัฟ ไม่มีอะไรให้วาด — ข้ามไปเลย ไม่ต้องสร้างโหนด
+    // (กากบาทตอนลากมีทางของตัวเองใน setDragMarks)
+    if (!unit && types.length === 0) {
+      if (m.nodes && !m.nodes.cross.classList.contains('is-on')) releaseMarkNodes(m);
+      else if (m.nodes) { m.nodes.icon.classList.remove('is-on'); m.nodes.halo.classList.remove('is-on'); }
+      continue;
     }
 
-    const types = zone.buffs.map((b) => b.type);
+    const n = ensureMarkNodes(m);
+    n.icon.classList.toggle('is-on', !!unit);
+    n.halo.classList.toggle('is-on', !!unit);
+    if (unit) {
+      const src = OP_ICON[unit];
+      if (n.icon.dataset.src !== src) {
+        n.icon.setAttribute('href', src);
+        n.icon.dataset.src = src;
+      }
+      const loops = state.units[unit]?.busyRemainLoops ?? 0;
+      // ⚠️ เขียนเฉพาะตอนค่าเปลี่ยนจริง (กฎรอบ 10.11) เขียนค่าเดิมทับก็ยังทำให้คำนวณผังใหม่
+      const txt = (loops / 2).toFixed(1);
+      if (n.timer.textContent !== txt) n.timer.textContent = txt;
+    } else if (n.timer.textContent !== '') {
+      n.timer.textContent = '';
+    }
+
     const key = types.join(',');
-    if (m.buffs.dataset.shown !== key) {
-      m.buffs.dataset.shown = key;
-      paintBuffIcons(m, types);
+    if (n.buffs.dataset.shown !== key) {
+      n.buffs.dataset.shown = key;
+      paintBuffIcons(m, n, types);
     }
   }
 }
 
 // วาดไอคอนบัฟใหม่ทั้งชุด — เรียกเฉพาะตอนชุดบัฟเปลี่ยน ไม่ได้เรียกทุกลูป
-function paintBuffIcons(m, types) {
-  m.buffs.innerHTML = '';
+// m = ข้อมูลโซน (cx/cy/size) · n = โหนดจริงที่สร้างไว้แล้ว
+function paintBuffIcons(m, n, types) {
+  n.buffs.innerHTML = '';
   if (!types.length) return;
 
   const s = m.size * 0.8;                  // ขนาดไอคอนบัฟ 1 อัน
@@ -255,14 +289,14 @@ function paintBuffIcons(m, types) {
         x: x.toFixed(1), y: (y - s / 2).toFixed(1), width: s.toFixed(1), height: s.toFixed(1),
         preserveAspectRatio: 'xMidYMid meet',
       });
-      m.buffs.appendChild(img);
+      n.buffs.appendChild(img);
     } else {
       const t = svgEl('text', {
         class: 'zone-buff-glyph', x: (x + s / 2).toFixed(1), y: y.toFixed(1),
         'font-size': s.toFixed(1),
       });
       t.textContent = iconEmoji(type);
-      m.buffs.appendChild(t);
+      n.buffs.appendChild(t);
     }
     x += s + gap;
   }
@@ -289,7 +323,9 @@ export function setDragMarks(handle, { active, invalidIds = null, hoverId = null
   handle.container.classList.toggle('is-dragging', !!active);
   for (const [zoneId, m] of handle.marks ?? []) {
     const bad = active && invalidIds?.has(zoneId);
-    m.cross.classList.toggle('is-on', !!bad);
+    // สร้างกากบาทเฉพาะโซนที่ต้องขึ้นจริง — ไม่ต้องมีรออยู่ครบทั้ง 47 โซน
+    if (bad) ensureMarkNodes(m).cross.classList.add('is-on');
+    else if (m.nodes) m.nodes.cross.classList.remove('is-on');
     handle.zoneEls.get(zoneId)?.classList.toggle('is-invalid', !!bad);
     handle.zoneEls.get(zoneId)?.classList.toggle('is-target', active && zoneId === hoverId && !bad);
   }
