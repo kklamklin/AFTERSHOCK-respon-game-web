@@ -178,28 +178,45 @@ function primeAll() {
   }
 }
 
+// เวลารอสูงสุดก่อน "คืนเสียง" ตอนปลุก — ดูเหตุผลใน primeOne()
+const PRIME_TIMEOUT_MS = 400;
+
 function primeOne(el) {
   const g = el._node;
   const keep = g ? g.gain.value : null;
   if (g) g.gain.value = 0;
-  const restore = () => { if (g) g.gain.value = keep; };
   // จดไว้ว่าตอนเริ่มปลุก element นี้ถูกสั่งเล่นไปแล้วกี่ครั้ง
   // ถ้าระหว่างรอ promise มีคนสั่งเล่น "ของจริง" มาแทรก ต้องไม่ไปสั่งหยุดทับเขา
   // (เกิดจริงตอนแตะหน้าปก: เสียงคลิกถูกสั่งเล่นในจังหวะเดียวกับที่กำลังปลุกอยู่พอดี)
   const token = wantPlay(el);
-  const stop = () => {
-    if (el._want !== token) { restore(); return; } // มีคนสั่งเล่นจริงมาแทรก ปล่อยให้เขาเล่นไป
-    el.pause();
-    try { el.currentTime = 0; } catch { /* ยังไม่มีข้อมูลไฟล์ ตั้งเวลาไม่ได้ ไม่เป็นไร */ }
-    restore();
+  let done = false;
+
+  // จบการปลุก — ทางไหนก็ตามต้องมาลงที่นี่ และต้องคืน gain เสมอ
+  const finish = () => {
+    if (done) return;
+    done = true;
+    if (el._want === token) {   // ไม่มีใครสั่งเล่นจริงมาแทรก จึงหยุดได้
+      el.pause();
+      try { el.currentTime = 0; } catch { /* ยังไม่มีข้อมูลไฟล์ ตั้งเวลาไม่ได้ ไม่เป็นไร */ }
+    }
+    if (g) g.gain.value = keep;
   };
+
   try {
     const r = el.play();
-    if (r && r.then) r.then(stop, restore);
-    else stop();
+    if (r && r.then) r.then(finish, finish);
+    else finish();
   } catch {
-    restore();
+    finish();
   }
+
+  // ⚠️ ตัวกันเหนียวที่ขาดไม่ได้ — เคยทำเกมเงียบทั้งเกมบนเน็ตมือถือมาแล้ว
+  //
+  // ถ้าไฟล์ยังโหลดไม่ถึงไหน (readyState 0) promise ของ play() จะ "ค้าง" ไม่ตอบกลับเลย
+  // ไม่สำเร็จและไม่ล้มเหลว → finish() ไม่เคยถูกเรียก → gain ค้างที่ 0 = เงียบสนิท
+  // จนกว่าไฟล์จะโหลดเสร็จ ซึ่งบนเน็ตมือถือกับไฟล์เสียงรวม 12.6 MB อาจกินเวลาเป็นนาที
+  // อาการที่ผู้เล่นเจอคือ "เปิดลิงก์แล้วเล่นเลยไม่มีเสียง แต่เปิดค้างไว้สักพักแล้วมีเสียง"
+  setTimeout(finish, PRIME_TIMEOUT_MS);
 }
 
 /** จองสิทธิ์เล่น element นี้ — ทุกที่ที่สั่ง play() จริงต้องเรียกก่อน (ดู primeOne) */
