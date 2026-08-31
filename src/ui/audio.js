@@ -21,8 +21,17 @@ const pools = new Map();   // key เสียงสั้น → { nodes: [], n
 const singles = new Map(); // key เพลง/เสียงยาว → HTMLAudioElement
 
 let ctx = null;        // AudioContext (null = เบราว์เซอร์ไม่รองรับ ใช้ el.volume แทน)
-let masterGain = null;
-let master = 1;        // ระดับเสียงรวมจากหน้า Settings (0..1)
+
+// เสียงแยกเป็น 2 สาย ปรับแยกกันได้จากหน้า Settings (เจ้าของสั่ง)
+//   <audio> → gain ประจำเสียง → สายรวมของกลุ่ม (sfx/music) → limiter → ลำโพง
+// กลุ่มดูจาก SOUNDS[key].kind — 'bgm' เข้าสายเพลง · 'sfx' กับ 'cue' เข้าสายเอฟเฟกต์
+let busGain = { sfx: null, music: null };
+let busLevel = { sfx: 1, music: 1 };
+
+/** เสียงคีย์นี้อยู่สายไหน */
+function busOf(key) {
+  return SOUNDS[key]?.kind === 'bgm' ? 'music' : 'sfx';
+}
 let unlocked = false;
 
 // เพลงประจำฉากที่กำลังเล่นอยู่ — มีเจ้าของเดียวคือที่นี่
@@ -39,9 +48,10 @@ function makeNode(key) {
   el.crossOrigin = 'anonymous';
   el.dataset.sound = key;
   el._gain = spec.gain ?? 1;
+  el._bus = busOf(key);
   if (spec.kind === 'bgm') el.loop = true; // เพลงประจำฉากวนซ้ำเสมอ จนกว่าจะถูกสั่งเปลี่ยน
   // ยังไม่ต่อเข้า Web Audio ตอนนี้ — ต่อตอนผู้เล่นแตะจอครั้งแรก (ดู unlockAudio)
-  el.volume = Math.min(1, el._gain) * master;
+  el.volume = Math.min(1, el._gain) * busLevel[el._bus];
   // ใส่ลง DOM จริง (ไม่มี controls จึงมองไม่เห็น) เพื่อให้ตรวจสถานะเสียงได้จากภายนอก
   // new Audio() เฉย ๆ จะลอยอยู่นอกหน้า ทั้งเทสและ DevTools มองไม่เห็นว่าอะไรกำลังเล่นอยู่
   document.body.appendChild(el);
@@ -56,18 +66,18 @@ function allElements() {
 // ต่อ element เข้ากับสายเสียง — ถ้าต่อไม่ได้ ถอยไปใช้ el.volume (ดังสุดได้แค่ 1)
 function connect(el) {
   if (!ctx) {
-    el.volume = Math.min(1, el._gain) * master;
+    el.volume = Math.min(1, el._gain) * busLevel[el._bus];
     return;
   }
   try {
     const src = ctx.createMediaElementSource(el);
     const g = ctx.createGain();
     g.gain.value = el._gain;
-    src.connect(g).connect(masterGain);
+    src.connect(g).connect(busGain[el._bus]);
     el._node = g;
     el.volume = 1; // เสียงถูกคุมด้วย gain node แล้ว (บน iOS ตั้ง volume ไม่ได้อยู่ดี)
   } catch {
-    el.volume = Math.min(1, el._gain) * master;
+    el.volume = Math.min(1, el._gain) * busLevel[el._bus];
   }
 }
 
@@ -77,16 +87,20 @@ function makeContext() {
   if (!AC) return;
   try {
     ctx = new AC();
-    masterGain = ctx.createGain();
-    masterGain.gain.value = master;
-    // limiter กันเสียงแตกตอนดัน gain เกิน 1 หรือหลายเสียงดังพร้อมกัน
+    // limiter กันเสียงแตกตอนดัน gain เกิน 1 หรือหลายเสียงดังพร้อมกัน — ใช้ร่วมกันทั้งสองสาย
     const limiter = ctx.createDynamicsCompressor();
     limiter.threshold.value = -3;
     limiter.knee.value = 0;
     limiter.ratio.value = 20;
     limiter.attack.value = 0.002;
     limiter.release.value = 0.15;
-    masterGain.connect(limiter).connect(ctx.destination);
+    limiter.connect(ctx.destination);
+    for (const bus of ['sfx', 'music']) {
+      const g = ctx.createGain();
+      g.gain.value = busLevel[bus];
+      g.connect(limiter);
+      busGain[bus] = g;
+    }
   } catch {
     ctx = null; // ไม่มี Web Audio ก็ยังเล่นได้ผ่าน el.volume
   }
@@ -102,18 +116,23 @@ export function preloadSounds() {
       singles.set(key, makeNode(key));
     }
   }
-  // ผูกกับหน้า Settings — เลื่อนแถบเสียงแล้วดังขึ้น/ลงทันที
-  onPrefsChange((p) => applyMaster(volumeGain(p.volume)));
+  // ผูกกับหน้า Settings — เลื่อนแถบเสียงแล้วดังขึ้น/ลงทันที (แยกเอฟเฟกต์กับเพลง)
+  onPrefsChange((p) => {
+    applyBus('sfx', volumeGain(p.sfxVolume));
+    applyBus('music', volumeGain(p.musicVolume));
+  });
 }
 
-function applyMaster(v) {
-  master = v;
-  if (masterGain) {
-    masterGain.gain.value = v;
+function applyBus(bus, v) {
+  busLevel[bus] = v;
+  if (busGain[bus]) {
+    busGain[bus].gain.value = v;
     return;
   }
-  // โหมดสำรอง (ยังไม่ได้ต่อ Web Audio) — คูณเข้าไปที่ el.volume ของทุกตัว
-  for (const el of allElements()) el.volume = Math.min(1, (el._gain ?? 1) * v);
+  // โหมดสำรอง (ยังไม่ได้ต่อ Web Audio) — คูณเข้าไปที่ el.volume ของเสียงในสายนี้
+  for (const el of allElements()) {
+    if (el._bus === bus) el.volume = Math.min(1, (el._gain ?? 1) * v);
+  }
 }
 
 /**

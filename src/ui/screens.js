@@ -236,7 +236,8 @@ export function renderSettingsMenu(root, { onBack } = {}) {
   const body = document.createElement('div');
   body.className = 'settings-body';
   body.append(
-    buildSlider('Volume', 'volume'),
+    buildSlider('Sound FX', 'sfxVolume'),
+    buildSlider('Music', 'musicVolume'),
     buildSlider('Brightness', 'brightness'),
     buildToggle('Low graphics', 'สำหรับมือถือรุ่นเล็ก — ลดแสง การสั่น และเอฟเฟกต์ ให้เกมลื่นขึ้น',
                 isLowGraphics, setLowGraphics),

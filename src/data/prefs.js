@@ -8,8 +8,15 @@
 
 const KEY = 'aftershocks:prefs';
 
-// ทั้งคู่เก็บเป็น 0..100 ให้ตรงกับแถบเลื่อนในหน้า Settings
-const DEFAULTS = { volume: 80, brightness: 50 };
+// ทุกตัวเก็บเป็น 0..100 ให้ตรงกับแถบเลื่อนในหน้า Settings
+//
+// เสียงแยกเป็น 2 แถบตามที่เจ้าของสั่ง:
+//   sfxVolume   — เสียงเอฟเฟกต์ (คลิก · ผลภารกิจ · QTE · เสียงนับคะแนน)
+//   musicVolume — เพลงประจำฉาก (London Bridge · result)
+const DEFAULTS = { sfxVolume: 80, musicVolume: 80, brightness: 50 };
+
+// คีย์เดิมสมัยที่ยังมีแถบเสียงแถบเดียว — ใช้ย้ายค่าของผู้เล่นเก่าเข้าแถบใหม่ทั้งสอง
+const LEGACY_VOLUME_KEY = 'volume';
 
 const prefs = { ...DEFAULTS };
 const listeners = new Set();
@@ -22,6 +29,11 @@ function clamp(n) {
 export function loadPrefs() {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}');
+    // ผู้เล่นเก่าที่เคยตั้งแถบเสียงรวมไว้ — ยกค่าเดิมมาใส่ทั้งสองแถบ จะได้ไม่เด้งกลับ 80 เอง
+    if (saved[LEGACY_VOLUME_KEY] != null && saved.sfxVolume == null && saved.musicVolume == null) {
+      prefs.sfxVolume = clamp(saved[LEGACY_VOLUME_KEY]);
+      prefs.musicVolume = clamp(saved[LEGACY_VOLUME_KEY]);
+    }
     for (const k of Object.keys(DEFAULTS)) {
       if (saved[k] != null) prefs[k] = clamp(saved[k]);
     }
@@ -55,8 +67,9 @@ export function onPrefsChange(fn) {
 }
 
 // ── แปลงค่า 0..100 เป็นค่าที่เอาไปใช้จริง ────────────────────────
-/** ระดับเสียงรวม 0..1 — ยกกำลัง 2 เพราะหูคนไม่ได้ยินเป็นเส้นตรง เลื่อนครึ่งแถบต้องรู้สึกว่าครึ่งเสียง */
-export function volumeGain(v = prefs.volume) {
+/** แปลงค่าแถบเลื่อน 0..100 เป็นอัตราขยาย 0..1
+ *  ยกกำลัง 2 เพราะหูคนไม่ได้ยินเป็นเส้นตรง เลื่อนครึ่งแถบต้องรู้สึกว่าครึ่งเสียง */
+export function volumeGain(v) {
   return (clamp(v) / 100) ** 2;
 }
 
