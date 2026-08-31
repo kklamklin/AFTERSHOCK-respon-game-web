@@ -875,10 +875,13 @@ html, body {
   font-size: calc(var(--u) * 1.6); color: var(--muted);
 }
 
-/* ช่องมองแผนที่ — ซูม/ปัดเกิดขึ้นในนี้เท่านั้น UI รอบนอกไม่ขยับตาม (§11) */
+/* ช่องมองแผนที่ — ซูม/ปัดเกิดขึ้นในนี้เท่านั้น UI รอบนอกไม่ขยับตาม (§11)
+   พื้นหลังสีอ่อนคือ "ขอบ" ที่โผล่มาตอนปัดเลยขอบแผนที่ (ดู PAN_MARGIN ใน ui/map.js)
+   เห็นเฉพาะตอนซูมเข้าแล้วปัดไปสุดขอบ ตอนไม่ซูมแผนที่คลุมเต็มช่องอยู่แล้ว */
 .map-viewport {
   position: relative; width: 100%; height: 100%;
   overflow: hidden; touch-action: none; cursor: default;
+  background: #dfe8f3;
 }
 .map-viewport.is-zoomed { cursor: grab; }
 .map-viewport.is-zoomed:active { cursor: grabbing; }

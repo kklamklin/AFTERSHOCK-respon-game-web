@@ -359,6 +359,14 @@ export function applyZoneColors(root) {
 const MIN_SCALE = 1;
 const MAX_SCALE = 5;
 
+// เผื่อ "ขอบ" ให้ปัดเลยขอบแผนที่ออกไปได้ — คิดเป็นสัดส่วนของช่องมองแผนที่
+//
+// เดิมล็อกไว้ไม่ให้เลยขอบเลย ผลคือโซนที่อยู่ริม ๆ ถูกดันไปติดขอบจอ
+// จะดูให้ชัดหรือลากไอคอนลงต้องเล็งเอาแบบอึดอัด
+// ตอนนี้ปัดเลยออกไปได้อีก 18% ของช่องมอง โซนริมจึงลากมาไว้กลางจอได้สบาย
+// พื้นที่ที่โผล่มาคือแถบขอบสีอ่อน (ดู .map-viewport ใน styles.css)
+const PAN_MARGIN = 0.18;
+
 function createPanZoom(viewport, target) {
   let scale = 1;
   let tx = 0;
@@ -367,10 +375,13 @@ function createPanZoom(viewport, target) {
   let pinchStart = null;
 
   function apply() {
-    // จำกัดไม่ให้ลากจนเห็นพื้นที่ว่างนอกแผนที่
+    // จำกัดระยะปัด — บวกขอบเผื่อไว้ให้เลยขอบแผนที่ออกไปได้หน่อย
+    // ⚠️ เผื่อเฉพาะตอนซูมเข้าเท่านั้น ตอนไม่ซูมต้องล็อกนิ่งสนิทเหมือนเดิม
+    // ไม่งั้นแผนที่จะเลื่อนไปมาได้ทั้งที่ผู้เล่นไม่ได้ซูม ซึ่งกวนมากตอนลากไอคอน
     const rect = viewport.getBoundingClientRect();
-    const maxX = (rect.width * (scale - 1)) / 2;
-    const maxY = (rect.height * (scale - 1)) / 2;
+    const edge = scale > MIN_SCALE ? PAN_MARGIN : 0;
+    const maxX = (rect.width * (scale - 1)) / 2 + rect.width * edge;
+    const maxY = (rect.height * (scale - 1)) / 2 + rect.height * edge;
     tx = Math.max(-maxX, Math.min(maxX, tx));
     ty = Math.max(-maxY, Math.min(maxY, ty));
     target.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
