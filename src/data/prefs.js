@@ -91,7 +91,7 @@ export function brightnessFactor(v = prefs.brightness) {
 //
 // ทั้งคู่ค่าเริ่มต้นเป็น true ตามที่เจ้าของสั่ง
 const OPTS_KEY = 'aftershocks:gameOpts';
-const OPT_DEFAULTS = { skipStory: true, hints: true };
+const OPT_DEFAULTS = { skipStory: false, hints: true };
 
 // ── โหมดกราฟิกต่ำ (สำหรับมือถือรุ่นเล็ก) ─────────────────────────
 // เก็บแยกอีกก้อนเพราะเป็นค่าของ "หน้า Settings" ไม่ใช่ตัวเลือกตอนเลือกโหมด

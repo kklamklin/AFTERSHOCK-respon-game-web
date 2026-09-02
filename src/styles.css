@@ -876,12 +876,12 @@ html, body {
 }
 
 /* ช่องมองแผนที่ — ซูม/ปัดเกิดขึ้นในนี้เท่านั้น UI รอบนอกไม่ขยับตาม (§11)
-   พื้นหลังสีอ่อนคือ "ขอบ" ที่โผล่มาตอนปัดเลยขอบแผนที่ (ดู PAN_MARGIN ใน ui/map.js)
-   เห็นเฉพาะตอนซูมเข้าแล้วปัดไปสุดขอบ ตอนไม่ซูมแผนที่คลุมเต็มช่องอยู่แล้ว */
+   ⚠️ ไม่ใส่พื้นหลังของตัวเอง — ปล่อยให้เห็นพื้นของ .game-map (สีเดียวกับพื้นหลังเกม)
+   ตรงนี้คือ "ขอบ" ที่โผล่มาตอนปัดเลยขอบแผนที่ (ดู PAN_MARGIN ใน ui/map.js)
+   เคยลองใส่สีอ่อนแล้ว เจ้าของบอกชอบสีเดิมมากกว่า */
 .map-viewport {
   position: relative; width: 100%; height: 100%;
   overflow: hidden; touch-action: none; cursor: default;
-  background: #dfe8f3;
 }
 .map-viewport.is-zoomed { cursor: grab; }
 .map-viewport.is-zoomed:active { cursor: grabbing; }
@@ -2382,3 +2382,46 @@ html.is-low-gfx .feed-card { animation: none !important; }
 }
 .settings-toggle-label { font-family: var(--font-display); font-size: 17px; letter-spacing: 1px; }
 .settings-toggle-note { font-size: 12px; color: var(--muted); flex-basis: 100%; }
+
+/* ══════════════════════════════════════════════════════════════════
+   คำใบ้ในเกม (ui/hints.js) — สอนผู้เล่นใหม่ทีละขั้น
+   ม่านเป็นสี่เหลี่ยม 4 ชิ้นล้อมรอบเป้าหมาย ไม่ใช้ box-shadow วงใหญ่
+   เพราะโหมดกราฟิกต่ำตัด box-shadow ทิ้ง ม่านจะหายไปทั้งอัน
+   ทุกชิ้นไม่กันการกด ผู้เล่นจึงลองลากตามคำใบ้ได้ทันทีโดยไม่ต้องปิดก่อน
+   ══════════════════════════════════════════════════════════════════ */
+.hint-wrap { position: absolute; inset: 0; z-index: 60; pointer-events: none; }
+
+.hint-shade { position: absolute; background: rgba(2, 6, 16, 0.72); }
+.hint-shade[hidden] { display: none; }
+
+.hint-ring {
+  position: absolute; border: 2px solid var(--accent); border-radius: 6px;
+  box-shadow: 0 0 0 2px rgba(69, 208, 255, 0.25);
+}
+.hint-ring[hidden] { display: none; }
+
+.hint-bubble {
+  position: absolute; width: calc(var(--u) * 34); max-width: 420px;
+  pointer-events: auto;                      /* กล่องเดียวที่กดได้ */
+  background: var(--bg-raise); border: 1px solid var(--accent); border-radius: 8px;
+  padding: calc(var(--u) * 1) calc(var(--u) * 1.2);
+  display: flex; flex-direction: column; gap: calc(var(--u) * 0.4);
+}
+/* ขั้นที่ไม่ได้ชี้อะไร — ลอยกลางจอ */
+.hint-bubble.is-center { left: 50%; top: 50%; transform: translate(-50%, -50%); }
+
+.hint-num   { font-family: var(--font-display); font-size: calc(var(--u) * 1.1); color: var(--accent); letter-spacing: 1px; }
+.hint-title { font-family: var(--font-display); font-size: calc(var(--u) * 1.7); color: #fff; letter-spacing: 0.5px; }
+.hint-body  { font-family: var(--font-ui); font-size: calc(var(--u) * 1.15); color: var(--ink); line-height: 1.5; white-space: pre-line; }
+
+.hint-row { display: flex; gap: calc(var(--u) * 0.6); align-items: center; margin-top: calc(var(--u) * 0.3); }
+/* ⚠️ ปุ่มต้องสูงอย่างน้อย 4u — เวทีถูกย่อบนมือถือ (จอเตี้ยสุด scale ~0.62)
+   วัดจริงบน iPhone แนวนอน: 3u = 19px · 4u = 24px (ยังเฉียด) · 5u = 30px กดสบาย */
+.hint-next, .hint-skip {
+  font-family: var(--font-display); letter-spacing: 1px; cursor: pointer;
+  border-radius: 5px; padding: calc(var(--u) * 0.7) calc(var(--u) * 1.4);
+  font-size: calc(var(--u) * 1.3); min-height: calc(var(--u) * 5);
+}
+.hint-next { background: var(--accent); border: 1px solid var(--accent); color: var(--bg-deep); font-weight: 800; margin-left: auto; }
+.hint-skip { background: none; border: 1px solid var(--line); color: var(--ink-dim); }
+.hint-skip:hover { color: var(--ink); border-color: var(--line-hot); }

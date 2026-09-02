@@ -14,6 +14,7 @@ import { skillStatus, unitStatusLabel, useGlobalSkill, unitReadiness, isLastStan
 import { resolveMission } from '../systems/outcomes.js';
 import { resolveLastStandQte } from '../systems/status.js';
 import { runLastStandQte } from './qte.js';
+import { hintsEnabled, runHints } from './hints.js';
 import { OPERATORS as OPS_FOR_STATUS } from '../data/operators.js';
 import { createFeed } from './feed.js';
 import { attachDrag, cancelDrag, selectSkillByKey, activeSelection } from './dragdrop.js';
@@ -469,12 +470,15 @@ let activeClock = null;
 let cancelSmooth = null;
 let activeMenu = null;
 let activeQte = null;   // มินิเกมต่อเวลา Last Stand ที่เปิดค้างอยู่ (ถ้ามี)
+let activeHints = null; // คำใบ้สำหรับผู้เล่นใหม่ที่กำลังแสดงอยู่ (ถ้ามี)
 let detachKeys = null;  // ถอดคีย์ลัดตอนออกจากหน้าเกม
 
 export function stopGameClock() {
   cancelDrag();
   activeQte?.destroy();   // ออกจากหน้าเกมกลางคัน มินิเกมต้องไม่ค้างอยู่
   activeQte = null;
+  activeHints?.stop();    // คำใบ้ก็เหมือนกัน ห้ามค้างข้ามหน้า
+  activeHints = null;
   detachKeys?.();
   detachKeys = null;
   activeClock?.stop();
@@ -767,7 +771,7 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
     clock.setRunning(true);
     syncGameBgm();
   };
-  dragCtx.onChange = () => { bottom.showZone(null); paintAll(); top.paintSpeed(); };
+  dragCtx.onChange = () => { bottom.showZone(null); paintAll(); top.paintSpeed(); activeHints?.notifyDeployed(); };
   dragCtx.onHoverZone = (zoneId, opKey, skillId) => bottom.showZone(zoneId, opKey, skillId);
 
   // ── คีย์ลัดสำหรับเล่นบนคอม (§10.14) ──────────────────────────
@@ -843,6 +847,15 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
       paintAll();
       // เวลาเริ่มเดินตรงนี้ = จังหวะที่เพลงต้องเริ่มด้วย (syncGameBgm อ่าน state.running)
       if (activeClock === clock) { clock.setRate(CONFIG.startSpeed); clock.setRunning(true); top.paintSpeed(); syncGameBgm(); }
+
+      // คำใบ้สำหรับผู้เล่นใหม่ — เปิดตรงนี้เพราะทุกอย่างบนจอวางเสร็จแล้ว
+      // (ต้องวัดตำแหน่งของจริงเพื่อชี้เป้า ถ้าเปิดก่อนแผนที่มาจะวัดได้ศูนย์)
+      if (activeClock === clock && hintsEnabled()) {
+        activeHints = runHints(root, {
+          onPause: () => { clock.setRunning(false); top.paintSpeed(); paintLive(); syncGameBgm(); },
+          onResume: () => { activeHints = null; clock.setRunning(true); top.paintSpeed(); syncGameBgm(); },
+        });
+      }
     })
     .catch((err) => {
       mapViewport.innerHTML = '';
