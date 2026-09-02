@@ -285,32 +285,6 @@ html, body {
 .mode-opt-label { font-size: 17px; letter-spacing: 1px; }
 .mode-opt-note { font-size: 13px; }
 
-/* หน้าใส่รหัสผ่าน Building 21 (โครงสร้าง ส่วนสีอยู่ในบล็อกธีมท้ายไฟล์) */
-.screen--dlccode { padding: 32px 48px 96px; align-items: stretch; }
-.dlccode-wrap {
-  display: flex; flex-direction: column; gap: 14px; align-items: flex-start;
-  margin-top: 48px; max-width: 420px;
-}
-.dlccode-hint { font-size: 16px; }
-.dlccode-input {
-  width: 100%; font-size: 24px; letter-spacing: 4px; padding: 12px 16px;
-  border-radius: 8px; font-family: var(--font-mono);
-}
-.dlccode-error { font-size: 14px; min-height: 1.2em; }
-.dlccode-submit {
-  font-size: 18px; font-weight: 800; letter-spacing: 2px;
-  padding: 10px 24px; border-radius: 8px; cursor: pointer; align-self: flex-start;
-}
-/* สั่นตอนใส่รหัสผิด — ใช้ transform ล้วน (§รอบ 10.11) */
-@keyframes dlccode-shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-8px); }
-  40% { transform: translateX(8px); }
-  60% { transform: translateX(-5px); }
-  80% { transform: translateX(5px); }
-}
-.dlccode-wrap.is-shake { animation: dlccode-shake 0.35s ease; }
-
 /* หน้า How to Play — เนื้อหายาว เลื่อนได้ */
 .screen--howto { padding: 32px 48px 96px; align-items: stretch; }
 .howto-body {
@@ -2054,21 +2028,6 @@ img.game-icon {
 .mode-opt-label { font-family: var(--font-display); }
 .mode-opt-note { color: var(--muted); }
 
-/* ── หน้าใส่รหัสผ่าน Building 21 ─────────────────────────── */
-.dlccode-hint, .dlccode-error { font-family: var(--font-ui); }
-.dlccode-hint { color: var(--ink-dim); }
-.dlccode-error { color: var(--danger); }
-.dlccode-input {
-  background: var(--bg-panel); border: 1px solid var(--line); color: var(--ink);
-}
-.dlccode-input:focus { outline: none; border-color: var(--accent); box-shadow: var(--glow-soft); }
-.dlccode-submit {
-  font-family: var(--font-display); color: var(--bg-deep);
-  background: var(--accent); border: 1px solid var(--accent);
-  box-shadow: var(--glow-soft); transition: filter 0.18s ease;
-}
-.dlccode-submit:hover { filter: brightness(1.15); }
-
 /* ── เนื้อหายาว (How to play / การ์ด จนท.) ────────────────── */
 .howto-body, .card-body {
   background: var(--bg-panel); border: 1px solid var(--line);
@@ -2425,3 +2384,103 @@ html.is-low-gfx .feed-card { animation: none !important; }
 .hint-next { background: var(--accent); border: 1px solid var(--accent); color: var(--bg-deep); font-weight: 800; margin-left: auto; }
 .hint-skip { background: none; border: 1px solid var(--line); color: var(--ink-dim); }
 .hint-skip:hover { color: var(--ink); border-color: var(--line-hot); }
+
+/* ══════════════════════════════════════════════════════════════════
+   Dev Panel (ui/devPanel.js) — เครื่องมือนักพัฒนา
+   ⚠️ อยู่ "นอกเวที" จึงใช้ vh/vw กับ px จริงได้ (กฎห้าม vh/vw ใช้กับของในเวทีเท่านั้น)
+   z-index สูงกว่าหน้า "หมุนจอ" เพื่อให้เปิดดูได้แม้ถือมือถือแนวตั้ง
+   ══════════════════════════════════════════════════════════════════ */
+.dev-root {
+  position: fixed; inset: 0; z-index: 9000;
+  background: #04070f; color: var(--ink); font-family: var(--font-ui);
+  display: flex; flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* ── หน้ารหัสผ่าน ─────────────────────────────────────────── */
+.dev-gate {
+  margin: auto; width: min(420px, 88vw);
+  display: flex; flex-direction: column; gap: 12px;
+  background: var(--bg-panel); border: 1px solid var(--accent);
+  border-radius: 10px; padding: 20px;
+}
+.dev-gate-title { font-family: var(--font-display); font-size: 22px; letter-spacing: 3px; color: var(--accent); }
+.dev-gate-note { font-size: 13px; color: var(--ink-dim); white-space: pre-line; line-height: 1.6; }
+.dev-gate-input {
+  font-family: var(--font-mono); font-size: 20px; letter-spacing: 3px;
+  padding: 12px 14px; border-radius: 8px;
+  background: #04070f; border: 1px solid var(--line); color: var(--ink);
+}
+.dev-gate-input:focus { outline: none; border-color: var(--accent); }
+.dev-gate-err { font-size: 13px; color: var(--danger); min-height: 1.2em; }
+@keyframes dev-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+.dev-gate.is-shake { animation: dev-shake 0.3s ease; }
+
+/* ── โครงแผง ──────────────────────────────────────────────── */
+.dev-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--bg);
+}
+.dev-title { font-family: var(--font-display); letter-spacing: 3px; color: var(--accent); font-size: 16px; }
+.dev-tabs { display: flex; gap: 6px; margin-left: 8px; }
+.dev-tab {
+  font-family: var(--font-display); font-size: 14px; letter-spacing: 1px; cursor: pointer;
+  background: none; border: 1px solid var(--line); color: var(--ink-dim);
+  border-radius: 6px; padding: 8px 14px; min-height: 38px;
+}
+.dev-tab.is-on { background: var(--accent); border-color: var(--accent); color: var(--bg-deep); font-weight: 800; }
+.dev-close {
+  margin-left: auto; background: none; border: 1px solid var(--line); color: var(--ink);
+  border-radius: 6px; width: 38px; height: 38px; font-size: 16px; cursor: pointer;
+}
+.dev-body { flex: 1; overflow: auto; padding: 12px 14px 28px; -webkit-overflow-scrolling: touch; }
+
+.dev-note { font-size: 12px; color: var(--muted); white-space: pre-line; line-height: 1.6; margin-bottom: 10px; }
+.dev-note--inline { margin: 0 0 0 4px; }
+.dev-sub {
+  font-family: var(--font-display); font-size: 14px; letter-spacing: 1px;
+  color: var(--accent); margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--line);
+}
+.dev-pre {
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.55; white-space: pre;
+  overflow: auto; background: var(--bg-panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 12px; margin: 0; color: var(--ink);
+}
+.dev-pre--code { max-height: none; font-size: 11.5px; }
+
+.dev-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.dev-quick { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.dev-btn {
+  font-family: var(--font-ui); font-size: 13px; cursor: pointer; min-height: 38px;
+  background: var(--bg-raise); border: 1px solid var(--line); color: var(--ink);
+  border-radius: 6px; padding: 8px 14px;
+}
+.dev-btn:hover { border-color: var(--accent); }
+.dev-btn--go { background: var(--accent); border-color: var(--accent); color: var(--bg-deep); font-weight: 800; margin-left: auto; }
+
+.dev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }
+.dev-grid--tall { max-height: 46vh; overflow: auto; padding-right: 4px; }
+.dev-field {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg-panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px;
+}
+.dev-field-label {
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-dim);
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dev-input, .dev-select, .dev-search {
+  font-family: var(--font-mono); font-size: 13px; min-height: 34px;
+  background: #04070f; border: 1px solid var(--line); color: var(--ink);
+  border-radius: 5px; padding: 5px 8px;
+}
+.dev-input { width: 90px; text-align: right; }
+.dev-select { flex: 1; min-width: 180px; }
+.dev-search { width: 100%; margin-bottom: 8px; }
+.dev-input:focus, .dev-select:focus, .dev-search:focus { outline: none; border-color: var(--accent); }
+/* วาบเขียวสั้น ๆ ตอนค่าถูกใช้จริง — ยืนยันว่ากดติด */
+@keyframes dev-flash { from { background: var(--ok); color: #04070f; } to { background: #04070f; } }
+.is-flash { animation: dev-flash 0.45s ease; }

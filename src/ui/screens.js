@@ -19,6 +19,7 @@ import {
   isLowGraphics, setLowGraphics, onLowGraphicsChange,
 } from '../data/prefs.js';
 import { CONFIG } from '../config.js';
+import { openDevPanel } from './devPanel.js';
 
 // ความสว่างหน้าจอ — ผูกครั้งเดียวตอนโหลด แล้วอัปเดตเองทุกครั้งที่ค่าเปลี่ยน
 // ใส่ที่ <html> เพื่อให้ครอบทั้งหน้าจอเกมและชั้นเอฟเฟกต์ (ui/fx.js) ที่อยู่นอก #screen-root
@@ -92,7 +93,7 @@ function buildLogo({ size = 'lg', subtitle = 'Response', iconsBeside = false } =
 const SCREEN_CLASSES = [
   'screen--splash', 'screen--menu', 'screen--blank', 'screen--settings',
   'screen--quit', 'screen--intel', 'screen--howto', 'screen--roster', 'screen--card', 'screen--vn',
-  'screen--game', 'screen--result', 'screen--mode', 'screen--dlccode',
+  'screen--game', 'screen--result', 'screen--mode',
 ];
 
 function setScreenClass(root, cls) {
@@ -321,9 +322,9 @@ export const GAME_MODES = [
   {
     id: 'building21',
     label: 'Building 21',
-    desc: 'ต้องใส่รหัสผ่านก่อนเข้า',
+    desc: 'ต้องปลดล็อกด้วยรหัสผ่านใน Dev Panel ก่อน',
     locked: false,
-    gated: true, // ยังกดเข้าได้ปกติ แต่ระหว่างทางต้องผ่านหน้ารหัสผ่านก่อน (ดู renderAccessCode ด้านล่าง)
+    gated: true, // ยังกดเข้าได้ปกติ แต่ต้องปลดล็อกด้วยรหัสใน Dev Panel ก่อน (ดู showAccessCode)
   },
 ];
 
@@ -460,65 +461,6 @@ export function renderModeSelect(root, { onBack, onPlay, onGated } = {}) {
   document.addEventListener('keydown', onKey);
 
   root.appendChild(buildBackToMenu(() => { detachKeys(); onBack?.(); }));
-}
-
-// ── หน้าใส่รหัสผ่าน Building 21 ───────────────────────────────────
-// รหัสถูกครั้งเดียว → จำไว้ในเครื่อง (localStorage) ไม่ต้องพิมพ์ซ้ำอีก — ดู data/prefs.js
-// รหัสจริงอยู่ที่ CONFIG.dlcAccessCode ที่เดียว (config.js) เจ้าของเป็นคนแจกให้ผู้เล่นเอง
-export function renderAccessCode(root, { onBack, onSuccess } = {}) {
-  root.innerHTML = '';
-  setScreenClass(root, 'screen--dlccode');
-
-  root.appendChild(buildSubHeader('BUILDING 21 — ACCESS CODE', onBack));
-
-  const wrap = document.createElement('div');
-  wrap.className = 'dlccode-wrap';
-
-  const hint = document.createElement('p');
-  hint.className = 'dlccode-hint';
-  hint.textContent = 'กรอกรหัสผ่าน 15 หลักที่ได้รับ';
-  wrap.appendChild(hint);
-
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.inputMode = 'numeric';
-  input.autocomplete = 'off';
-  input.maxLength = 15;
-  input.className = 'dlccode-input';
-  input.placeholder = '••••••••••••••';
-  // รับเฉพาะตัวเลข — พิมพ์อย่างอื่นแล้วถูกตัดทิ้งทันที ไม่ต้องรอกด submit ถึงจะรู้ว่าผิด
-  input.addEventListener('input', () => {
-    input.value = input.value.replace(/\D/g, '').slice(0, 15);
-    error.textContent = '';
-  });
-  wrap.appendChild(input);
-
-  const error = document.createElement('p');
-  error.className = 'dlccode-error';
-  wrap.appendChild(error);
-
-  const submit = document.createElement('button');
-  submit.className = 'dlccode-submit';
-  submit.textContent = 'ยืนยัน';
-  wrap.appendChild(submit);
-
-  function trySubmit() {
-    if (input.value === CONFIG.dlcAccessCode) {
-      setDlcUnlocked();
-      onSuccess?.();
-      return;
-    }
-    error.textContent = 'รหัสไม่ถูกต้อง';
-    wrap.classList.remove('is-shake'); // รีทริกเกอร์แอนิเมชันสั่นได้ต่อเนื่องแม้พิมพ์ผิดซ้ำ ๆ
-    void wrap.offsetWidth;
-    wrap.classList.add('is-shake');
-  }
-  submit.addEventListener('click', trySubmit);
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') trySubmit(); });
-
-  root.appendChild(wrap);
-  root.appendChild(buildBackToMenu(() => onBack?.()));
-  input.focus();
 }
 
 export function renderIntelMenu(root, { onBack, onNavigate } = {}) {
@@ -956,11 +898,14 @@ export function initScreens(root) {
     menuBgm();
     renderModeSelect(root, { onBack: showMenu, onPlay: onModeStart, onGated: showAccessCode });
   });
-  // โหมดที่ล็อกด้วยรหัสผ่าน (ตอนนี้มีแค่ Building 21) — เครื่องยังไม่เคยปลดล็อกแวะมาที่นี่ก่อน
-  const showAccessCode = (modeId) => quick(() => {
-    menuBgm();
-    renderAccessCode(root, { onBack: showModeSelect, onSuccess: () => onModeStart(modeId) });
-  });
+  // โหมดที่ล็อกด้วยรหัสผ่าน (ตอนนี้มีแค่ Building 21) — เครื่องที่ยังไม่ปลดล็อก
+  //
+  // ⚠️ การใส่รหัสถูกย้ายไปอยู่ใน Dev Panel แล้ว (เจ้าของสั่งให้รวมไว้ที่เดียว)
+  // กด PLAY ตอนยังไม่ปลดล็อกจึงเด้งไปหน้ารหัสของ Dev Panel ให้เลย
+  // ใส่ถูกแล้ว = ปลดล็อกทั้ง Dev Panel และ Building 21 พร้อมกัน
+  const showAccessCode = () => {
+    openDevPanel({ onUnlock: () => showModeSelect() });
+  };
 
   // เลือกโหมดแล้วจะเริ่มยังไง — Building 21 ยังไม่มีเนื้อหาจริง เข้าไปแล้วเจอหน้าว่างไปก่อน
   // (เจ้าของสั่งไว้ว่ายังไม่ต้องทำอะไร) โหมดใหม่ในอนาคตมาต่อ else if ตรงนี้

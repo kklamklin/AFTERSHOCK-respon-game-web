@@ -10,6 +10,7 @@ import { probeIcons } from './data/icons.js';
 import { preloadSounds, attachClickSound } from './ui/audio.js';
 import { loadPrefs, loadGameOptions, loadLowGraphics } from './data/prefs.js';
 import { initStage } from './ui/stage.js';
+import { attachDevPanelEntry } from './ui/devPanel.js';
 import { state } from './state.js';
 import { CONFIG } from './config.js';
 import * as rng from './utils/rng.js';
@@ -36,6 +37,9 @@ loadLowGraphics();
 // เสียงจริงจะดังได้หลังผู้เล่นแตะจอครั้งแรกเท่านั้น (autoplay policy ของเบราว์เซอร์)
 preloadSounds();
 attachClickSound();
+
+// ทางเข้า Dev Panel — แตะเลขเวอร์ชัน 5 ครั้ง หรือ Ctrl+Shift+D (ต้องใส่รหัสก่อนเข้า)
+attachDevPanelEntry();
 
 initScreens(document.getElementById('screen-root'));
 
