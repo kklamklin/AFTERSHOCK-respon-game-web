@@ -204,25 +204,7 @@ console.log('Building 21 หน้ารหัสของตัวเอง');
   await ctx.close();
 }
 
-// ── 3. มือถือ: ปุ่มกดโดน ────────────────────────────────────────────
-console.log('มือถือ');
-for (const vp of [{ width: 667, height: 375 }, { width: 844, height: 390 }, { width: 740, height: 360 }]) {
-  const { ctx, page } = await freshPage(vp);
-  const b = await (await page.$('.menu-dev-chip')).boundingBox();
-  ok(b.height >= 24 && b.x + b.width <= vp.width && b.y + b.height <= vp.height, `${vp.width}×${vp.height} ปุ่ม DEV สูง ${b.height.toFixed(0)}px อยู่ในจอ`);
-  await page.tap('.menu-dev-chip');
-  await page.waitForSelector('.dev-gate-input');
-  await page.fill('.dev-gate-input', CODE);
-  await page.tap('.dev-gate .dev-btn--go');
-  await page.waitForSelector('.dev-start');
-  const s = await (await page.$('.dev-start')).boundingBox();
-  ok(s.y + s.height <= vp.height && s.height >= 30, `${vp.width}×${vp.height} ปุ่มเริ่ม Custom Game เห็นโดยไม่ต้องเลื่อน`, JSON.stringify(s));
-  await page.tap('.dev-start');
-  await page.waitForSelector('.game-dev-btn');
-  const d = await (await page.$('.game-dev-btn')).boundingBox();
-  ok(d.height >= 20 && d.x + d.width <= vp.width, `${vp.width}×${vp.height} ปุ่ม DEV ในเกมสูง ${d.height.toFixed(0)}px`);
-  await ctx.close();
-}
+// (ส่วนเทสมือถือถูกเอาออกรอบ 10.28 — มือถือถูกบล็อกแล้ว ดู tests/phone.mjs)
 
 await browser.close();
 console.log(`\nผ่าน ${pass} · ไม่ผ่าน ${fail}`);

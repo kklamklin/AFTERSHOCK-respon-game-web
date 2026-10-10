@@ -2572,3 +2572,20 @@ html.is-low-gfx .feed-card { animation: none !important; }
   background: rgba(255, 193, 64, 0.12); color: #ffc140; border: 1px solid #ffc140;
 }
 html.is-low-gfx .menu-dev-chip { animation: none; }
+
+/* ══════════════════════════════════════════════════════════════
+   บล็อกมือถือ (รอบ 10.28) — โชว์เมื่อ <html class="is-phone"> (ตั้งโดยสคริปต์ใน index.html)
+   อยู่นอกเวที ใช้ vh/vw ได้ · ทับหน้า "หมุนจอ" ด้วย เพราะหมุนแล้วก็เล่นไม่ได้อยู่ดี
+   ══════════════════════════════════════════════════════════════ */
+.phone-gate { display: none; }
+html.is-phone .phone-gate {
+  position: fixed; inset: 0; z-index: 9500;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 24px; text-align: center;
+  background: linear-gradient(180deg, #0a1226 0%, #060b18 100%);
+  color: var(--ink); font-family: var(--font-ui);
+}
+html.is-phone #screen-root, html.is-phone .rotate-gate { display: none !important; }
+.phone-gate-icon { width: 96px; height: 96px; color: var(--accent); }
+.phone-gate-title { font-family: var(--font-display); font-size: 24px; letter-spacing: 2px; }
+.phone-gate-note { font-size: 15px; color: var(--muted); line-height: 1.6; }
