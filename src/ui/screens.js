@@ -20,6 +20,7 @@ import {
 } from '../data/prefs.js';
 import { CONFIG } from '../config.js';
 import { openDevPanel } from './devPanel.js';
+import { applyCustomGame, restoreBaseConfig } from '../data/customGame.js';
 
 // ความสว่างหน้าจอ — ผูกครั้งเดียวตอนโหลด แล้วอัปเดตเองทุกครั้งที่ค่าเปลี่ยน
 // ใส่ที่ <html> เพื่อให้ครอบทั้งหน้าจอเกมและชั้นเอฟเฟกต์ (ui/fx.js) ที่อยู่นอก #screen-root
@@ -93,7 +94,7 @@ function buildLogo({ size = 'lg', subtitle = 'Response', iconsBeside = false } =
 const SCREEN_CLASSES = [
   'screen--splash', 'screen--menu', 'screen--blank', 'screen--settings',
   'screen--quit', 'screen--intel', 'screen--howto', 'screen--roster', 'screen--card', 'screen--vn',
-  'screen--game', 'screen--result', 'screen--mode',
+  'screen--game', 'screen--result', 'screen--mode', 'screen--dlccode',
 ];
 
 function setScreenClass(root, cls) {
@@ -155,6 +156,14 @@ export function renderMenu(root, { onNavigate } = {}) {
   }
   root.appendChild(nav);
   root.appendChild(buildVersionTag('V.1 alpha'));
+
+  // ปุ่ม DEV เล็ก ๆ มุมขวาล่าง → Dev Panel (ใส่รหัส) → Custom Game (รอบ 10.27)
+  const dev = document.createElement('button');
+  dev.className = 'menu-dev-chip';
+  dev.type = 'button';
+  dev.textContent = 'DEV PANEL';
+  dev.addEventListener('click', () => onNavigate?.('dev'));
+  root.appendChild(dev);
 }
 
 // หน้า Settings — เวอร์ชันเข้าจากเมนูหลัก (§ setting draft รูป "ขวาสุด")
@@ -322,9 +331,9 @@ export const GAME_MODES = [
   {
     id: 'building21',
     label: 'Building 21',
-    desc: 'ต้องปลดล็อกด้วยรหัสผ่านใน Dev Panel ก่อน',
+    desc: 'ต้องใส่รหัสผ่านก่อนเข้า',
     locked: false,
-    gated: true, // ยังกดเข้าได้ปกติ แต่ต้องปลดล็อกด้วยรหัสใน Dev Panel ก่อน (ดู showAccessCode)
+    gated: true, // ยังกดเข้าได้ปกติ แต่ระหว่างทางต้องผ่านหน้ารหัสผ่านก่อน (ดู renderAccessCode ด้านล่าง)
   },
 ];
 
@@ -461,6 +470,65 @@ export function renderModeSelect(root, { onBack, onPlay, onGated } = {}) {
   document.addEventListener('keydown', onKey);
 
   root.appendChild(buildBackToMenu(() => { detachKeys(); onBack?.(); }));
+}
+
+// ── หน้าใส่รหัสผ่าน Building 21 ───────────────────────────────────
+// รหัสถูกครั้งเดียว → จำไว้ในเครื่อง (localStorage) ไม่ต้องพิมพ์ซ้ำอีก — ดู data/prefs.js
+// รหัสจริงอยู่ที่ CONFIG.dlcAccessCode ที่เดียว (config.js) เจ้าของเป็นคนแจกให้ผู้เล่นเอง
+export function renderAccessCode(root, { onBack, onSuccess } = {}) {
+  root.innerHTML = '';
+  setScreenClass(root, 'screen--dlccode');
+
+  root.appendChild(buildSubHeader('BUILDING 21 — ACCESS CODE', onBack));
+
+  const wrap = document.createElement('div');
+  wrap.className = 'dlccode-wrap';
+
+  const hint = document.createElement('p');
+  hint.className = 'dlccode-hint';
+  hint.textContent = 'กรอกรหัสผ่าน 15 หลักที่ได้รับ';
+  wrap.appendChild(hint);
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.inputMode = 'numeric';
+  input.autocomplete = 'off';
+  input.maxLength = 15;
+  input.className = 'dlccode-input';
+  input.placeholder = '••••••••••••••';
+  // รับเฉพาะตัวเลข — พิมพ์อย่างอื่นแล้วถูกตัดทิ้งทันที ไม่ต้องรอกด submit ถึงจะรู้ว่าผิด
+  input.addEventListener('input', () => {
+    input.value = input.value.replace(/\D/g, '').slice(0, 15);
+    error.textContent = '';
+  });
+  wrap.appendChild(input);
+
+  const error = document.createElement('p');
+  error.className = 'dlccode-error';
+  wrap.appendChild(error);
+
+  const submit = document.createElement('button');
+  submit.className = 'dlccode-submit';
+  submit.textContent = 'ยืนยัน';
+  wrap.appendChild(submit);
+
+  function trySubmit() {
+    if (input.value === CONFIG.dlcAccessCode) {
+      setDlcUnlocked();
+      onSuccess?.();
+      return;
+    }
+    error.textContent = 'รหัสไม่ถูกต้อง';
+    wrap.classList.remove('is-shake'); // รีทริกเกอร์แอนิเมชันสั่นได้ต่อเนื่องแม้พิมพ์ผิดซ้ำ ๆ
+    void wrap.offsetWidth;
+    wrap.classList.add('is-shake');
+  }
+  submit.addEventListener('click', trySubmit);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') trySubmit(); });
+
+  root.appendChild(wrap);
+  root.appendChild(buildBackToMenu(() => onBack?.()));
+  input.focus();
 }
 
 export function renderIntelMenu(root, { onBack, onNavigate } = {}) {
@@ -878,7 +946,8 @@ export function initScreens(root) {
   // (setBgm ข้ามการเริ่มใหม่ให้เองถ้าเป็นเพลงเดิม — ดู ui/audio.js)
   const menuBgm = () => setBgm('menu');
 
-  const showMenu = () => quick(() => { clearFx(); menuBgm(); renderMenu(root, { onNavigate: onMenuNavigate }); });
+  // กลับหน้าเมนูทุกครั้ง = คืนค่าเกมหลัก (เผื่อเพิ่งออกจาก Custom Game) — ดู data/customGame.js
+  const showMenu = () => quick(() => { restoreBaseConfig(); clearFx(); menuBgm(); renderMenu(root, { onNavigate: onMenuNavigate }); });
   const showBlank = (id, backTo = showMenu) => quick(() => { menuBgm(); renderBlank(root, { label: id, onBack: backTo }); });
   const showSettings = () => quick(() => { menuBgm(); renderSettingsMenu(root, { onBack: showMenu }); });
   const showQuit = () => renderQuit(root);
@@ -889,8 +958,27 @@ export function initScreens(root) {
   const showCard = (speciesKey, side) => quick(() => { menuBgm(); renderOperatorCard(root, { speciesKey, onBack: () => showRoster(side) }); });
   // Play -> เลือกโหมด -> Tutorial (visual novel) -> หน้าเกมหลัก -> หน้า Result
   // เล่นใหม่จากหน้า Result ข้าม tutorial ไปเลย (renderGameScreen รีเซ็ต state ให้เองอยู่แล้ว)
-  const showGame = () => scene(() => { clearFx(); renderGameScreen(root, { onExit: showMenu, onFinish: showResult }); });
+  // เกมหลักคืนค่า CONFIG ก่อนเริ่มทุกครั้ง — กันค่าของ Custom Game หลุดเข้ามาไม่ว่าเดินมาทางไหน
+  const showGame = () => scene(() => { restoreBaseConfig(); clearFx(); renderGameScreen(root, { onExit: showMenu, onFinish: showResult }); });
   const showResult = () => quick(() => { clearFx(); renderResult(root, { state, onHome: showMenu, onReplay: showGame }); });
+  // Custom Game — เกมแยกจากเกมหลัก ใช้ค่าที่ปรับไว้ใน Dev Panel (รอบ 10.27)
+  // ไม่ผ่านฉากสอนเล่น · ไม่มีคำใบ้ · เล่นใหม่จากหน้า Result = ใช้ค่าชุดเดิมอีกรอบ
+  // (เขียนค่าทับใหม่ทุกรอบ เพราะระหว่างเล่นแก้ CONFIG สด ๆ จากแผง DEV ได้)
+  let customDraft = null;
+  const showCustomGame = (draft = customDraft) => {
+    customDraft = draft;
+    setBgm(null);
+    scene(() => {
+      applyCustomGame(customDraft);
+      clearFx();
+      renderGameScreen(root, { custom: true, onExit: showMenu, onFinish: showCustomResult });
+    });
+  };
+  const showCustomResult = () => quick(() => {
+    clearFx();
+    renderResult(root, { state, custom: true, onHome: showMenu, onReplay: () => showCustomGame() });
+  });
+  const showDevPanel = () => openDevPanel({ onStartCustom: (draft) => showCustomGame(draft) });
   // กด Play = เพลงเมนูหยุดทันที (เจ้าของสั่งไว้) หน้าบรีฟจึงเงียบ
   const showTutorial = () => { setBgm(null); scene(() => renderTutorial(root, { onFinish: showGame })); };
   // หน้าเลือกโหมด — ยังอยู่ในโซนเมนู เพลงเมนูจึงเล่นต่อ (เพลงหยุดตอนกด PLAY เข้าฉากบรีฟ)
@@ -898,14 +986,11 @@ export function initScreens(root) {
     menuBgm();
     renderModeSelect(root, { onBack: showMenu, onPlay: onModeStart, onGated: showAccessCode });
   });
-  // โหมดที่ล็อกด้วยรหัสผ่าน (ตอนนี้มีแค่ Building 21) — เครื่องที่ยังไม่ปลดล็อก
-  //
-  // ⚠️ การใส่รหัสถูกย้ายไปอยู่ใน Dev Panel แล้ว (เจ้าของสั่งให้รวมไว้ที่เดียว)
-  // กด PLAY ตอนยังไม่ปลดล็อกจึงเด้งไปหน้ารหัสของ Dev Panel ให้เลย
-  // ใส่ถูกแล้ว = ปลดล็อกทั้ง Dev Panel และ Building 21 พร้อมกัน
-  const showAccessCode = () => {
-    openDevPanel({ onUnlock: () => showModeSelect() });
-  };
+  // โหมดที่ล็อกด้วยรหัสผ่าน (ตอนนี้มีแค่ Building 21) — เครื่องยังไม่เคยปลดล็อกแวะมาที่นี่ก่อน
+  const showAccessCode = (modeId) => quick(() => {
+    menuBgm();
+    renderAccessCode(root, { onBack: showModeSelect, onSuccess: () => onModeStart(modeId) });
+  });
 
   // เลือกโหมดแล้วจะเริ่มยังไง — Building 21 ยังไม่มีเนื้อหาจริง เข้าไปแล้วเจอหน้าว่างไปก่อน
   // (เจ้าของสั่งไว้ว่ายังไม่ต้องทำอะไร) โหมดใหม่ในอนาคตมาต่อ else if ตรงนี้
@@ -925,6 +1010,7 @@ export function initScreens(root) {
     else if (id === 'quit') showQuit();
     else if (id === 'intel') showIntel();
     else if (id === 'play') showModeSelect();
+    else if (id === 'dev') showDevPanel();
     else showBlank(id);
   }
 

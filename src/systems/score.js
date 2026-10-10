@@ -11,8 +11,9 @@
 import { CONFIG } from '../config.js';
 
 // เหตุผลที่เกมจบ (state.endReason ตั้งค่าโดย systems/time.js)
+// timeup อ่านความยาวเกมจาก CONFIG สด ๆ — Custom Game ตั้งให้สั้น/ยาวกว่า 72 ชม. ได้
 const END_TEXT = {
-  timeup: 'หมดเวลา 72 ชั่วโมง',
+  get timeup() { return `หมดเวลา ${CONFIG.totalLoops / CONFIG.loopsPerHour} ชั่วโมง`; },
   empty: 'ไม่มีผู้รอดชีวิตเหลือให้ช่วยแล้ว',
   critical: 'ภารกิจล้มเหลว — เจ้าหน้าที่ภาคสนามหมดสติทั้งคู่',
 };

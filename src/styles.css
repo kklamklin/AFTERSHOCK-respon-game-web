@@ -285,6 +285,32 @@ html, body {
 .mode-opt-label { font-size: 17px; letter-spacing: 1px; }
 .mode-opt-note { font-size: 13px; }
 
+/* หน้าใส่รหัสผ่าน Building 21 (โครงสร้าง ส่วนสีอยู่ในบล็อกธีมท้ายไฟล์) */
+.screen--dlccode { padding: 32px 48px 96px; align-items: stretch; }
+.dlccode-wrap {
+  display: flex; flex-direction: column; gap: 14px; align-items: flex-start;
+  margin-top: 48px; max-width: 420px;
+}
+.dlccode-hint { font-size: 16px; }
+.dlccode-input {
+  width: 100%; font-size: 24px; letter-spacing: 4px; padding: 12px 16px;
+  border-radius: 8px; font-family: var(--font-mono);
+}
+.dlccode-error { font-size: 14px; min-height: 1.2em; }
+.dlccode-submit {
+  font-size: 18px; font-weight: 800; letter-spacing: 2px;
+  padding: 10px 24px; border-radius: 8px; cursor: pointer; align-self: flex-start;
+}
+/* สั่นตอนใส่รหัสผิด — ใช้ transform ล้วน (§รอบ 10.11) */
+@keyframes dlccode-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+.dlccode-wrap.is-shake { animation: dlccode-shake 0.35s ease; }
+
 /* หน้า How to Play — เนื้อหายาว เลื่อนได้ */
 .screen--howto { padding: 32px 48px 96px; align-items: stretch; }
 .howto-body {
@@ -2028,6 +2054,21 @@ img.game-icon {
 .mode-opt-label { font-family: var(--font-display); }
 .mode-opt-note { color: var(--muted); }
 
+/* ── หน้าใส่รหัสผ่าน Building 21 ─────────────────────────── */
+.dlccode-hint, .dlccode-error { font-family: var(--font-ui); }
+.dlccode-hint { color: var(--ink-dim); }
+.dlccode-error { color: var(--danger); }
+.dlccode-input {
+  background: var(--bg-panel); border: 1px solid var(--line); color: var(--ink);
+}
+.dlccode-input:focus { outline: none; border-color: var(--accent); box-shadow: var(--glow-soft); }
+.dlccode-submit {
+  font-family: var(--font-display); color: var(--bg-deep);
+  background: var(--accent); border: 1px solid var(--accent);
+  box-shadow: var(--glow-soft); transition: filter 0.18s ease;
+}
+.dlccode-submit:hover { filter: brightness(1.15); }
+
 /* ── เนื้อหายาว (How to play / การ์ด จนท.) ────────────────── */
 .howto-body, .card-body {
   background: var(--bg-panel); border: 1px solid var(--line);
@@ -2484,3 +2525,50 @@ html.is-low-gfx .feed-card { animation: none !important; }
 /* วาบเขียวสั้น ๆ ตอนค่าถูกใช้จริง — ยืนยันว่ากดติด */
 @keyframes dev-flash { from { background: var(--ok); color: #04070f; } to { background: #04070f; } }
 .is-flash { animation: dev-flash 0.45s ease; }
+
+/* ── Custom Game (รอบ 10.27) ──────────────────────────────── */
+/* ทางลัดติ๊กเปิด/ปิด */
+.dev-flags { display: flex; flex-wrap: wrap; gap: 8px; }
+.dev-flag {
+  display: flex; align-items: center; gap: 8px; cursor: pointer; min-height: 38px;
+  background: var(--bg-panel); border: 1px solid var(--line); border-radius: 6px;
+  padding: 6px 12px; font-size: 13px; color: var(--ink-dim);
+}
+.dev-flag input { width: 18px; height: 18px; accent-color: var(--accent); }
+.dev-flag.is-on { border-color: var(--accent); color: var(--ink); }
+/* ช่องกรอก: ชื่อไทยบรรทัดบน · "ปกติ ..." บรรทัดล่าง */
+.dev-field-label { display: flex; flex-direction: column; gap: 1px; font-family: var(--font-ui); font-size: 12.5px; }
+.dev-field-label > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dev-field-base { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); }
+/* ค่าที่ต่างจากเกมหลัก — ขอบสีเด่นให้เห็นว่าปรับอะไรไปบ้าง */
+.dev-field.is-changed { border-color: var(--accent); }
+.dev-field.is-changed .dev-input { color: var(--accent); }
+.dev-adv { margin-top: 6px; }
+.dev-adv > summary { cursor: pointer; list-style: revert; }
+/* แถบล่างติดขอบจอ — ปุ่มเริ่มเกมกดได้เสมอไม่ต้องเลื่อนลงไปหา */
+.dev-foot {
+  position: sticky; bottom: -28px; margin: 18px -14px -28px; padding: 10px 14px 14px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: var(--bg); border-top: 1px solid var(--line);
+}
+.dev-count { font-size: 13px; color: var(--ink-dim); }
+.dev-foot .dev-btn--go { font-size: 15px; padding: 10px 18px; }
+
+/* ปุ่ม DEV PANEL เล็ก ๆ มุมขวาล่างของหน้าเมนู (อยู่ในเวที → px ตามเวที)
+   สูง 52px ในเวที = ราว 26px บนจอ 667×375 (เวทีถูกย่อเหลือ ~0.5) ยังกดโดน */
+.menu-dev-chip {
+  position: absolute; right: 20px; bottom: 14px; z-index: 3;
+  min-height: 52px; padding: 0 18px; border-radius: 6px; cursor: pointer;
+  font-family: var(--font-mono); font-size: 13px; letter-spacing: 2px;
+  background: rgba(4, 7, 15, 0.82); color: var(--ink-dim); border: 1px solid var(--line);
+  animation: fx-rise 0.4s ease 1s both;
+}
+.menu-dev-chip:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ปุ่ม DEV บนแถบบนของหน้าเกม — มีเฉพาะ Custom Game */
+.game-dev-btn {
+  font-family: var(--font-mono); font-size: calc(var(--u) * 1.15); letter-spacing: 1px;
+  min-height: calc(var(--u) * 4); padding: 0 calc(var(--u) * 1.2); border-radius: 5px; cursor: pointer;
+  background: rgba(255, 193, 64, 0.12); color: #ffc140; border: 1px solid #ffc140;
+}
+html.is-low-gfx .menu-dev-chip { animation: none; }

@@ -16,7 +16,8 @@ import {
   renderOperatorRoster, renderOperatorCard,
 } from './screens.js';
 
-const TOTAL_HOURS = CONFIG.totalLoops / CONFIG.loopsPerHour;
+// อ่านสดทุกครั้ง — Custom Game เปลี่ยนความยาวเกมได้
+const totalHours = () => CONFIG.totalLoops / CONFIG.loopsPerHour;
 const TIER_ORDER = ['gray', 'yellow', 'red'];
 const TIER_LETTER = { gray: 'A', yellow: 'B', red: 'C' };
 
@@ -174,7 +175,7 @@ export function createGameMenu(root, { pause, resume, isRunning, quitToMenu } = 
       head.appendChild(el('div', 'gm-time-now', `Time : ${state.hour} Hr`));
       const bar = el('div', 'gm-time-bar');
       const fill = el('div', 'gm-time-fill');
-      fill.style.width = `${Math.min(100, (state.hour / TOTAL_HOURS) * 100)}%`;
+      fill.style.width = `${Math.min(100, (state.hour / totalHours()) * 100)}%`;
       bar.appendChild(fill);
       head.appendChild(bar);
       card.appendChild(head);

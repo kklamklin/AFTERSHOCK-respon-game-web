@@ -15,6 +15,7 @@ import { resolveMission } from '../systems/outcomes.js';
 import { resolveLastStandQte } from '../systems/status.js';
 import { runLastStandQte } from './qte.js';
 import { hintsEnabled, runHints } from './hints.js';
+import { openIngameDevPanel, closeDevPanel, isDevPanelOpen } from './devPanel.js';
 import { OPERATORS as OPS_FOR_STATUS } from '../data/operators.js';
 import { createFeed } from './feed.js';
 import { attachDrag, cancelDrag, selectSkillByKey, activeSelection } from './dragdrop.js';
@@ -107,6 +108,14 @@ function buildTopBar(data, handlers) {
   };
   speedBox.append(runBtn, rateBtn);
   right.append(heli, speedBox);
+
+  // ปุ่ม DEV — มีเฉพาะ Custom Game (รอบ 10.27) เกมหลักไม่มีทางเปิดเครื่องมือพวกนี้ได้
+  if (handlers.onDev) {
+    const devBtn = el('button', 'game-dev-btn', 'CUSTOM · DEV');
+    devBtn.title = 'เครื่องมือ Custom Game';
+    devBtn.addEventListener('click', () => handlers.onDev());
+    right.prepend(devBtn);
+  }
 
   bar.append(left, center, right);
 
@@ -474,6 +483,7 @@ let activeHints = null; // คำใบ้สำหรับผู้เล่�
 let detachKeys = null;  // ถอดคีย์ลัดตอนออกจากหน้าเกม
 
 export function stopGameClock() {
+  closeDevPanel();        // แผง DEV ของ Custom Game ห้ามค้างข้ามหน้า
   cancelDrag();
   activeQte?.destroy();   // ออกจากหน้าเกมกลางคัน มินิเกมต้องไม่ค้างอยู่
   activeQte = null;
@@ -491,7 +501,11 @@ export function stopGameClock() {
   setBgm(null); // ออกจากหน้าเกมเมื่อไหร่ เพลงต้องเงียบทันที ไม่ตามไปหน้าอื่น
 }
 
-export function renderGameScreen(root, { onExit, onFinish } = {}) {
+/**
+ * @param custom  true = Custom Game (รอบ 10.27) — ใช้ CONFIG ที่ถูกปรับไว้แล้ว (data/customGame.js)
+ *                ไม่มีคำใบ้ · มีป้าย CUSTOM และปุ่ม DEV บนแถบบน
+ */
+export function renderGameScreen(root, { onExit, onFinish, custom = false } = {}) {
   stopGameClock();
   resetState(); // เริ่มเกมใหม่ทุกครั้งที่เข้าหน้านี้ (สุ่มผู้รอด 1,200 คนใหม่)
 
@@ -499,6 +513,7 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
 
   root.innerHTML = '';
   root.className = 'screen-overlay screen--game';
+  root.classList.toggle('is-custom', custom);
 
   // ประกาศไว้ก่อน เพราะปุ่มบนแถบบนอ้างถึงมัน แต่ตัวมันต้องสร้างหลังนาฬิกา
   let menu = null;
@@ -511,6 +526,7 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
     // ถ้าไม่วาด เลขนับถอยหลังจะค้างที่เฟรมก่อนกดหยุด
     onRunToggle: () => { clock.setRunning(!state.running); top.paintSpeed(); paintLive(); syncGameBgm(); },
     onRateToggle: () => { clock.setRate(state.speed === 2 ? 1 : 2); top.paintSpeed(); paintLive(); syncGameBgm(); },
+    onDev: custom ? () => openDev() : null,
   });
   root.appendChild(top.bar);
 
@@ -774,6 +790,30 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
   dragCtx.onChange = () => { bottom.showZone(null); paintAll(); top.paintSpeed(); activeHints?.notifyDeployed(); };
   dragCtx.onHoverZone = (zoneId, opKey, skillId) => bottom.showZone(zoneId, opKey, skillId);
 
+  // ── แผง DEV ของ Custom Game (รอบ 10.27) ──────────────────────
+  // เปิดแล้วเวลาหยุด (เพลงหยุดด้วย) · ปิดแล้วเดินต่อถ้าก่อนเปิดเดินอยู่
+  // advance() เดินเกมด้วย tick() ตัวเดียวกับนาฬิกาจริง ผลภารกิจ/คนตาย/AP จึงคิดครบตามกฎ
+  function openDev() {
+    if (state.ended || activeQte || isDevPanelOpen()) return;
+    cancelDrag();
+    const wasRunning = state.running;
+    clock.setRunning(false); top.paintSpeed(); paintLive(); syncGameBgm();
+    openIngameDevPanel({
+      advance: (loops) => {
+        for (let i = 0; i < loops && !state.ended && !activeQte; i += 1) tick();
+        // เดินไปเจอมินิเกม QTE → ปิดแผงให้ผู้เล่นเห็นมินิเกมเลย
+        if (activeQte) closeDevPanel();
+      },
+      repaint: () => { paintAll(); top.paintSpeed(); },
+      onClose: () => {
+        if (state.ended || activeClock !== clock) return;
+        // มินิเกมเปิดค้างอยู่ = มันคุมเวลาเอง ห้ามสั่งเดินทับ
+        if (wasRunning && !activeQte) clock.setRunning(true);
+        top.paintSpeed(); syncGameBgm();
+      },
+    });
+  }
+
   // ── คีย์ลัดสำหรับเล่นบนคอม (§10.14) ──────────────────────────
   //
   // การลากไอคอนแบบเดิมยังใช้ได้ทุกอย่าง อันนี้เป็น "ทางที่สอง" ไม่ได้มาแทน
@@ -850,7 +890,8 @@ export function renderGameScreen(root, { onExit, onFinish } = {}) {
 
       // คำใบ้สำหรับผู้เล่นใหม่ — เปิดตรงนี้เพราะทุกอย่างบนจอวางเสร็จแล้ว
       // (ต้องวัดตำแหน่งของจริงเพื่อชี้เป้า ถ้าเปิดก่อนแผนที่มาจะวัดได้ศูนย์)
-      if (activeClock === clock && hintsEnabled()) {
+      // Custom Game ไม่มีคำใบ้ — คนที่เข้ามาถึงนี่ได้รู้วิธีเล่นแล้ว
+      if (activeClock === clock && !custom && hintsEnabled()) {
         activeHints = runHints(root, {
           onPause: () => { clock.setRunning(false); top.paintSpeed(); paintLive(); syncGameBgm(); },
           onResume: () => { activeHints = null; clock.setRunning(true); top.paintSpeed(); syncGameBgm(); },

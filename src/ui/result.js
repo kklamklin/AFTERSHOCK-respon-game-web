@@ -91,7 +91,8 @@ function statBox(label, value) {
   return { box, valueEl: v };
 }
 
-export function renderResult(root, { state, onHome, onReplay } = {}) {
+// custom = จบจาก Custom Game — ขึ้นป้ายบอกว่าคะแนนนี้ไม่ใช่ของเกมหลัก (ค่าถูกปรับไว้)
+export function renderResult(root, { state, onHome, onReplay, custom = false } = {}) {
   stopAnim();
   const r = scoreBreakdown(state);
 
@@ -100,7 +101,7 @@ export function renderResult(root, { state, onHome, onReplay } = {}) {
 
   const card = el('div', 'res-card');
   card.append(
-    el('div', 'res-title', 'ผลปฏิบัติการ'),
+    el('div', 'res-title', custom ? 'ผลปฏิบัติการ · CUSTOM GAME' : 'ผลปฏิบัติการ'),
     el('div', `res-reason res-reason--${r.reason ?? 'timeup'}`, r.reasonText),
   );
 

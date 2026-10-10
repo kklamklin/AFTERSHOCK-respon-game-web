@@ -9,13 +9,14 @@
 import { CONFIG } from '../config.js';
 import { buffsOn } from './successRate.js';
 
-const TOTAL_HOURS = CONFIG.totalLoops / CONFIG.loopsPerHour;
+// อ่านสดทุกครั้ง (ไม่เก็บไว้ตอนโหลด) — Custom Game เปลี่ยนความยาวเกมได้
+const totalHours = () => CONFIG.totalLoops / CONFIG.loopsPerHour;
 
 // คืนเป็นเปอร์เซ็นต์ 0-50
 export function dangerChance(state, zone) {
   if (buffsOn(state, zone).some((b) => b.immune)) return 0;
   const base = CONFIG.dangerBase[zone.level];
-  const scaled = base * (1 + state.hour / TOTAL_HOURS);
+  const scaled = base * (1 + state.hour / totalHours());
   return Math.min(CONFIG.dangerCap, scaled) * 100;
 }
 

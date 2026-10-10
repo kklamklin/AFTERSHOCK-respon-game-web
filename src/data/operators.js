@@ -16,6 +16,7 @@
 import { CONFIG } from '../config.js';
 
 // แปลงตาราง CONFIG.fieldSkills เป็นรูป zones ที่ระบบสกิลใช้ — ระดับที่ ap เป็น null คือเข้าไม่ได้
+// เรียกผ่าน getter `zones` ด้านล่าง = คำนวณใหม่ทุกครั้งที่ถูกอ่าน แก้ CONFIG แล้วมีผลทันที
 function fieldZones(opKey) {
   const { ap, workHours } = CONFIG.fieldSkills[opKey];
   const zones = {};
@@ -26,10 +27,20 @@ function fieldZones(opKey) {
   return zones;
 }
 
-// แปลง CONFIG.buffs เป็นฟิลด์ที่การ์ดสกิลใช้แสดงผล
-function buffSpec(id) {
-  const b = CONFIG.buffs[id];
-  return { buff: b.rate, scope: b.scope, durationHours: b.durationHours, ap: b.ap, cd: b.cooldownHours };
+// สกิลบัฟ — ฟิลด์ตัวเลขเป็น "getter" อ่าน CONFIG.buffs สด ๆ ทุกครั้งที่ถูกถาม
+// ⚠️ เดิมคัดลอกค่าไว้ตอนโหลดไฟล์ ผลคือแก้ CONFIG ระหว่างรัน (Custom Game / Dev Panel) แล้วราคาไม่เปลี่ยน
+// ฟิลด์ที่ใส่มาใน fields เองจะทับของจาก CONFIG (เช่น Scan ที่ scope เป็น 'multi')
+function buffSkill(id, fields) {
+  const out = { ...fields };
+  const live = {
+    buff: (b) => b.rate, scope: (b) => b.scope, durationHours: (b) => b.durationHours,
+    ap: (b) => b.ap, cd: (b) => b.cooldownHours,
+  };
+  for (const [key, read] of Object.entries(live)) {
+    if (key in fields) continue;
+    Object.defineProperty(out, key, { get: () => read(CONFIG.buffs[id]), enumerable: true });
+  }
+  return out;
 }
 
 export const OPERATORS = {
@@ -47,13 +58,12 @@ export const OPERATORS = {
       sar: {
         name: 'Search & Rescue', icon: 'Icon-skills-robertson-search&rescue.PNG', type: 'field',
         // เข้าโซนแดงได้แล้ว แต่ช้าและฐานสำเร็จต่ำ (75−40 = 35%) ไม่บัฟคือส่งไปตาย
-        zones: fieldZones('human'),
+        get zones() { return fieldZones('human'); },
       },
-      crowd: {
-        name: 'Crowd Control', icon: 'Icon-skills-robertson-crowd_control.PNG', type: 'buff',
-        // ไม่จองโซน · ไม่มีความเสี่ยงบาดเจ็บ (GAMESCREEN_SPEC §3.3) — ต้นทุนจริงคือคูลดาวน์
-        ...buffSpec('crowd'), risky: false,
-      },
+      // ไม่จองโซน · ไม่มีความเสี่ยงบาดเจ็บ (GAMESCREEN_SPEC §3.3) — ต้นทุนจริงคือคูลดาวน์
+      crowd: buffSkill('crowd', {
+        name: 'Crowd Control', icon: 'Icon-skills-robertson-crowd_control.PNG', type: 'buff', risky: false,
+      }),
     },
   },
 
@@ -68,7 +78,7 @@ export const OPERATORS = {
     skills: {
       hsar: {
         name: 'Hardsearch & Extract', icon: 'Icon-skills-Lyla-hardsearch&extract.png', type: 'field',
-        zones: fieldZones('cat'),
+        get zones() { return fieldZones('cat'); },
       },
     },
   },
@@ -82,14 +92,14 @@ export const OPERATORS = {
       talk: ['Base-op-Lia-talking1.png', 'Base-op-Lia-talking2.png'], // ✅ มีไฟล์จริงแล้ว สลับ 2 เฟรมทำแอนิเมชันพูด
     },
     skills: {
-      scan: {
+      scan: buffSkill('scan', {
         name: 'Scan Area', icon: 'Icon-skills-Ria-scan_area.PNG', type: 'buff', // ชื่อไฟล์สะกด Ria โดยตั้งใจ (ดูหมายเหตุด้านบน) ห้ามแก้
-        ...buffSpec('scan'), scope: 'multi',
-      },
-      alert: {
+        scope: 'multi',
+      }),
+      alert: buffSkill('alert', {
         name: 'Alert Allied', icon: 'Icon-skills-Ria-alert_allied.PNG', type: 'shield', // ชื่อไฟล์สะกด Ria โดยตั้งใจ (ดูหมายเหตุด้านบน) ห้ามแก้
-        ...buffSpec('alert'), immune: true,
-      },
+        immune: true,
+      }),
     },
   },
 
@@ -100,11 +110,10 @@ export const OPERATORS = {
       talk: ['Base-op-mudongzock-talking1.PNG', 'Base-op-mudongzock-talking2.PNG'], // TODO: ยังไม่เห็นไฟล์นี้ ตรวจสอบตอนอัปจริง
     },
     skills: {
-      air: {
-        // ⚠️ ในเกมชื่อ "Mudongzock" แต่ไฟล์จริงสะกด "mudongzong" (ไม่มี c) — เจ้าของสั่งให้ค้างไว้แบบนี้
+      // ⚠️ ในเกมชื่อ "Mudongzock" แต่ไฟล์จริงสะกด "mudongzong" (ไม่มี c) — เจ้าของสั่งให้ค้างไว้แบบนี้
+      air: buffSkill('air', {
         name: 'Air Deploy', icon: 'Icon-skills-mudongzong-air_deploy.PNG', type: 'buff', // ชื่อไฟล์สะกด mudongzong โดยตั้งใจ ห้ามแก้ (ในเกมชื่อ Mudongzock)
-        ...buffSpec('air'),
-      },
+      }),
     },
   },
 };
