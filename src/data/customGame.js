@@ -27,10 +27,12 @@ export const CUSTOM_FLAGS = {
     c.apStart = 9999;
     for (const step of c.apCurve) step.ap = 999;
   },
-  // สกิลบัฟไม่มีคูลดาวน์ · Scan ใช้ได้ไม่จำกัดช่อง
+  // สกิลบัฟไม่มีคูลดาวน์ · สกิลที่มีระบบช่อง (เช่น Scan) ใช้ได้ไม่จำกัดช่อง
   noCooldown: (c) => {
-    for (const b of Object.values(c.buffs)) b.cooldownHours = 0;
-    c.buffs.scan.maxStacks = 99;
+    for (const b of Object.values(c.buffs)) {
+      b.cooldownHours = 0;
+      if (b.maxStacks != null) b.maxStacks = 99;
+    }
   },
   // ลงพื้นที่แล้วไม่มีวันบาดเจ็บ (ตัดโอกาสอันตรายเป็น 0)
   noInjury: (c) => { c.dangerCap = 0; },

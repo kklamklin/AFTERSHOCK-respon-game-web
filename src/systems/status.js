@@ -9,8 +9,8 @@
 import { CONFIG } from '../config.js';
 import { roll100 } from '../utils/rng.js';
 import { dangerChance } from './danger.js';
+import { OPERATORS, FIELD_OPS } from '../data/operators.js';
 
-const FIELD_OPS = ['human', 'cat'];
 const hours = (h) => h * CONFIG.loopsPerHour;
 
 /**
@@ -25,7 +25,7 @@ export function rollDanger(state, opKey, zone) {
   if (unit.status === 'laststand') return { hit: false, chance: 0 };
   if (chance <= 0 || roll100() > chance) return { hit: false, chance };
 
-  // เงื่อนไข Last Stand: Lyla หมดสติอยู่ + Robertson บาดเจ็บอยู่ + ทอยติดซ้ำ (§5.1)
+  // เงื่อนไข Last Stand: ภาคสนามคนอื่นหมดสติหมด + ตัวเองบาดเจ็บอยู่ + ทอยติดซ้ำ (§5.1)
   if (canEnterLastStand(state, opKey)) {
     unit.status = 'laststand';
     unit.recoverRemainLoops = hours(CONFIG.lastStand.durationHours);
@@ -44,11 +44,14 @@ export function rollDanger(state, opKey, zone) {
   return { hit: true, chance, to };
 }
 
+// ใครมี Last Stand ดูจากธง lastStand ใน data/operators.js (ตอนนี้มีแค่ Robertson)
+// เงื่อนไข: ตัวเองบาดเจ็บอยู่ + ภาคสนามคนอื่นทุกคนหมดสติ (เดิมคือ "Lyla หมดสติ" — ทีมปัจจุบันผลเท่าเดิม)
 export function canEnterLastStand(state, opKey) {
-  if (opKey !== 'human') return false;                 // มีแค่ Robertson
+  if (!OPERATORS[opKey]?.lastStand) return false;
   if (state.lastStandUsed) return false;               // ใช้ได้ครั้งเดียวต่อเกม
-  if (state.units.human.status !== 'injured') return false;
-  return state.units.cat.status === 'lost';
+  if (state.units[opKey].status !== 'injured') return false;
+  const others = FIELD_OPS.filter((k) => k !== opKey);
+  return others.length > 0 && others.every((k) => state.units[k].status === 'lost');
 }
 
 /**

@@ -86,13 +86,14 @@ function tickTimers(state) {
 }
 
 // คืน true = บัฟยังอยู่ · false = หมดอายุแล้วให้ลบทิ้ง
-// Scan Area หมดอายุเมื่อไหร่ ต้องคืน "ช่อง" ให้ Lia ด้วย (GAMESCREEN_SPEC §3.4)
+// บัฟที่มีระบบช่อง (เช่น Scan Area) หมดอายุเมื่อไหร่ ต้องคืน "ช่อง" ให้เจ้าของด้วย (GAMESCREEN_SPEC §3.4)
 function expireBuff(state, buff) {
   buff.remainLoops -= 1;
   if (buff.remainLoops > 0) return true;
-  if (buff.type === 'scan') {
-    const lia = state.units.elf;
-    lia.scanStacks = Math.min(CONFIG.buffs.scan.maxStacks, (lia.scanStacks ?? 0) + 1);
+  const max = CONFIG.buffs[buff.type]?.maxStacks;
+  const owner = state.units[buff.owner];
+  if (max != null && owner) {
+    owner.skillStacks[buff.type] = Math.min(max, (owner.skillStacks[buff.type] ?? 0) + 1);
   }
   return false;
 }

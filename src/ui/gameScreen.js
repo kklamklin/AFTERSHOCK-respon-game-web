@@ -5,7 +5,7 @@
 // ยังเป็นค่าหลอก: สถานะบาดเจ็บของ จนท. (รอรอบที่ 8)
 // ไฟล์นี้อยู่ใน ui/ จึงห้ามคำนวณกฎเกม — เรียก systems/ มาคำนวณแล้วเอาผลมาแสดงเท่านั้น
 
-import { OPERATORS } from '../data/operators.js';
+import { OPERATORS, opsOnSide, allSkills, isGlobalSkill, skillName } from '../data/operators.js';
 import { state, resetState } from '../state.js';
 import { CONFIG } from '../config.js';
 import { createClock, tickLoop, loopDurationMs } from '../systems/time.js';
@@ -93,8 +93,17 @@ function buildTopBar(data, handlers) {
   center.appendChild(timeBtn);
 
   const right = el('div', 'game-top-right');
+  // ป้ายบัฟทั้งแมพบนแถบบน — โชว์ไอคอนของบัฟทั้งแมพที่กำลังมีผล (เช่น Air Deploy)
+  // ไม่ผูกกับสกิลตัวไหน: อ่านจาก state.globalBuffs แล้วใช้ไอคอนตาม id สกิล (data/icons.js)
   const heli = el('div', 'game-air');
-  heli.appendChild(iconNode('air', 'air-glyph', 'Air Deploy กำลังมีผลทั้งแมพ'));
+  let shownGlobal = null;
+  const paintGlobalIcon = (type) => {
+    if (type === shownGlobal) return;
+    shownGlobal = type;
+    heli.replaceChildren(iconNode(type, 'air-glyph', `${skillName(type)} กำลังมีผลทั้งแมพ`));
+  };
+  const firstGlobal = allSkills().find((s) => isGlobalSkill(s.skillId))?.skillId;
+  if (firstGlobal) paintGlobalIcon(firstGlobal);
   heli.hidden = !data.airDeployOn;
 
   // ปุ่มเวลา 2 ปุ่ม (§2) — หน้าตาเหมือนเดิม แต่เป็นไฟล์ vector ถ้ามี ไม่งั้นใช้ emoji
@@ -156,7 +165,9 @@ function buildTopBar(data, handlers) {
         if (shownHour != null) pulse(timeBtn, 'is-bump', 500);
         shownHour = state.hour;
       }
-      heli.hidden = !(data.airDeployOn || state.globalBuffs.some((b) => b.type === 'air'));
+      const active = state.globalBuffs[0]?.type;
+      if (active) paintGlobalIcon(active);
+      heli.hidden = !(data.airDeployOn || active);
     },
   };
 }
@@ -179,6 +190,7 @@ function buildSkillRow(speciesKey, skillId, skill) {
   const row = el('div', 'skill-row');
   row.dataset.op = speciesKey;
   row.dataset.skill = skillId;
+  row.dataset.type = skill.type;   // ให้คำใบ้/เทสหา "สกิลลงพื้นที่" ได้โดยไม่ต้องรู้ชื่อ จนท.
 
   row.appendChild(el('div', 'skill-label', skill.name));
 
@@ -198,8 +210,8 @@ function buildSkillRow(speciesKey, skillId, skill) {
   icon.append(img, el('span', 'skill-using', 'USING'), cd, block);
   iconWrap.appendChild(icon);
 
-  // Air Deploy บัฟทั้งแมพ → กดใช้เลย ไม่ต้องลาก (§3.1) · ที่เหลือลากไปวางบนโซน (§10)
-  if (CONFIG.buffs[skillId]?.scope === 'global') {
+  // บัฟทั้งแมพ (เช่น Air Deploy) → กดใช้เลย ไม่ต้องลาก (§3.1) · ที่เหลือลากไปวางบนโซน (§10)
+  if (isGlobalSkill(skillId)) {
     icon.classList.add('is-clickable');
     icon.addEventListener('click', () => {
       const done = useGlobalSkill(state, speciesKey, skillId);
@@ -209,7 +221,7 @@ function buildSkillRow(speciesKey, skillId, skill) {
     attachDrag(icon, speciesKey, skillId, dragCtx);
   }
 
-  // แถวจุดบอกช่อง Scan Area ที่เหลือ (เฉพาะ Lia — §3.4)
+  // แถวจุดบอกช่องที่เหลือ (เฉพาะสกิลที่มีระบบช่อง เช่น Scan Area — §3.4)
   const dots = el('div', 'skill-stacks');
   iconWrap.appendChild(dots);
 
@@ -531,7 +543,8 @@ export function renderGameScreen(root, { onExit, onFinish, custom = false } = {}
   root.appendChild(top.bar);
 
   const body = el('div', 'game-body');
-  const leftSide = buildSide('left', 'Field Operator', ['human', 'cat']);
+  // จนท. แต่ละฝั่งอ่านจากทะเบียน data/operators.js (side) — เพิ่มตัวใหม่ที่นั่น ไม่ต้องแก้ตรงนี้
+  const leftSide = buildSide('left', 'Field Operator', opsOnSide('field'));
   body.appendChild(leftSide.aside);
 
   const mapWrap = el('div', 'game-map-wrap');
@@ -546,7 +559,7 @@ export function renderGameScreen(root, { onExit, onFinish, custom = false } = {}
   mapWrap.appendChild(mapBox);
   body.appendChild(mapWrap);
 
-  const rightSide = buildSide('right', 'Baseplace', ['elf', 'spirit']);
+  const rightSide = buildSide('right', 'Baseplace', opsOnSide('support'));
   body.appendChild(rightSide.aside);
   root.appendChild(body);
 
@@ -818,14 +831,12 @@ export function renderGameScreen(root, { onExit, onFinish, custom = false } = {}
   //
   // การลากไอคอนแบบเดิมยังใช้ได้ทุกอย่าง อันนี้เป็น "ทางที่สอง" ไม่ได้มาแทน
   //   Esc = เมนู ☰ (หรือปิดสิ่งที่เปิดอยู่) · P = หยุด/เดินเวลา · T = หน้าเวลาที่เหลือ
-  //   1-6 = เลือกสกิล แล้วเอาเมาส์ไปคลิกโซนที่จะลง
+  //   1-9 = เลือกสกิล (เลขตามลำดับไอคอนบนจอ ตอนนี้มี 6) แล้วเอาเมาส์ไปคลิกโซนที่จะลง
   //         กดเลขอื่น = เปลี่ยนสกิล · กดเลขเดิมซ้ำ = ยกเลิก
   //
   // ลำดับเลขไล่จากซ้ายไปขวาตามที่การ์ดเรียงบนจอ (Robertson 2 สกิล → Lyla → Lia 2 สกิล → Mudongzock)
-  const KEY_SKILLS = [];
-  for (const opKey of ['human', 'cat', 'elf', 'spirit']) {
-    for (const skillId of Object.keys(OPERATORS[opKey].skills)) KEY_SKILLS.push({ opKey, skillId });
-  }
+  // ลำดับมาจากทะเบียน (ภาคสนามก่อน แล้วภาคฐาน) — ตรงกับลำดับการ์ดบนจอเสมอ
+  const KEY_SKILLS = allSkills();
 
   const iconOf = (opKey, skillId) =>
     root.querySelector(`.skill-row[data-op="${opKey}"][data-skill="${skillId}"] .skill-icon`);
@@ -840,8 +851,8 @@ export function renderGameScreen(root, { onExit, onFinish, custom = false } = {}
 
     const icon = iconOf(item.opKey, item.skillId);
     if (!icon) return;
-    // Air Deploy บัฟทั้งแมพ ไม่มีโซนให้เลือก — กดเลขแล้วใช้เลยเหมือนกดที่ไอคอน (§3.1)
-    if (CONFIG.buffs[item.skillId]?.scope === 'global') {
+    // บัฟทั้งแมพ ไม่มีโซนให้เลือก — กดเลขแล้วใช้เลยเหมือนกดที่ไอคอน (§3.1)
+    if (isGlobalSkill(item.skillId)) {
       const done = useGlobalSkill(state, item.opKey, item.skillId);
       if (done) { fireSkillIcon(icon); dragCtx.onChange?.(done, null); }
       return;
@@ -870,7 +881,7 @@ export function renderGameScreen(root, { onExit, onFinish, custom = false } = {}
     } else if (k === 't') {
       e.preventDefault();
       menu?.openTime(state);
-    } else if (k >= '1' && k <= String(KEY_SKILLS.length)) {
+    } else if (k >= '1' && k <= '9' && Number(k) <= KEY_SKILLS.length) {
       e.preventDefault();
       useSkillByKey(Number(k) - 1);
     }

@@ -19,7 +19,7 @@
 import { CONFIG } from '../config.js';
 import { state } from '../state.js';
 import { isDlcUnlocked, setDlcUnlocked } from '../data/prefs.js';
-import { OPERATORS } from '../data/operators.js';
+import { OPERATORS, FIELD_OPS, allSkills, stackLimit } from '../data/operators.js';
 import {
   CUSTOM_FLAGS, baseValue, numericLeaves, setByPath, getByPath,
   loadCustomDraft, saveCustomDraft, emptyDraft, draftChangeCount,
@@ -49,14 +49,28 @@ const TIER_TH = { gray: 'เทา', yellow: 'เหลือง', red: 'แด�
 const tiers = (label, pathOf, extra = {}) =>
   ['gray', 'yellow', 'red'].map((t) => ({ label: `${label} ${TIER_TH[t]}`, path: pathOf(t), ...extra }));
 
-const BUFF_TH = { crowd: 'Crowd Control', scan: 'Scan Area', alert: 'Alert Allied', air: 'Air Deploy' };
-const buffFields = () => Object.keys(BUFF_TH).flatMap((id) => [
+// ช่องของสกิลบัฟ/ภาคสนาม สร้างจากทะเบียน data/operators.js — เพิ่ม จนท. ใหม่ก็มีช่องให้ปรับเอง
+const BUFF_SKILLS = allSkills().filter((s) => s.skill.type !== 'field');
+const buffFields = () => BUFF_SKILLS.flatMap(({ skillId: id, skill }) => [
   ['ap', 'AP', { int: true, min: 0 }],
   ['cooldownHours', 'คูลดาวน์ (ชม.)', { min: 0 }],
   ['rate', 'บวกอัตราสำเร็จ (%)', {}],
   ['durationHours', 'อยู่ได้ (ชม.)', { min: 0 }],
 ].filter(([k]) => typeof baseValue(`buffs.${id}.${k}`) === 'number')
-  .map(([k, label, extra]) => ({ label: `${BUFF_TH[id]} · ${label}`, path: `buffs.${id}.${k}`, ...extra })));
+  .map(([k, label, extra]) => ({ label: `${skill.name} · ${label}`, path: `buffs.${id}.${k}`, ...extra })));
+
+// สกิลลงพื้นที่ทุกตัว: ฐานสำเร็จ + AP + เวลาทำงาน ต่อระดับโซน (ตัวเลขอยู่ CONFIG.fieldSkills[configKey])
+const FIELD_SKILLS = allSkills().filter((s) => s.skill.type === 'field');
+const fieldFields = () => FIELD_SKILLS.flatMap(({ opKey, skill }) => {
+  const who = OPERATORS[opKey].name;
+  const key = skill.configKey;
+  return [
+    { label: `${who} · ฐานสำเร็จ (%)`, path: `fieldSkills.${key}.base` },
+    ...tiers(`${who} · AP`, (t) => `fieldSkills.${key}.ap.${t}`, { int: true, min: 0 }),
+    ...tiers(`${who} · เวลาทำงาน (ชม.)`, (t) => `fieldSkills.${key}.workHours.${t}`, { min: 0.5 }),
+  ].filter((f) => typeof baseValue(f.path) === 'number');
+});
+const namesOf = (list) => [...new Set(list.map((s) => OPERATORS[s.opKey].name))].join(' · ');
 
 const FIELD_GROUPS = [
   {
@@ -81,17 +95,10 @@ const FIELD_GROUPS = [
     ],
   },
   {
-    title: 'ทีมภาคสนาม (Robertson · Lyla)',
-    fields: [
-      { label: 'Robertson · ฐานสำเร็จ (%)', path: 'fieldSkills.human.base' },
-      ...tiers('Robertson · AP', (t) => `fieldSkills.human.ap.${t}`, { int: true, min: 0 }),
-      ...tiers('Robertson · เวลาทำงาน (ชม.)', (t) => `fieldSkills.human.workHours.${t}`, { min: 0.5 }),
-      { label: 'Lyla · ฐานสำเร็จ (%)', path: 'fieldSkills.cat.base' },
-      ...tiers('Lyla · AP', (t) => `fieldSkills.cat.ap.${t}`, { int: true, min: 0 }),
-      ...tiers('Lyla · เวลาทำงาน (ชม.)', (t) => `fieldSkills.cat.workHours.${t}`, { min: 0.5 }),
-    ],
+    title: `ทีมภาคสนาม (${namesOf(FIELD_SKILLS)})`,
+    fields: fieldFields(),
   },
-  { title: 'สกิลบัฟ (Robertson · Lia · Mudongzock)', fields: buffFields() },
+  { title: `สกิลบัฟ (${namesOf(BUFF_SKILLS)})`, fields: buffFields() },
   {
     title: 'อันตรายและการบาดเจ็บ',
     fields: [
@@ -449,7 +456,7 @@ function buildState(p, host) {
       if (u.recoverRemainLoops > 0) bits.push(`ฟื้นใน ${h(u.recoverRemainLoops)}`);
       const cds = Object.entries(u.skillCooldowns ?? {}).filter(([, v]) => v > 0);
       if (cds.length) bits.push('คูลดาวน์ ' + cds.map(([s, v]) => `${s} ${h(v)}`).join(', '));
-      if (u.scanStacks != null) bits.push(`ช่อง Scan ${u.scanStacks}`);
+      for (const [sk, n] of Object.entries(u.skillStacks ?? {})) bits.push(`ช่อง ${sk} ${n}`);
       return '  ' + bits.join(' · ');
     });
     pre.textContent = [
@@ -509,7 +516,7 @@ function buildLiveTune(host, hooks) {
     for (const u of Object.values(state.units)) {
       for (const k of Object.keys(u.skillCooldowns)) u.skillCooldowns[k] = 0;
       if (!u.mission) u.busyRemainLoops = 0;      // Crowd Control จองตัวไว้โดยไม่มีภารกิจ
-      if (u.scanStacks != null) u.scanStacks = CONFIG.buffs.scan.maxStacks;
+      for (const sk of Object.keys(u.skillStacks ?? {})) u.skillStacks[sk] = stackLimit(sk) ?? u.skillStacks[sk];
     }
   }, 'cooldown');
   act('รักษาทุกคนให้หาย', () => {

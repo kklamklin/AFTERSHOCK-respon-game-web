@@ -12,10 +12,12 @@ import { roll100, randInt, pickWeighted } from '../utils/rng.js';
 import { successBreakdown } from './successRate.js';
 import { isZoneEmpty } from './zones.js';
 import { rollDanger } from './status.js';
+import { fieldConfigKey } from '../data/operators.js';
 
 // ชั้น 2 — ระดับความสำเร็จ แล้วสุ่ม % ในช่วงของระดับนั้น (บัฟไม่มีผลกับชั้นนี้)
-export function rollRescuePct(opKey) {
-  const tier = pickWeighted(CONFIG.rescueTierChance[opKey]);
+// ตารางระดับอ่านด้วย configKey ของสกิล (ตัวเดียวกับ CONFIG.fieldSkills) — ดู data/operators.js
+export function rollRescuePct(opKey, skillId = null) {
+  const tier = pickWeighted(CONFIG.rescueTierChance[fieldConfigKey(opKey, skillId)]);
   const [lo, hi] = CONFIG.rescuePctRange[tier];
   return { tier, pct: randInt(lo, hi) };
 }
@@ -44,6 +46,7 @@ export function resolveMission(state, opKey) {
   const br = successBreakdown(state, opKey, zone, {
     ignoreInjured: mission.lastStand,
     lastStand: mission.lastStand,
+    skillId: mission.skillId,
   });
   const rate = br.total;
 
@@ -57,7 +60,7 @@ export function resolveMission(state, opKey) {
     return { ...base, kind: 'fail', rate, roll, danger };
   }
 
-  const roll2 = rollRescuePct(opKey);
+  const roll2 = rollRescuePct(opKey, mission.skillId);
   const tier = roll2.tier;
   // Last Stand ดึงคนออกได้มากขึ้นอีก 10% ของโซน (§5.2) — เพดานยังเป็น 100%
   const pct = mission.lastStand

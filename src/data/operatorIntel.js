@@ -1,5 +1,8 @@
 // ข้อมูล Intel Card ของ จนท. แต่ละคน — คัดลอกและย่อจาก docs/AFTERSHOCK_Intel_Cards.md
 // key ตรงกับ OPERATORS ใน operators.js (human/cat/elf/spirit)
+// จนท. ที่ไม่มีข้อมูลในนี้ยังเปิดหน้า Intel ได้ — ใช้ intelOf() ด้านล่าง ห้ามอ่าน OPERATOR_INTEL[key] ตรง ๆ
+import { OPERATORS } from './operators.js';
+
 export const OPERATOR_INTEL = {
   human: {
     fullName: 'James Robertson',
@@ -93,3 +96,18 @@ export const OPERATOR_INTEL = {
     ],
   },
 };
+
+// ข้อมูล Intel ของ จนท. 1 คน — ตัวที่ยังไม่มีข้อมูลในตารางข้างบน (เช่น จนท. ใหม่ที่เพิ่งเพิ่มในทะเบียน)
+// ได้ข้อมูลว่างแทน หน้า Intel จึงไม่พัง · ชื่อกับรายชื่อสกิลดึงจาก data/operators.js
+export function intelOf(key) {
+  if (OPERATOR_INTEL[key]) return OPERATOR_INTEL[key];
+  const op = OPERATORS[key];
+  return {
+    fullName: op?.name ?? key,
+    codename: '—',
+    age: '—',
+    unit: '—',
+    bio: ['ยังไม่มีข้อมูล Intel ของเจ้าหน้าที่คนนี้ (เพิ่มได้ที่ data/operatorIntel.js)'],
+    skills: Object.values(op?.skills ?? {}).map((s) => ({ name: s.name, desc: '' })),
+  };
+}

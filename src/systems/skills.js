@@ -4,12 +4,12 @@
 // รอบที่ 4 ใช้ตัดสินหน้าตาไอคอน · รอบที่ 5 จะใช้ตัวเดียวกันนี้ตัดสินว่าลากได้ไหม
 
 import { CONFIG } from '../config.js';
-import { OPERATORS } from '../data/operators.js';
+import { OPERATORS, isGlobalSkill, stackLimit } from '../data/operators.js';
 
 export const TIERS = ['gray', 'yellow', 'red'];
 
 // AP ที่ต้องจ่ายสำหรับสกิลนี้ในโซนระดับนั้น — null = ลงโซนนั้นไม่ได้
-// ตอน Last Stand ทุกสกิลของ Robertson ฟรีและเข้าได้ทุกโซน (§5.2)
+// ตอน Last Stand สกิลลงพื้นที่ของคนนั้นฟรีและเข้าได้ทุกโซน (§5.2)
 export function apCost(state, opKey, skillId, tier) {
   const skill = OPERATORS[opKey].skills[skillId];
   if (skill.type !== 'field') return skill.ap;
@@ -52,18 +52,18 @@ export function skillStatus(state, opKey, skillId) {
   const skill = OPERATORS[opKey].skills[skillId];
   const cooldownLoops = unit.skillCooldowns[skillId] ?? 0;
 
-  const isScan = opKey === 'elf' && skillId === 'scan';
-  const stacks = isScan ? unit.scanStacks : null;
-  const maxStacks = isScan ? CONFIG.buffs.scan.maxStacks : null;
+  // สกิลที่มีระบบช่อง (เช่น Scan Area) — ดูจาก CONFIG.buffs[id].maxStacks ไม่ผูกกับ จนท. คนไหน
+  const maxStacks = stackLimit(skillId);
+  const stacks = maxStacks == null ? null : (unit.skillStacks?.[skillId] ?? maxStacks);
 
   // USING = "สกิลนี้แหละที่ทำให้ จนท. ไม่ว่างอยู่ตอนนี้"
   //   สกิลลงพื้นที่ → ดูว่าภารกิจที่ทำอยู่คือสกิลนี้ไหม
-  //   Crowd Control → ไม่ว่างแต่ไม่ได้อยู่ในภารกิจ = กำลังคุมฝูงชนอยู่
-  //   บัฟทั้งแมพ (Air Deploy) → ยังมีผลอยู่บนแมพ
+  //   สกิลที่ล็อกตัว (locksUnit เช่น Crowd Control) → ไม่ว่างแต่ไม่ได้อยู่ในภารกิจ = กำลังใช้สกิลนี้อยู่
+  //   บัฟทั้งแมพ (เช่น Air Deploy) → ยังมีผลอยู่บนแมพ
   let using = false;
-  if (CONFIG.buffs[skillId]?.scope === 'global') using = state.globalBuffs.some((b) => b.type === skillId);
+  if (isGlobalSkill(skillId)) using = state.globalBuffs.some((b) => b.type === skillId);
   else if (skill.type === 'field') using = unit.mission?.skillId === skillId;
-  else if (skillId === 'crowd') using = unit.busyRemainLoops > 0 && !unit.mission;
+  else if (skill.locksUnit) using = unit.busyRemainLoops > 0 && !unit.mission;
 
   let reason = null;
   if (unit.status === 'lost') reason = 'lost';
@@ -153,7 +153,7 @@ export function dropCheck(state, opKey, skillId, zone) {
     if (cost == null) return { ok: false, reason: 'zone-blocked' }; // เช่น Robertson → โซนแดง
   } else {
     if (zone.buffs.some((b) => b.type === skillId)) return { ok: false, reason: 'buff-exists' };
-    // บัฟบางตัว (Crowd Control) ลงได้เฉพาะโซนที่มี จนท. ทำงานอยู่จริง ๆ เท่านั้น
+    // บัฟบางตัว (needsUnit เช่น Crowd Control) ลงได้เฉพาะโซนที่มี จนท. ทำงานอยู่จริง ๆ เท่านั้น
     if (CONFIG.buffs[skillId]?.needsUnit && !zone.unit) return { ok: false, reason: 'no-unit' };
     cost = skill.ap;
   }
@@ -189,19 +189,21 @@ export function applyDrop(state, opKey, skillId, zone) {
   zone.buffs.push({
     type: skillId,
     rate: cfg.rate,
-    immune: skillId === 'alert',
+    immune: !!skill.immune,          // กันบาดเจ็บ (เช่น Alert Allied) — ธงอยู่ใน data/operators.js
     remainLoops: cfg.durationHours * CONFIG.loopsPerHour,
+    owner: opKey,                    // ใช้คืนช่องให้ถูกคนตอนบัฟหมดอายุ (systems/time.js)
   });
 
-  if (skillId === 'scan') unit.scanStacks -= 1;                 // ช่องคืนตอนบัฟหมดอายุ (§3.4)
+  // สกิลที่มีระบบช่อง — ใช้ไป 1 ช่อง ช่องคืนตอนบัฟหมดอายุ (§3.4)
+  if (stackLimit(skillId) != null) unit.skillStacks[skillId] = (unit.skillStacks[skillId] ?? stackLimit(skillId)) - 1;
   if (cfg.cooldownHours > 0) unit.skillCooldowns[skillId] = cfg.cooldownHours * CONFIG.loopsPerHour;
-  // Crowd Control ต้องล็อก Robertson ทั้งตัว 3 ชม. ไม่ใช่แค่สกิลนี้ (§3.3)
-  if (skillId === 'crowd') unit.busyRemainLoops = cfg.cooldownHours * CONFIG.loopsPerHour;
+  // สกิลที่ล็อกตัว (เช่น Crowd Control) — จนท. ทั้งตัวไม่ว่างตามคูลดาวน์ ไม่ใช่แค่สกิลนี้ (§3.3)
+  if (skill.locksUnit) unit.busyRemainLoops = cfg.cooldownHours * CONFIG.loopsPerHour;
 
   return { kind: 'buff', cost: check.cost };
 }
 
-// Air Deploy — กดใช้เลย ไม่ต้องลาก บัฟทั้งแมพ (§3.1)
+// บัฟทั้งแมพ (scope 'global' เช่น Air Deploy) — กดใช้เลย ไม่ต้องลาก (§3.1)
 export function useGlobalSkill(state, opKey, skillId) {
   const st = skillStatus(state, opKey, skillId);
   const cfg = CONFIG.buffs[skillId];
@@ -212,6 +214,7 @@ export function useGlobalSkill(state, opKey, skillId) {
   state.globalBuffs.push({
     type: skillId, rate: cfg.rate,
     remainLoops: cfg.durationHours * CONFIG.loopsPerHour,
+    owner: opKey,
   });
   state.units[opKey].skillCooldowns[skillId] = cfg.cooldownHours * CONFIG.loopsPerHour;
   return { kind: 'global', cost: cfg.ap };

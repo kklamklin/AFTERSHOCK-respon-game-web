@@ -4,6 +4,7 @@
 
 import { TUTORIAL_SCRIPT, SPEAKER_META, TUTORIAL_SYNOPSIS } from '../data/tutorialScript.js';
 import { iconNode } from '../data/icons.js';
+import { OPERATORS, FIELD_OPS, allSkills } from '../data/operators.js';
 
 const TYPE_SPEED_MS = 22; // ต่อ 1 ตัวอักษร
 
@@ -193,7 +194,8 @@ export function renderTutorial(root, { onFinish } = {}) {
       field.append(
         Object.assign(document.createElement('div'), { className: 'vn-skill-title', textContent: 'ภาคสนาม' }),
         (() => { const r = document.createElement('div'); r.className = 'vn-skill-row';
-          r.append(chip('skillField', 'Robertson'), chip('skillField', 'Lyla')); return r; })());
+          // รายชื่อภาคสนามอ่านจากทะเบียน data/operators.js
+          r.append(...FIELD_OPS.map((k) => chip('skillField', OPERATORS[k].name))); return r; })());
 
       // บัฟ = สกิลหนุน (ไอคอนจริงของแต่ละสกิล)
       const buff = document.createElement('div');
@@ -201,7 +203,9 @@ export function renderTutorial(root, { onFinish } = {}) {
       buff.append(
         Object.assign(document.createElement('div'), { className: 'vn-skill-title', textContent: 'บัฟ' }),
         (() => { const r = document.createElement('div'); r.className = 'vn-skill-row';
-          r.append(chip('crowd', 'Crowd'), chip('scan', 'Scan'), chip('alert', 'Alert'), chip('air', 'Air'));
+          // บัฟทุกตัวในทะเบียน (ทุกสกิลที่ไม่ใช่ลงพื้นที่) ไอคอนตาม id สกิล · ชื่อสั้นจาก shortName
+          r.append(...allSkills().filter((s) => s.skill.type !== 'field')
+            .map((s) => chip(s.skillId, s.skill.shortName ?? s.skill.name)));
           return r; })());
 
       wrap.append(field, buff);

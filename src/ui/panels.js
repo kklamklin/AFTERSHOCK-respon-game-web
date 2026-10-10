@@ -8,7 +8,7 @@
 import { CONFIG } from '../config.js';
 import { OPERATORS } from '../data/operators.js';
 import { displayCounts, deathPerHour } from '../systems/zones.js';
-import { successBreakdown, buffsOn, BUFF_NAME } from '../systems/successRate.js';
+import { successBreakdown, buffsOn, buffName } from '../systems/successRate.js';
 import { dangerChance, injuryChance } from '../systems/danger.js';
 import { dropCheck, apCost, workLoops } from '../systems/skills.js';
 import { iconNode } from '../data/icons.js';
@@ -55,7 +55,7 @@ function buffRow(buffs) {
   } else {
     for (const b of buffs) {
       const chip = el('span', 'zd-buff');
-      chip.append(iconNode(b.type, 'zd-glyph'), el('span', null, BUFF_NAME[b.type] ?? b.type));
+      chip.append(iconNode(b.type, 'zd-glyph'), el('span', null, buffName(b.type)));
       val.appendChild(chip);
     }
   }
@@ -103,7 +103,7 @@ export function buildZoneDetail() {
 
       // ── คอลัมน์ 3-4: ต่างกันระหว่างสกิลลงพื้นที่กับสกิลบัฟ ──
       if (skill.type === 'field') {
-        const br = successBreakdown(state, opKey, zone);
+        const br = successBreakdown(state, opKey, zone, { skillId });
         const chips = el('div', 'zd-col zd-chips');
         for (const p of br.parts) {
           const chip = el('span', `zd-chip ${p.value >= 0 ? 'is-plus' : 'is-minus'}`);
@@ -127,9 +127,10 @@ export function buildZoneDetail() {
       } else {
         const cfg = CONFIG.buffs[skillId];
         // รวมผลพิเศษไว้บรรทัดเดียวกัน ให้จำนวนบรรทัดเท่าโหมดลงพื้นที่พอดี (แผงสูงคงที่)
+        // ข้อความสร้างจากพฤติกรรมของบัฟ (ธงใน data/operators.js + ตัวเลขใน config) ไม่ผูกกับชื่อสกิล
         let effect;
-        if (skillId === 'alert') effect = 'ปลอดภัย 100%';
-        else if (skillId === 'scan') effect = `+${cfg.rate} · ชะลอการตาย ${cfg.deathSlowFactor * 100}%`;
+        if (skill.immune) effect = 'ปลอดภัย 100%';
+        else if (cfg.deathSlowFactor) effect = `+${cfg.rate} · ชะลอการตาย ${Math.round(cfg.deathSlowFactor * 100)}%`;
         else effect = `อัตราสำเร็จ +${cfg.rate}`;
 
         const out = el('div', 'zd-col zd-col--out zd-col--wide');

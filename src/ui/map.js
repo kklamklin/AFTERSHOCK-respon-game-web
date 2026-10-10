@@ -6,6 +6,7 @@
 
 import { CONFIG } from '../config.js';
 import { iconPath, iconEmoji } from '../data/icons.js';
+import { OPERATORS } from '../data/operators.js';
 
 const VIEWBOX = { w: 1600, h: 1000 }; // ขนาดจริงของ map.svg
 
@@ -148,7 +149,7 @@ function warnHiddenZones(svg, zoneEls) {
 
 // ── เลเยอร์ทับบนโซน: ไอคอน จนท. · ไอคอนบัฟ · กากบาทตอนลาก (§11) ──
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const OP_ICON = { human: 'assets/skills/Field-op-robertson-icon.png', cat: 'assets/skills/Field-op-Lyla-icon.png' };
+// หมุด จนท. บนแผนที่ — path อยู่ในทะเบียน data/operators.js (mapIcon) ไม่พิมพ์ซ้ำที่นี่
 // ไอคอนบัฟบนโซน — ไฟล์จริงจาก data/icons.js ถ้ามี ไม่งั้นใช้ emoji เดิม
 
 function svgEl(tag, attrs = {}) {
@@ -248,7 +249,7 @@ export function updateZoneMarkers(handle, state) {
     n.icon.classList.toggle('is-on', !!unit);
     n.halo.classList.toggle('is-on', !!unit);
     if (unit) {
-      const src = OP_ICON[unit];
+      const src = OPERATORS[unit]?.mapIcon ?? '';
       if (n.icon.dataset.src !== src) {
         n.icon.setAttribute('href', src);
         n.icon.dataset.src = src;

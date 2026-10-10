@@ -57,7 +57,7 @@ export function generateZones() {
       casualty: 0,
       cleared: false,
       buffs: [], // [{ type, buff, remainLoops, scope }]
-      unit: null, // 'human' | 'cat' | null — จนท.ที่กำลังทำงานอยู่ในโซนนี้
+      unit: null, // key ของ จนท. ภาคสนามที่กำลังทำงานอยู่ในโซนนี้ (ดู data/operators.js) · null = ว่าง
     };
   });
 

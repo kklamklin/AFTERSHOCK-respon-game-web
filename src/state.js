@@ -3,6 +3,7 @@
 
 import { generateZones } from './systems/zones.js';
 import { CONFIG } from './config.js';
+import { OPERATORS, OP_KEYS, stackLimit } from './data/operators.js';
 
 export function createInitialState() {
   return {
@@ -14,14 +15,10 @@ export function createInitialState() {
 
     zones: generateZones(),
 
-    units: {
-      human:  createUnit(),
-      cat:    createUnit(),
-      elf:    { ...createUnit(), scanStacks: CONFIG.buffs.scan.maxStacks },
-      spirit: createUnit(),
-    },
+    // จนท. ทุกตัวในทะเบียน data/operators.js — เพิ่มตัวใหม่ที่นั่น ตรงนี้ได้ช่องของตัวเองเอง
+    units: Object.fromEntries(OP_KEYS.map((key) => [key, createUnit(key)])),
 
-    globalBuffs: [],              // [{ type:'air', rate:15, remainLoops }]
+    globalBuffs: [],              // [{ type:idสกิล, rate, remainLoops, owner }]
     criticalCountdownLoops: null, // ตั้งค่าเมื่อ Field ล้มทั้งคู่ (§13)
     lastStandUsed: false,         // Last Stand ใช้ได้ครั้งเดียวต่อเกม (§5)
     // มินิเกมต่อเวลา Last Stand — null = ยังไม่ถึงคิว · 'pending' = ถึงเวลาแล้ว รอผู้เล่นเล่น
@@ -49,19 +46,30 @@ export function createInitialState() {
 
 // ตัวนับเวลาทุกตัวเก็บเป็น "ลูป" (1 ลูป = 30 นาทีในเกม) ไม่ใช่ชั่วโมง
 // เพราะเกมเดินทีละลูป — เก็บละเอียดกว่าแล้วค่อยหารสองตอนแสดงผลเป็นชั่วโมง
-function createUnit() {
+function createUnit(opKey) {
   return {
     status: 'normal',        // normal | injured | lost | laststand
     busyRemainLoops: 0,      // ตัวนี้ใช้งานไม่ได้อีกกี่ลูป (ลงพื้นที่อยู่ หรือกำลังทำ Crowd Control)
     recoverRemainLoops: 0,   // เวลาฟื้นจาก injured / lost / เวลาที่เหลือของ Last Stand
     skillCooldowns: {},      // { [skillId]: ลูปที่เหลือ }
-    scanStacks: null,        // เฉพาะ Lia — ช่อง Scan Area ที่เหลือ (§3.4)
+    // ช่องที่เหลือของสกิลที่มีระบบช่อง (CONFIG.buffs[id].maxStacks เช่น Scan Area §3.4) — { [skillId]: n }
+    skillStacks: initialStacks(opKey),
 
     // ภารกิจลงพื้นที่ที่ทำอยู่ — null ถ้าไม่ได้อยู่ในโซนไหน
     // บันทึกเงื่อนไขตอน "ปล่อยไอคอน" ไว้เลย เพราะ Last Stand ต้องคิดด้วยเงื่อนไขตอนออกเดินทาง
     // แม้บัฟจะหมดอายุระหว่างทาง (GAMESCREEN_SPEC §5.3)
     mission: null,           // { zoneId, skillId, tier, lastStand, totalLoops }
   };
+}
+
+// สกิลไหนของ จนท. คนนี้มีระบบช่อง → เริ่มเกมด้วยช่องเต็ม
+function initialStacks(opKey) {
+  const out = {};
+  for (const skillId of Object.keys(OPERATORS[opKey].skills)) {
+    const max = stackLimit(skillId);
+    if (max != null) out[skillId] = max;
+  }
+  return out;
 }
 
 export const state = createInitialState();

@@ -6,24 +6,21 @@
 // ไฟล์นี้อยู่ใน systems/ จึงไม่แตะ DOM
 
 import { CONFIG } from '../config.js';
-import { OPERATORS } from '../data/operators.js';
+import { OPERATORS, skillName, fieldConfig } from '../data/operators.js';
 
-export const BUFF_NAME = {
-  crowd: 'Crowd Control',
-  scan: 'Scan Area',
-  air: 'Air Deploy',
-  alert: 'Alert Allied',
-};
+// ชื่อบัฟอ่านจากทะเบียน data/operators.js (id บัฟ = id สกิล) — ไม่ต้องพิมพ์ซ้ำที่นี่
+export const buffName = (type) => skillName(type);
 
 // บัฟทั้งหมดที่มีผลกับโซนนี้ ณ ตอนนี้ (ของโซนเอง + ของทั้งแมพ)
 export function buffsOn(state, zone) {
   return [...zone.buffs, ...state.globalBuffs];
 }
 
-export function successBreakdown(state, opKey, zone, { ignoreInjured = false, lastStand = null } = {}) {
+// skillId = สกิลลงพื้นที่ที่ใช้ (ไม่ส่งมา = สกิลลงพื้นที่ตัวแรกของคนนั้น)
+export function successBreakdown(state, opKey, zone, { ignoreInjured = false, lastStand = null, skillId = null } = {}) {
   const parts = [];
 
-  parts.push({ key: 'base', label: OPERATORS[opKey].name, value: CONFIG.fieldSkills[opKey].base });
+  parts.push({ key: 'base', label: OPERATORS[opKey].name, value: fieldConfig(opKey, skillId).base });
 
   // Last Stand ดันโอกาสสำเร็จขึ้นอีก 10 (§5.2)
   // ตอนคิดผลจริงส่ง lastStand มาจากภารกิจ เพราะต้องยึดเงื่อนไข "ตอนออกเดินทาง"
@@ -32,7 +29,7 @@ export function successBreakdown(state, opKey, zone, { ignoreInjured = false, la
   if (inLastStand) parts.push({ key: 'laststand', label: 'Last Stand', value: CONFIG.lastStand.rateBonus });
 
   for (const b of buffsOn(state, zone)) {
-    if (b.rate) parts.push({ key: b.type, label: BUFF_NAME[b.type] ?? b.type, value: b.rate });
+    if (b.rate) parts.push({ key: b.type, label: buffName(b.type), value: b.rate });
   }
 
   if (!ignoreInjured && state.units[opKey].status === 'injured') {

@@ -2,8 +2,8 @@
 // ตอนนี้ทำแค่หน้าปก + เมนูหลัก ตามที่สั่ง — ปุ่มเมนู (Play/Settings/Intel/Quit)
 // ยังไม่เชื่อมไปหน้าจริง กดแล้วไปหน้าว่างชั่วคราวก่อน (renderBlank)
 
-import { OPERATORS } from '../data/operators.js';
-import { OPERATOR_INTEL } from '../data/operatorIntel.js';
+import { OPERATORS, opsOnSide } from '../data/operators.js';
+import { intelOf } from '../data/operatorIntel.js';
 import { renderTutorial } from './tutorial.js';
 import { renderGameScreen } from './gameScreen.js';
 import { renderResult } from './result.js';
@@ -776,9 +776,10 @@ export function renderHowToPlay(root, { onBack } = {}) {
 }
 
 // หน้า Operator — เมนูย่อยของ Intel (Field operator / Baseplate)
+// รายชื่อแต่ละฝั่งอ่านจากทะเบียน data/operators.js (side) — เพิ่ม จนท. ใหม่ก็โผล่ในนี้เอง
 const OPERATOR_SIDES = {
-  field: { title: 'FIELD OPERATOR', keys: ['human', 'cat'] },
-  baseplate: { title: 'BASEPLATE', keys: ['elf', 'spirit'] },
+  field: { title: 'FIELD OPERATOR', get keys() { return opsOnSide('field'); } },
+  baseplate: { title: 'BASEPLATE', get keys() { return opsOnSide('support'); } },
 };
 
 function portraitSrc(speciesKey) {
@@ -820,7 +821,7 @@ export function renderOperatorRoster(root, { side, onBack, onSelect } = {}) {
   list.className = 'roster-list';
   for (const key of keys) {
     const op = OPERATORS[key];
-    const intel = OPERATOR_INTEL[key];
+    const intel = intelOf(key);
 
     const row = document.createElement('button');
     row.className = 'roster-row';
@@ -854,7 +855,7 @@ export function renderOperatorCard(root, { speciesKey, onBack } = {}) {
   setScreenClass(root, 'screen--card');
 
   const op = OPERATORS[speciesKey];
-  const intel = OPERATOR_INTEL[speciesKey];
+  const intel = intelOf(speciesKey);
 
   root.appendChild(buildSubHeader(op.name, onBack));
 

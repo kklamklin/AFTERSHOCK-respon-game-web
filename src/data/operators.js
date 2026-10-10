@@ -1,37 +1,82 @@
-// จนท. 4 ตัว + สกิล — อ้างอิงจาก docs/gamesystemfinal.md §16.2
+// จนท. ทั้งหมด + สกิล — "ทะเบียนกลาง" ที่ทั้งเกมอ่าน (รอบ 10.29)
+// อ้างอิงจาก docs/gamesystemfinal.md §16.2
 //
-// ชื่อไฟล์ asset อ้างอิงจากไฟล์จริงที่อัปโหลดไว้ใน Google Drive (ไม่ได้ตั้งเป็นสูตรเดียวกันทุกไฟล์
-// เพราะไฟล์จริงตัวพิมพ์เล็ก/ใหญ่และเว้นวรรค/ underscore ไม่ตรงกันเป๊ะ — เก็บเป็น literal string
-// ในนี้ที่เดียว ห้ามเขียนสูตรสร้างชื่อไฟล์เองที่อื่น ให้ import ใช้จากที่นี่เสมอ)
+// ── ทำไมต้องเป็นทะเบียนกลาง ────────────────────────────────────────
+// เดิมชื่อ จนท. ('human' 'cat' 'elf' 'spirit') กับชื่อสกิล ('scan' 'crowd' ...) ถูกพิมพ์ฝังไว้
+// ราว 10 ไฟล์ (state · กฎสถานะ · หน้าเกม · แผนที่ · Intel ฯลฯ) เพิ่มตัวใหม่ต้องไล่แก้ทุกที่
+// ตอนนี้ทุกไฟล์วนอ่านจาก OPERATORS ด้านล่างแทน — **เพิ่ม จนท. = เพิ่ม object 1 ก้อนในนี้**
+// (+ ตัวเลขใน config.js + ข้อมูลหน้า Intel ใน operatorIntel.js — ดูหัวข้อ "วิธีเพิ่ม จนท." ด้านล่าง)
 //
-// **สำคัญ: ชื่อไฟล์ตัวพิมพ์เล็ก/ใหญ่มีผล** เพราะ GitHub Pages เป็น case-sensitive filesystem
-// ถ้าอัปโหลดไฟล์มาแล้วชื่อไม่ตรงกับที่ระบุในนี้เป๊ะ ต้องมาแก้ path ในไฟล์นี้ให้ตรง
+// ── กติกาที่ต้องรู้ ──────────────────────────────────────────────────
+// • key ของ OPERATORS (human/cat/...) ใช้อ้างอิงใน logic ทั้งหมด (state.units ฯลฯ) — `name` คือชื่อที่ผู้เล่นเห็น
+// • ลำดับใน object = ลำดับบนจอ และลำดับคีย์ลัดตัวเลข (ภาคสนามอยู่แถบซ้าย · ภาคฐานอยู่แถบขวา)
+// • **id สกิลห้ามซ้ำกันข้าม จนท.** เพราะบัฟบนโซน/ตัวเลขใน CONFIG.buffs อ้างด้วย id สกิลตรง ๆ
+// • ไฟล์นี้เก็บแค่ "ชื่อ/รูป/ชนิดสกิล/พฤติกรรม" — ตัวเลขบาลานซ์ทั้งหมดอยู่ config.js
+//   (ราคา/เวลา/บัฟ ในนี้เป็น getter อ่าน CONFIG สด ๆ เพื่อให้ Custom Game ปรับได้)
+// • ชื่อไฟล์รูปเป็น literal string ห้ามเขียนสูตรสร้างชื่อเอง — ไฟล์จริงตัวพิมพ์เล็ก/ใหญ่ไม่ตรงกัน
+//   และ GitHub Pages แยกตัวพิมพ์เล็ก/ใหญ่ ชื่อไม่ตรงเป๊ะ = รูปหาย
 //
-// key ของ OPERATORS (human/cat/elf/spirit) คือ "สายพันธุ์" ใช้อ้างอิงใน logic ทั้งหมด
-// (state.units, CONFIG ฯลฯ) — `name` คือชื่อตัวละครที่โชว์ผู้เล่น
+// ── ฟิลด์ของ จนท. 1 ตัว ──────────────────────────────────────────────
+//   name        ชื่อที่ผู้เล่นเห็น
+//   side        'field' = ภาคสนาม (ลงพื้นที่เอง · แถบซ้าย) · 'support' = ภาคฐาน (บัฟ · แถบขวา)
+//   portraits   รูปใน assets/characters/ — ภาคสนาม: normal/injured/lost(/laststand) · ภาคฐาน: normal/talk[2 เฟรม]
+//   mapIcon     (ภาคสนาม) หมุดบนแผนที่ตอนลงโซน — path เต็ม
+//   lastStand   true = มีความสามารถ Last Stand (ตอนนี้มีแค่ Robertson · กฎอยู่ systems/status.js)
+//   skills      { [idสกิล]: สร้างด้วย fieldSkill() หรือ buffSkill() }
 //
-// ⚠ ไฟล์นี้เก็บได้แต่ "ชื่อ/รูป/ชนิดสกิล" เท่านั้น — ตัวเลขบาลานซ์ทั้งหมดอ่านจาก config.js
-// เคยพิมพ์ราคา AP ซ้ำไว้ที่นี่ด้วย ผลคือแก้เลขใน config.js แล้วเกมไม่เปลี่ยนเลย เพราะโค้ดจริงอ่านจากที่นี่
+// ── ชนิดสกิล ───────────────────────────────────────────────────────
+//   fieldSkill(configKey, {...})  ลงพื้นที่ช่วยคน · ตัวเลขอยู่ CONFIG.fieldSkills[configKey]
+//                                 และตาราง %ช่วยชีวิตอยู่ CONFIG.rescueTierChance[configKey]
+//   buffSkill(id, {...})          บัฟ · ตัวเลขอยู่ CONFIG.buffs[id] (id = id สกิล)
+//     พฤติกรรมที่เปิดได้ด้วยธง (ไม่ต้องเขียนโค้ดเพิ่ม):
+//       immune: true        โซนที่มีบัฟนี้ = จนท. ไม่บาดเจ็บ (Alert Allied)
+//       locksUnit: true     ใช้แล้วตัว จนท. ไม่ว่างตามคูลดาวน์ (Crowd Control)
+//     และจาก CONFIG.buffs[id]:
+//       scope: 'global'     กดใช้ทันทีไม่ต้องลาก บัฟทั้งแมพ (Air Deploy)
+//       needsUnit: true     ลงได้เฉพาะโซนที่มี จนท. ภาคสนามทำงานอยู่
+//       maxStacks: n        ใช้ได้พร้อมกันสูงสุด n ช่อง คืนช่องตอนบัฟหมดอายุ (Scan Area)
+//       deathSlowFactor     ชะลอการตายในโซน · rate = บวกอัตราสำเร็จ
+//   ไอคอนบัฟบนแผนที่/แผงข้อมูลอยู่ที่ data/icons.js (key = id สกิล) — ไม่มีก็ไม่พัง ขึ้นว่างไว้
+//
+// ── วิธีเพิ่ม จนท. ใหม่ ────────────────────────────────────────────
+//   1. เพิ่ม object ใน OPERATORS (คัดลอกตัวที่ชนิดเดียวกันมาแก้)
+//   2. ภาคสนาม → เพิ่ม CONFIG.fieldSkills[key] + CONFIG.rescueTierChance[key]
+//      บัฟ     → เพิ่ม CONFIG.buffs[idสกิล]
+//   3. เพิ่มข้อมูลหน้า Intel ใน data/operatorIntel.js (ไม่มีก็ไม่พัง ขึ้นข้อมูลว่าง)
+//   4. วางรูปลง assets/ ตามชื่อที่ใส่ไว้
+//   ⚠️ แถบซ้าย/ขวาบนจอออกแบบไว้ฝั่งละ 2 ใบ ใส่เกินจะเบียด — ต้องจัดหน้าจอเพิ่มแยกต่างหาก
 
 import { CONFIG } from '../config.js';
 
+const TIERS = ['gray', 'yellow', 'red'];
+
 // แปลงตาราง CONFIG.fieldSkills เป็นรูป zones ที่ระบบสกิลใช้ — ระดับที่ ap เป็น null คือเข้าไม่ได้
-// เรียกผ่าน getter `zones` ด้านล่าง = คำนวณใหม่ทุกครั้งที่ถูกอ่าน แก้ CONFIG แล้วมีผลทันที
-function fieldZones(opKey) {
-  const { ap, workHours } = CONFIG.fieldSkills[opKey];
+// เรียกผ่าน getter `zones` = คำนวณใหม่ทุกครั้งที่ถูกอ่าน แก้ CONFIG แล้วมีผลทันที
+function fieldZones(configKey) {
+  const { ap, workHours } = CONFIG.fieldSkills[configKey];
   const zones = {};
-  for (const tier of ['gray', 'yellow', 'red']) {
+  for (const tier of TIERS) {
     if (ap[tier] == null) continue;
     zones[tier] = { ap: ap[tier], cd: workHours[tier] };
   }
   return zones;
 }
 
+/** สกิลลงพื้นที่ — ตัวเลขอยู่ที่ CONFIG.fieldSkills[configKey] */
+function fieldSkill(configKey, fields) {
+  return {
+    ...fields,
+    type: 'field',
+    configKey,
+    get zones() { return fieldZones(configKey); },
+  };
+}
+
 // สกิลบัฟ — ฟิลด์ตัวเลขเป็น "getter" อ่าน CONFIG.buffs สด ๆ ทุกครั้งที่ถูกถาม
 // ⚠️ เดิมคัดลอกค่าไว้ตอนโหลดไฟล์ ผลคือแก้ CONFIG ระหว่างรัน (Custom Game / Dev Panel) แล้วราคาไม่เปลี่ยน
-// ฟิลด์ที่ใส่มาใน fields เองจะทับของจาก CONFIG (เช่น Scan ที่ scope เป็น 'multi')
+// ฟิลด์ที่ใส่มาใน fields เองจะทับของจาก CONFIG
 function buffSkill(id, fields) {
-  const out = { ...fields };
+  const out = { type: 'buff', ...fields };
   const live = {
     buff: (b) => b.rate, scope: (b) => b.scope, durationHours: (b) => b.durationHours,
     ap: (b) => b.ap, cd: (b) => b.cooldownHours,
@@ -46,6 +91,8 @@ function buffSkill(id, fields) {
 export const OPERATORS = {
   human: {
     name: 'Robertson', side: 'field',
+    lastStand: true,
+    mapIcon: 'assets/skills/Field-op-robertson-icon.png',
     portraits: {
       normal: 'Field-op-robertson.png',
       injured: 'Field-op-robertson-injured.png',
@@ -55,20 +102,21 @@ export const OPERATORS = {
     },
     hasSpecialSkill: false, // TODO: บางตัวมีสกิลพิเศษเพิ่ม — รอ asset/สเปกเพิ่มเติม ยังไม่ต้องทำ
     skills: {
-      sar: {
-        name: 'Search & Rescue', icon: 'Icon-skills-robertson-search&rescue.PNG', type: 'field',
-        // เข้าโซนแดงได้แล้ว แต่ช้าและฐานสำเร็จต่ำ (75−40 = 35%) ไม่บัฟคือส่งไปตาย
-        get zones() { return fieldZones('human'); },
-      },
-      // ไม่จองโซน · ไม่มีความเสี่ยงบาดเจ็บ (GAMESCREEN_SPEC §3.3) — ต้นทุนจริงคือคูลดาวน์
+      // เข้าโซนแดงได้แล้ว แต่ช้าและฐานสำเร็จต่ำ (75−40 = 35%) ไม่บัฟคือส่งไปตาย
+      sar: fieldSkill('human', {
+        name: 'Search & Rescue', icon: 'Icon-skills-robertson-search&rescue.PNG',
+      }),
+      // ไม่จองโซน · ไม่มีความเสี่ยงบาดเจ็บ (GAMESCREEN_SPEC §3.3) — ต้นทุนจริงคือ Robertson ไม่ว่างตามคูลดาวน์
       crowd: buffSkill('crowd', {
-        name: 'Crowd Control', icon: 'Icon-skills-robertson-crowd_control.PNG', type: 'buff', risky: false,
+        name: 'Crowd Control', shortName: 'Crowd', icon: 'Icon-skills-robertson-crowd_control.PNG',
+        risky: false, locksUnit: true,
       }),
     },
   },
 
   cat: {
     name: 'Lyla', side: 'field',
+    mapIcon: 'assets/skills/Field-op-Lyla-icon.png',
     portraits: {
       normal: 'Field-op-Lyla.png',
       injured: 'Field-op-Lyla-injured.png',
@@ -76,10 +124,9 @@ export const OPERATORS = {
     },
     hasSpecialSkill: false, // TODO: เช่นเดียวกับด้านบน
     skills: {
-      hsar: {
-        name: 'Hardsearch & Extract', icon: 'Icon-skills-Lyla-hardsearch&extract.png', type: 'field',
-        get zones() { return fieldZones('cat'); },
-      },
+      hsar: fieldSkill('cat', {
+        name: 'Hardsearch & Extract', icon: 'Icon-skills-Lyla-hardsearch&extract.png',
+      }),
     },
   },
 
@@ -92,13 +139,14 @@ export const OPERATORS = {
       talk: ['Base-op-Lia-talking1.png', 'Base-op-Lia-talking2.png'], // ✅ มีไฟล์จริงแล้ว สลับ 2 เฟรมทำแอนิเมชันพูด
     },
     skills: {
+      // ใช้ได้พร้อมกันหลายโซนตามจำนวนช่อง (CONFIG.buffs.scan.maxStacks)
       scan: buffSkill('scan', {
-        name: 'Scan Area', icon: 'Icon-skills-Ria-scan_area.PNG', type: 'buff', // ชื่อไฟล์สะกด Ria โดยตั้งใจ (ดูหมายเหตุด้านบน) ห้ามแก้
+        name: 'Scan Area', shortName: 'Scan', icon: 'Icon-skills-Ria-scan_area.PNG', // ชื่อไฟล์สะกด Ria โดยตั้งใจ (ดูหมายเหตุด้านบน) ห้ามแก้
         scope: 'multi',
       }),
       alert: buffSkill('alert', {
-        name: 'Alert Allied', icon: 'Icon-skills-Ria-alert_allied.PNG', type: 'shield', // ชื่อไฟล์สะกด Ria โดยตั้งใจ (ดูหมายเหตุด้านบน) ห้ามแก้
-        immune: true,
+        name: 'Alert Allied', shortName: 'Alert', icon: 'Icon-skills-Ria-alert_allied.PNG', // ชื่อไฟล์สะกด Ria โดยตั้งใจ (ดูหมายเหตุด้านบน) ห้ามแก้
+        type: 'shield', immune: true,
       }),
     },
   },
@@ -112,11 +160,83 @@ export const OPERATORS = {
     skills: {
       // ⚠️ ในเกมชื่อ "Mudongzock" แต่ไฟล์จริงสะกด "mudongzong" (ไม่มี c) — เจ้าของสั่งให้ค้างไว้แบบนี้
       air: buffSkill('air', {
-        name: 'Air Deploy', icon: 'Icon-skills-mudongzong-air_deploy.PNG', type: 'buff', // ชื่อไฟล์สะกด mudongzong โดยตั้งใจ ห้ามแก้ (ในเกมชื่อ Mudongzock)
+        name: 'Air Deploy', shortName: 'Air', icon: 'Icon-skills-mudongzong-air_deploy.PNG', // ชื่อไฟล์สะกด mudongzong โดยตั้งใจ ห้ามแก้ (ในเกมชื่อ Mudongzock)
       }),
     },
   },
 };
+
+// ── ตัวช่วยอ่านทะเบียน — ไฟล์อื่นใช้พวกนี้แทนการพิมพ์ชื่อ จนท./สกิลเอง ──────
+
+/** key ของ จนท. ทุกตัว ตามลำดับในทะเบียน */
+export const OP_KEYS = Object.keys(OPERATORS);
+
+/** จนท. ฝั่งเดียวกัน — 'field' (ภาคสนาม) หรือ 'support' (ภาคฐาน) */
+export function opsOnSide(side) {
+  return OP_KEYS.filter((k) => OPERATORS[k].side === side);
+}
+
+export const FIELD_OPS = opsOnSide('field');
+export const SUPPORT_OPS = opsOnSide('support');
+
+/** สกิลทั้งเกมเรียงตามลำดับบนจอ (ภาคสนามก่อน แล้วภาคฐาน) — ใช้กับคีย์ลัดตัวเลข */
+export function allSkills() {
+  return [...FIELD_OPS, ...SUPPORT_OPS].flatMap((opKey) =>
+    Object.entries(OPERATORS[opKey].skills).map(([skillId, skill]) => ({ opKey, skillId, skill })));
+}
+
+/** หาสกิลจาก id (id ไม่ซ้ำกันทั้งเกม) — คืน { opKey, skillId, skill } หรือ null */
+export function findSkill(skillId) {
+  return allSkills().find((s) => s.skillId === skillId) ?? null;
+}
+
+/** ชื่อสกิลที่ผู้เล่นเห็น — ใช้กับป้ายบัฟบนโซน/แผงข้อมูล */
+export function skillName(skillId) {
+  return findSkill(skillId)?.skill.name ?? skillId;
+}
+
+/** บัฟทั้งแมพ (กดใช้ทันที ไม่ต้องลาก) ไหม */
+export function isGlobalSkill(skillId) {
+  return CONFIG.buffs[skillId]?.scope === 'global';
+}
+
+/** จำนวนช่องสูงสุดของสกิลที่มีช่อง (เช่น Scan Area) — null = ไม่มีระบบช่อง */
+export function stackLimit(skillId) {
+  return CONFIG.buffs[skillId]?.maxStacks ?? null;
+}
+
+/**
+ * ตัวเลขของสกิลลงพื้นที่ (base/ap/workHours) จาก CONFIG.fieldSkills
+ * ไม่ระบุ skillId = ใช้สกิลลงพื้นที่ตัวแรกของ จนท. คนนั้น
+ */
+export function fieldConfigKey(opKey, skillId = null) {
+  const skills = OPERATORS[opKey].skills;
+  const skill = skillId ? skills[skillId] : Object.values(skills).find((s) => s.type === 'field');
+  return skill?.configKey ?? opKey;
+}
+
+export function fieldConfig(opKey, skillId = null) {
+  return CONFIG.fieldSkills[fieldConfigKey(opKey, skillId)];
+}
+
+// ตรวจทะเบียนตอนโหลด — เตือนใน Console ถ้าตั้งผิด (ไม่โยน error เพื่อไม่ให้เกมดับทั้งเกม)
+(() => {
+  const seen = new Map();
+  for (const { opKey, skillId, skill } of allSkills()) {
+    if (seen.has(skillId)) console.error(`[operators] id สกิลซ้ำ: "${skillId}" (${seen.get(skillId)} กับ ${opKey})`);
+    seen.set(skillId, opKey);
+    if (skill.type === 'field' && !CONFIG.fieldSkills[skill.configKey]) {
+      console.error(`[operators] ไม่มี CONFIG.fieldSkills.${skill.configKey} ของสกิล ${skillId}`);
+    }
+    if (skill.type === 'field' && !CONFIG.rescueTierChance[skill.configKey]) {
+      console.error(`[operators] ไม่มี CONFIG.rescueTierChance.${skill.configKey} ของสกิล ${skillId}`);
+    }
+    if (skill.type !== 'field' && !CONFIG.buffs[skillId]) {
+      console.error(`[operators] ไม่มี CONFIG.buffs.${skillId} ของสกิล ${skillId}`);
+    }
+  }
+})();
+
 
 // ไอคอนสถานะที่ใช้ร่วมกันได้ทุกตัว (ไม่ผูกกับ operator คนใดคนหนึ่ง) — ยังไม่มีไฟล์จริง ใช้ placeholder ไปก่อน
 export const STATUS_ICONS = {
